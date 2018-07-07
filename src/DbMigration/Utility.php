@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
@@ -54,14 +55,14 @@ class Utility
                 }
                 return '[' . "\n" . $kvl . str_repeat(' ', $nest * $INDENT) . ']';
             }
-            else if (is_null($value)) {
+            elseif (is_null($value)) {
                 return 'null';
             }
-            else if ($value instanceof Exportion) {
+            elseif ($value instanceof Exportion) {
                 $fname = $value->export();
                 return "include " . var_export($fname, true);
             }
-            else if (is_object($value)) {
+            elseif (is_object($value)) {
                 return get_class($value) . '::__set_state(' . $export((array) $value, $nest) . ')';
             }
             else {
@@ -76,14 +77,14 @@ class Utility
         echo $result;
     }
 
-    public static function yaml_emit($value, $options = array())
+    public static function yaml_emit($value, $options = [])
     {
-        $options = array_replace(array(
+        $options = array_replace([
             'builtin'  => false,
             'inline'   => null,
             'indent'   => null,
-            'callback' => array(),
-        ), $options);
+            'callback' => [],
+        ], $options);
 
         if (function_exists('yaml_emit') && ($options['builtin'] || $options['callback'])) {
             return yaml_emit($value, YAML_UTF8_ENCODING, YAML_LN_BREAK, $options['callback']);
@@ -93,12 +94,12 @@ class Utility
         }
     }
 
-    public static function yaml_parse($input, $options = array())
+    public static function yaml_parse($input, $options = [])
     {
-        $options = array_replace(array(
+        $options = array_replace([
             'builtin'  => false,
-            'callback' => array(),
-        ), $options);
+            'callback' => [],
+        ], $options);
 
         if (function_exists('yaml_parse') && ($options['builtin'] || $options['callback'])) {
             return yaml_parse($input, 0, $ndocs, $options['callback']);
@@ -122,11 +123,11 @@ class Utility
         return json_encode($value, $options);
     }
 
-    public static function json_decode($value, $options = array())
+    public static function json_decode($value, $options = [])
     {
-        $options = array_replace(array(
-            'callback' => array(),
-        ), $options);
+        $options = array_replace([
+            'callback' => [],
+        ], $options);
 
         $result = json_decode($value, true);
         foreach ($options['callback'] as $prefix => $callback) {

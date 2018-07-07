@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use Doctrine\DBAL\Logging\DebugStack;
@@ -14,9 +15,9 @@ class MigrateCommandTest extends AbstractTestCase
         parent::setUp();
 
         $migtable = $this->createSimpleTable('migtable', 'integer', 'id', 'code');
-        $migtable->addUniqueIndex(array(
+        $migtable->addUniqueIndex([
             'code'
-        ), 'unq_index');
+        ], 'unq_index');
 
         $longtable = $this->createSimpleTable('longtable', 'integer', 'id');
         $longtable->addColumn('text_data', 'text');
@@ -35,26 +36,26 @@ class MigrateCommandTest extends AbstractTestCase
         $view = new View('simpleview', 'select 1');
         $this->oldSchema->createView($view);
 
-        $this->old->insert('migtable', array(
+        $this->old->insert('migtable', [
             'id'   => 5,
             'code' => 2
-        ));
-        $this->old->insert('migtable', array(
+        ]);
+        $this->old->insert('migtable', [
             'id'   => 9,
             'code' => 999
-        ));
-        $this->old->insert('sametable', array(
+        ]);
+        $this->old->insert('sametable', [
             'id' => 9
-        ));
+        ]);
 
         $this->app->add(new MigrateCommand());
 
-        $this->defaultArgs = array(
+        $this->defaultArgs = [
             '--format' => 'none',
             '-n'       => true,
-            'srcdsn' => $GLOBALS['old_db'],
-            'dstdsn' => $GLOBALS['new_db'],
-        );
+            'srcdsn'   => $GLOBALS['old_db'],
+            'dstdsn'   => $GLOBALS['new_db'],
+        ];
     }
 
     /**
@@ -65,9 +66,9 @@ class MigrateCommandTest extends AbstractTestCase
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
         $this->new->exec(file_get_contents($this->getFile('data.sql')));
 
-        $result = $this->runApp(array(
-            '-vvv'  => true,
-        ));
+        $result = $this->runApp([
+            '-vvv' => true,
+        ]);
 
         $this->assertContains('ALTER TABLE igntable', $result);
         $this->assertContains('DELETE FROM `migtable`', $result);
@@ -84,9 +85,9 @@ class MigrateCommandTest extends AbstractTestCase
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
         $this->new->exec(file_get_contents($this->getFile('data.sql')));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--type' => 'ddl',
-        ));
+        ]);
 
         $this->assertContains('ALTER TABLE igntable', $result);
         $this->assertNotContains('DELETE FROM `migtable`', $result);
@@ -102,9 +103,9 @@ class MigrateCommandTest extends AbstractTestCase
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
         $this->new->exec(file_get_contents($this->getFile('data.sql')));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--type' => 'dml',
-        ));
+        ]);
 
         $this->assertNotContains('ALTER TABLE igntable', $result);
         $this->assertContains('DELETE FROM `migtable`', $result);
@@ -119,36 +120,36 @@ class MigrateCommandTest extends AbstractTestCase
     {
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
-        ));
+        ]);
         $this->assertContains('insert into notexist VALUES(1)', $result);
         $this->assertContains('insert into notexist (id) VALUES(7);', $result);
         $this->assertContains('insert into notexist (id) VALUES(8);', $result);
         $this->assertContains('insert into notexist (id) VALUES(9);', $result);
-        $this->assertEquals(array(1, 7, 8, 9, 21, 22), $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
-        $this->assertEquals(array('aaa.sql', 'bbb.sql', 'ccc.php'), $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertEquals([1, 7, 8, 9, 21, 22], $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
 
         $this->old->executeUpdate('insert into migs values("hoge", "2011-12-24 12:34:56")');
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
-        ));
+        ]);
         $this->assertNotContains('insert into notexist VALUES(1)', $result);
         $this->assertNotContains('insert into notexist (id) VALUES(7);', $result);
         $this->assertNotContains('insert into notexist (id) VALUES(8);', $result);
         $this->assertNotContains('insert into notexist (id) VALUES(9);', $result);
         $this->assertContains('[2011-12-24 12:34:56] hoge', $result);
-        $this->assertEquals(array(1, 7, 8, 9, 21, 22), $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
-        $this->assertEquals(array('aaa.sql', 'bbb.sql', 'ccc.php'), $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertEquals([1, 7, 8, 9, 21, 22], $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--migration' => $this->getFile('nodir'),
-        ));
+        ]);
         $this->assertContains('-- no diff data', $result);
 
-        $this->assertExceptionMessage("'invalid query'", $this->runApp, array(
+        $this->assertExceptionMessage("'invalid query'", $this->runApp, [
             '--migration' => $this->getFile('migs_invalid'),
-        ));
+        ]);
     }
 
     /**
@@ -157,31 +158,31 @@ class MigrateCommandTest extends AbstractTestCase
     function run_type_data_choise()
     {
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->runApp(array());
+        $this->runApp([]);
 
         unset($this->defaultArgs['-n']);
 
         /** @var MigrateCommand $command */
         $command = $this->app->get('migrate');
-        $command->getQuestionHelper()->setInputStream($this->getEchoStream('y', array('n' => 3), 'y'));
+        $command->getQuestionHelper()->setInputStream($this->getEchoStream('y', ['n' => 3], 'y'));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
-        ));
+        ]);
         $this->assertContains('migs is created', $result);
-        $this->assertEquals(array(), $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
-        $this->assertEquals(array(), $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertEquals([], $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertEquals([], $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
 
         /** @var MigrateCommand $command */
         $command = $this->app->get('migrate');
-        $command->getQuestionHelper()->setInputStream($this->getEchoStream(array('p' => 3), 'y'));
+        $command->getQuestionHelper()->setInputStream($this->getEchoStream(['p' => 3], 'y'));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
-        ));
+        ]);
         $this->assertNotContains('migs is created', $result);
-        $this->assertEquals(array(), $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
-        $this->assertEquals(array('aaa.sql', 'bbb.sql', 'ccc.php'), $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertEquals([], $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
     }
 
     /**
@@ -192,17 +193,17 @@ class MigrateCommandTest extends AbstractTestCase
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
         $this->new->exec(file_get_contents($this->getFile('data.sql')));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '-v'        => true,
-            '--include' => array(
+            '--include' => [
                 'migtable'
-            ),
-            '--exclude' => array(
+            ],
+            '--exclude' => [
                 'igntable',
                 'migtable',
                 'drptable',
-            ),
-        ));
+            ],
+        ]);
 
         $this->assertNotContains('DELETE FROM `migtable`', $result);
         $this->assertNotContains('INSERT INTO `migtable`', $result);
@@ -219,12 +220,12 @@ class MigrateCommandTest extends AbstractTestCase
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
         $this->new->exec(file_get_contents($this->getFile('data.sql')));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '-v'          => true,
             '--type'      => 'dml',
             '--no-insert' => true,
             '--no-delete' => true,
-        ));
+        ]);
 
         $this->assertContains('UPDATE ', $result);
         $this->assertNotContains('INSERT ', $result);
@@ -236,16 +237,16 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_view()
     {
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '-v'       => true,
             '--noview' => false,
-        ));
+        ]);
         $this->assertContains('simpleview', $result);
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '-v'       => true,
             '--noview' => true,
-        ));
+        ]);
         $this->assertNotContains('simpleview', $result);
     }
 
@@ -255,26 +256,26 @@ class MigrateCommandTest extends AbstractTestCase
     function run_throwable_ddl()
     {
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->insertMultiple($this->old, 'unqtable', array(
-            array(
+        $this->insertMultiple($this->old, 'unqtable', [
+            [
                 'id'   => 2,
                 'code' => 7
-            ),
-            array(
+            ],
+            [
                 'id'   => 3,
                 'code' => 7
-            )
-        ));
+            ]
+        ]);
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--force' => true,
-        ));
+        ]);
 
         $this->assertContains("key 'unq_index'", $result);
 
-        $this->assertExceptionMessage("key 'unq_index'", $this->runApp, array(
+        $this->assertExceptionMessage("key 'unq_index'", $this->runApp, [
             '--force' => false,
-        ));
+        ]);
     }
 
     /**
@@ -284,29 +285,29 @@ class MigrateCommandTest extends AbstractTestCase
     {
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
         $this->new->exec(file_get_contents($this->getFile('data.sql')));
-        $this->insertMultiple($this->old, 'migtable', array(
-            array(
+        $this->insertMultiple($this->old, 'migtable', [
+            [
                 'id'   => 19,
                 'code' => 20
-            ),
-            array(
+            ],
+            [
                 'id'   => 20,
                 'code' => 19
-            )
-        ));
+            ]
+        ]);
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--force' => true,
-        ));
+        ]);
 
         $this->assertContains("key 'unq_index'", $result);
 
         $count = $this->old->fetchColumn("select COUNT(*) from migtable");
         $this->assertEquals($count, $this->old->fetchColumn("select COUNT(*) from migtable"));
 
-        $this->assertExceptionMessage("key 'unq_index'", $this->runApp, array(
+        $this->assertExceptionMessage("key 'unq_index'", $this->runApp, [
             '--force' => false,
-        ));
+        ]);
     }
 
     /**
@@ -317,10 +318,10 @@ class MigrateCommandTest extends AbstractTestCase
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
         $this->new->exec(file_get_contents($this->getFile('data.sql')));
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '-v'     => true,
             '--type' => 'dml',
-        ));
+        ]);
 
         $this->assertContains('difftable    is skipped by has different definition between schema', $result);
         $this->assertContains('nopkeytable  is skipped by has no primary key', $result);
@@ -340,9 +341,9 @@ return [
 ];");
 
         $this->expectOutputString("\npre-migration\npost-migration");
-        $this->runApp(array(
+        $this->runApp([
             '--callback' => $cfile,
-        ));
+        ]);
     }
 
     /**
@@ -353,13 +354,13 @@ return [
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
 
         $this->insertMultiple($this->old, 'migtable', array_map(function ($i) {
-            return array(
+            return [
                 'id'   => $i + 100,
                 'code' => $i * 10
-            );
+            ];
         }, range(1, 1001)));
 
-        $result = $this->runApp(array());
+        $result = $this->runApp([]);
 
         $this->assertLessThanOrEqual(1000, substr_count($result, 'DELETE FROM `migtable`'));
     }
@@ -372,25 +373,25 @@ return [
         $this->new->exec(file_get_contents($this->getFile('table.sql')));
         $this->new->exec(file_get_contents($this->getFile('data.sql')));
 
-        $result = $this->runApp(array(
-            '-c'    => true,
-            '-q'    => true,
-        ));
+        $result = $this->runApp([
+            '-c' => true,
+            '-q' => true,
+        ]);
 
         $this->assertEmpty($result);
 
-        $result = $this->runApp(array(
-            '-c'    => true,
-        ));
+        $result = $this->runApp([
+            '-c' => true,
+        ]);
 
         $this->assertNotContains('is skipped by no diff', $result);
 
-        $result = $this->runApp(array(
-            '-c'    => true,
-            '-v'    => true,
-            '-i'    => 'notexist,igntable,nopkeytable,sametable,difftable',
-            '-e'    => 'difftable',
-        ));
+        $result = $this->runApp([
+            '-c' => true,
+            '-v' => true,
+            '-i' => 'notexist,igntable,nopkeytable,sametable,difftable',
+            '-e' => 'difftable',
+        ]);
 
         $this->assertContains('is skipped by include option', $result);
         $this->assertContains('is skipped by exclude option', $result);
@@ -411,9 +412,9 @@ return [
 
         /** @var MigrateCommand $command */
         $command = $this->app->get('migrate');
-        $command->getQuestionHelper()->setInputStream($this->getEchoStream(array('y' => 100)));
+        $command->getQuestionHelper()->setInputStream($this->getEchoStream(['y' => 100]));
 
-        $result = $this->runApp(array());
+        $result = $this->runApp([]);
 
         $this->assertContains('total query count is 1023', $result);
         $this->assertContains("INSERT INTO `sametable` SET `id` = '1024';", $result);
@@ -430,10 +431,10 @@ return [
         $logger = new DebugStack();
         $this->old->getConfiguration()->setSQLLogger($logger);
 
-        $this->runApp(array(
+        $this->runApp([
             '--migration' => $this->getFile('migs'),
             '--check'     => true,
-        ));
+        ]);
 
         // if dryrun, old DB queries are "SELECT" only
         foreach ($logger->queries as $query) {

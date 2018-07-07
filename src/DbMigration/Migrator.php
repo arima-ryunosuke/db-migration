@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
@@ -23,7 +24,7 @@ class Migrator
      * @param bool $noview
      * @return array
      */
-    static public function getDDL($old, $new, $includes = array(), $excludes = array(), $noview = false)
+    static public function getDDL($old, $new, $includes = [], $excludes = [], $noview = false)
     {
         $diff = Comparator::compareSchemas(self::getSchema($old), self::getSchema($new));
 
@@ -49,9 +50,9 @@ class Migrator
         }
 
         if ($noview) {
-            $diff->newViews = array();
-            $diff->changedViews = array();
-            $diff->removedViews = array();
+            $diff->newViews = [];
+            $diff->changedViews = [];
+            $diff->removedViews = [];
         }
 
         return $diff->toSql($old->getDatabasePlatform());
@@ -69,10 +70,10 @@ class Migrator
      * @throws DBALException
      * @return array
      */
-    static public function getDML($old, $new, $table, array $wheres = array(), array $ignores = array(), $dmltypes = array())
+    static public function getDML($old, $new, $table, array $wheres = [], array $ignores = [], $dmltypes = [])
     {
         // result dmls
-        $dmls = array();
+        $dmls = [];
 
         // scanner objects
         $oldSchema = self::getSchema($old);
@@ -89,11 +90,11 @@ class Migrator
         $oldTuples = $oldScanner->getPrimaryRows();
         $newTuples = $newScanner->getPrimaryRows();
 
-        $defaulttypes = array(
+        $defaulttypes = [
             'insert' => true,
             'delete' => true,
             'update' => true,
-        );
+        ];
         $dmltypes += $defaulttypes;
 
         // DELETE if old only

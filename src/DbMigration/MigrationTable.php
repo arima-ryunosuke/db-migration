@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
@@ -22,12 +23,12 @@ class MigrationTable
     {
         $this->connection = $connection;
 
-        $this->table = new Table($tableName, array(
+        $this->table = new Table($tableName, [
             new Column('version', \Doctrine\DBAL\Types\Type::getType('string')),
             new Column('apply_at', \Doctrine\DBAL\Types\Type::getType('datetime')),
-        ), array(
-            new Index('PRIMARY', array('version'), true, true),
-        ));
+        ], [
+            new Index('PRIMARY', ['version'], true, true),
+        ]);
     }
 
     public function exists()
@@ -62,7 +63,7 @@ class MigrationTable
     public function fetch()
     {
         if (!$this->exists()) {
-            return array();
+            return [];
         }
         return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAll(\PDO::FETCH_COLUMN | \PDO::FETCH_UNIQUE);
     }

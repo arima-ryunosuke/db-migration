@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration;
 
 use Doctrine\DBAL\DriverManager;
@@ -31,7 +32,7 @@ class TableScannerTest extends AbstractTestCase
         $table_fuga->addColumn('id1', 'integer');
         $table_fuga->addColumn('id2', 'integer');
         $table_fuga->addColumn('data', 'string');
-        $table_fuga->setPrimaryKey(array('id1', 'id2'));
+        $table_fuga->setPrimaryKey(['id1', 'id2']);
         $this->oldSchema->dropAndCreateTable($table_fuga);
 
         $this->scanner = new TableScanner($this->old, $table_hoge, 'TRUE');
@@ -76,7 +77,7 @@ class TableScannerTest extends AbstractTestCase
         $condition = $this->invoke('parseCondition', '`id` = 1', '`');
         $this->assertEquals('`id` = 1', $condition);
 
-        $condition = $this->invoke('parseCondition', array('`id` > 1', '`id` < 10'), '`');
+        $condition = $this->invoke('parseCondition', ['`id` > 1', '`id` < 10'], '`');
         $this->assertEquals('`id` > 1 AND `id` < 10', $condition);
     }
 
@@ -85,11 +86,11 @@ class TableScannerTest extends AbstractTestCase
      */
     function commentize()
     {
-        $comment = $this->invoke('commentize', array(
+        $comment = $this->invoke('commentize', [
             'col1' => str_repeat('X', 100),
             'col2' => str_repeat('あ', 100),
             'col3' => null
-        ), 10);
+        ], 10);
 
         $this->assertContains('XXXXXXX...', $comment);
         $this->assertContains('あああ...', $comment);
@@ -101,7 +102,7 @@ class TableScannerTest extends AbstractTestCase
      */
     function getRecordFromPrimaryKeys_empty()
     {
-        $rows = $this->invoke('getRecordFromPrimaryKeys', array(), true);
+        $rows = $this->invoke('getRecordFromPrimaryKeys', [], true);
 
         $this->assertCount(0, $rows->fetchAll());
     }
@@ -112,11 +113,11 @@ class TableScannerTest extends AbstractTestCase
     function getRecordFromPrimaryKeys_multi()
     {
         $rows = array_map(function ($i) {
-            return array(
+            return [
                 'id1'  => $i,
                 'id2'  => $i,
                 'data' => $i,
-            );
+            ];
         }, range(1, 10));
         $this->insertMultiple($this->old, 'fuga', $rows);
 
@@ -134,9 +135,9 @@ class TableScannerTest extends AbstractTestCase
     function getRecordFromPrimaryKeys_page()
     {
         $this->insertMultiple($this->old, 'hoge', array_map(function ($i) {
-            return array(
+            return [
                 'id' => $i
-            );
+            ];
         }, range(1, 10)));
 
         TableScanner::$pageCount = 4;
@@ -158,16 +159,16 @@ class TableScannerTest extends AbstractTestCase
         $method = 'buildWhere';
 
         $expected = "((`id`    = '1' AND `subid` = '1') OR (`id`    = '1' AND `subid` = '2'))";
-        $this->assertEquals($expected, $this->invoke($method, array(
-            array('id' => 1, 'subid' => 1),
-            array('id' => 1, 'subid' => 2),
-        )));
+        $this->assertEquals($expected, $this->invoke($method, [
+            ['id' => 1, 'subid' => 1],
+            ['id' => 1, 'subid' => 2],
+        ]));
 
         $expected = "(`id` IN ('1','2'))";
-        $this->assertEquals($expected, $this->invoke($method, array(
-            array('id' => 1),
-            array('id' => 2),
-        )));
+        $this->assertEquals($expected, $this->invoke($method, [
+            ['id' => 1],
+            ['id' => 2],
+        ]));
     }
 
     /**
@@ -175,26 +176,26 @@ class TableScannerTest extends AbstractTestCase
      */
     function fillDefaultValue()
     {
-        $con = DriverManager::getConnection(array('pdo' => new \PDO('sqlite::memory:')));
+        $con = DriverManager::getConnection(['pdo' => new \PDO('sqlite::memory:')]);
 
         $table = new Table('deftable',
-            array(
+            [
                 new Column('id', Type::getType('integer')),
-                new Column('havedef', Type::getType('integer'), array('default' => 9)),
-                new Column('nullable', Type::getType('integer'), array('notnull' => false)),
-            ),
-            array(new Index('PRIMARY', array('id'), true, true))
+                new Column('havedef', Type::getType('integer'), ['default' => 9]),
+                new Column('nullable', Type::getType('integer'), ['notnull' => false]),
+            ],
+            [new Index('PRIMARY', ['id'], true, true)]
         );
 
         $con->getSchemaManager()->dropAndCreateTable($table);
 
         $scanner = new TableScanner($con, $table, '1');
 
-        $this->assertEquals(array(
+        $this->assertEquals([
             'id'       => 0,
             'havedef'  => 9,
             'nullable' => null,
-        ), $scanner->fillDefaultValue(array()));
+        ], $scanner->fillDefaultValue([]));
     }
 
     /**
@@ -202,21 +203,21 @@ class TableScannerTest extends AbstractTestCase
      */
     function getInsertSql_no_mysql()
     {
-        $old = DriverManager::getConnection(array('pdo' => new \PDO('sqlite::memory:')));
-        $new = DriverManager::getConnection(array('pdo' => new \PDO('sqlite::memory:')));
+        $old = DriverManager::getConnection(['pdo' => new \PDO('sqlite::memory:')]);
+        $new = DriverManager::getConnection(['pdo' => new \PDO('sqlite::memory:')]);
 
         $table = new Table('hogetable',
-            array(new Column('id', Type::getType('integer'))),
-            array(new Index('PRIMARY', array('id'), true, true))
+            [new Column('id', Type::getType('integer'))],
+            [new Index('PRIMARY', ['id'], true, true)]
         );
 
         $old->getSchemaManager()->dropAndCreateTable($table);
         $new->getSchemaManager()->dropAndCreateTable($table);
 
-        $this->insertMultiple($new, 'hogetable', array(array('id' => 1)));
+        $this->insertMultiple($new, 'hogetable', [['id' => 1]]);
 
         $scanner = new TableScanner($old, $table, '1');
-        $inserts = $scanner->getInsertSql(array(array('id' => 1)), new TableScanner($new, $table, '1'));
+        $inserts = $scanner->getInsertSql([['id' => 1]], new TableScanner($new, $table, '1'));
 
         // sqlite no support INSERT SET syntax. Therefore VALUES (value)
         $this->assertContains('INSERT INTO "hogetable" ("id") VALUES', $inserts[0]);

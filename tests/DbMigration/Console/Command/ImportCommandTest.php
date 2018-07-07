@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use Doctrine\DBAL\Logging\DebugStack;
@@ -15,11 +16,11 @@ class ImportCommandTest extends AbstractTestCase
 
         $this->app->add(new ImportCommand());
 
-        $this->defaultArgs = array(
+        $this->defaultArgs = [
             '--format' => 'none',
             '-n'       => true,
-            'dstdsn' => $GLOBALS['old_db'],
-        );
+            'dstdsn'   => $GLOBALS['old_db'],
+        ];
     }
 
     /**
@@ -27,14 +28,14 @@ class ImportCommandTest extends AbstractTestCase
      */
     function run_()
     {
-        $result = $this->runApp(array(
-            '-v'     => true,
-            '-m'     => $this->getFile('migs'),
-            'files'  => array(
+        $result = $this->runApp([
+            '-v'    => true,
+            '-m'    => $this->getFile('migs'),
+            'files' => [
                 $this->getFile('table.sql'),
                 $this->getFile('data.sql'),
-            )
-        ));
+            ]
+        ]);
         $this->assertContains("importDDL", $result);
         $this->assertContains("importDML", $result);
         $this->assertContains("attachMigration", $result);
@@ -52,14 +53,14 @@ class ImportCommandTest extends AbstractTestCase
 
         /** @var ImportCommand $command */
         $command = $this->app->get('import');
-        $command->getQuestionHelper()->setInputStream($this->getEchoStream(array('n' => 100)));
-        $this->assertExceptionMessage("canceled", $this->runApp, array(
-            '-v'     => true,
-            'files'  => array(
+        $command->getQuestionHelper()->setInputStream($this->getEchoStream(['n' => 100]));
+        $this->assertExceptionMessage("canceled", $this->runApp, [
+            '-v'    => true,
+            'files' => [
                 $this->getFile('table.sql'),
                 $this->getFile('data.sql'),
-            )
-        ));
+            ]
+        ]);
     }
 
     /**
@@ -67,12 +68,12 @@ class ImportCommandTest extends AbstractTestCase
      */
     function run_rollback()
     {
-        $this->assertExceptionMessage("very invalid sql", $this->runApp, array(
-            '-v'     => true,
-            'files'  => array(
+        $this->assertExceptionMessage("very invalid sql", $this->runApp, [
+            '-v'    => true,
+            'files' => [
                 $this->getFile('table.sql'),
                 $this->getFile('invalid.sql'),
-            )
-        ));
+            ]
+        ]);
     }
 }

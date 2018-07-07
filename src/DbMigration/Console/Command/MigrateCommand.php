@@ -5,7 +5,6 @@ namespace ryunosuke\DbMigration\Console\Command;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Table;
-use ryunosuke\DbMigration\Console\CancelException;
 use ryunosuke\DbMigration\MigrationException;
 use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Migrator;

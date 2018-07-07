@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
@@ -39,52 +40,52 @@ class Transporter
     /**
      * @var array
      */
-    private $encodings = array();
+    private $encodings = [];
 
     /**
      * @var array
      */
-    private $directories = array(
+    private $directories = [
         'table' => null,
         'view'  => null,
-    );
+    ];
 
     /**
      * @var array
      */
-    private $ymlOptions = array(
+    private $ymlOptions = [
         'inline' => 4,
         'indent' => 4,
-    );
+    ];
 
     /**
      * @var array
      */
-    private $defaultColumnAttributes = array(
+    private $defaultColumnAttributes = [
         'length'           => null,
         'precision'        => 10,
         'scale'            => 0,
         'fixed'            => false,
         'autoincrement'    => false,
         'columnDefinition' => null,
-    );
+    ];
 
     /**
      * @var array
      */
-    private $defaultIndexAttributes = array(
+    private $defaultIndexAttributes = [
         'primary' => false,
-        'flag'    => array(),
-        'option'  => array(),
-    );
+        'flag'    => [],
+        'option'  => [],
+    ];
 
     /**
      * @var array
      */
-    private $ignoreColumnOptionAttributes = array(
+    private $ignoreColumnOptionAttributes = [
         // for ryunosuke/dbal
         'beforeColumn',
-    );
+    ];
 
     public function __construct(Connection $connection)
     {
@@ -118,13 +119,13 @@ class Transporter
         $this->ymlOptions[$option] = $value;
     }
 
-    public function exportDDL($filename, $includes = array(), $excludes = array())
+    public function exportDDL($filename, $includes = [], $excludes = [])
     {
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
 
         // SQL is special
         if ($ext === 'sql') {
-            $creates = $alters = $views = array();
+            $creates = $alters = $views = [];
             foreach ($this->schema->listTables() as $table) {
                 if (Migrator::filterTable($table->getName(), $includes, $excludes) > 0) {
                     continue;
@@ -146,11 +147,11 @@ class Transporter
         }
         else {
             // generate schema array
-            $schemaArray = array(
+            $schemaArray = [
                 'platform' => $this->platform->getName(),
-                'table'    => array(),
-                'view'     => array(),
-            );
+                'table'    => [],
+                'view'     => [],
+            ];
             foreach ($this->schema->listTables() as $table) {
                 if (Migrator::filterTable($table->getName(), $includes, $excludes) > 0) {
                     continue;
@@ -171,10 +172,10 @@ class Transporter
                     }
                     if ($this->directories['view']) {
                         $fname = $this->directories['view'] . '/' . $view->getName() . '.' . $ext;
-                        $varray = new Exportion(dirname($filename), $fname, array('sql' => $view->getSql()));
+                        $varray = new Exportion(dirname($filename), $fname, ['sql' => $view->getSql()]);
                     }
                     else {
-                        $varray = array('sql' => $view->getSql());
+                        $varray = ['sql' => $view->getSql()];
                     }
                     $schemaArray['view'][$view->getName()] = $varray;
                 }
@@ -215,20 +216,20 @@ class Transporter
                     $options = $this->ymlOptions;
                     if ($this->directories['table']) {
                         $schemaArray['table'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return Utility::yaml_emit($data, array('builtin' => true)); });
+                            return $exportion->setProvider(function ($data) { return Utility::yaml_emit($data, ['builtin' => true]); });
                         }, $schemaArray['table']);
                     }
                     if ($this->directories['view']) {
                         $schemaArray['view'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return Utility::yaml_emit($data, array('builtin' => true)); });
+                            return $exportion->setProvider(function ($data) { return Utility::yaml_emit($data, ['builtin' => true]); });
                         }, $schemaArray['view']);
                     }
                     if ($this->directories['table'] || $this->directories['view']) {
                         $options['callback']['ryunosuke\\DbMigration\\Exportion'] = function (Exportion $exportion) {
-                            return array(
+                            return [
                                 'tag'  => '!include',
                                 'data' => $exportion->export(),
-                            );
+                            ];
                         };
                     }
                     $content = Utility::yaml_emit($schemaArray, $options);
@@ -240,7 +241,7 @@ class Transporter
         return $content;
     }
 
-    public function exportDML($filename, $filterCondition = array(), $ignoreColumn = array())
+    public function exportDML($filename, $filterCondition = [], $ignoreColumn = [])
     {
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
 
@@ -257,7 +258,7 @@ class Transporter
                 throw new \DomainException("'$ext' is not supported.");
             case 'sql':
                 $qtable = Utility::quoteIdentifier($this->connection, $tablename);
-                $result = array();
+                $result = [];
                 foreach ($scanner->getAllRows() as $row) {
                     $row = $scanner->fillDefaultValue($row);
                     $columns = implode(', ', Utility::quoteIdentifier($this->connection, array_keys($row)));
@@ -271,14 +272,14 @@ class Transporter
                 if (file_exists($filename) && (require $filename) instanceof \Closure) {
                     return "'$filename' is skipped.";
                 }
-                $result = array();
+                $result = [];
                 foreach ($scanner->getAllRows() as $row) {
                     $result[] = Utility::var_export($scanner->fillDefaultValue($row), true);
                 }
                 $result = "<?php return array(\n" . implode(",\n", $result) . "\n);\n";
                 break;
             case 'json':
-                $result = array();
+                $result = [];
                 foreach ($scanner->getAllRows() as $row) {
                     $result[] = Utility::json_encode($scanner->fillDefaultValue($row));
                 }
@@ -288,9 +289,9 @@ class Transporter
             case 'yaml':
                 $option = $this->ymlOptions;
                 $option['inline'] = 999;
-                $result = array();
+                $result = [];
                 foreach ($scanner->getAllRows() as $row) {
-                    $result[] = Utility::yaml_emit(array($scanner->fillDefaultValue($row)), $option);
+                    $result[] = Utility::yaml_emit([$scanner->fillDefaultValue($row)], $option);
                 }
                 $result = implode("", $result);
                 break;
@@ -353,11 +354,11 @@ class Transporter
                 $options = $this->ymlOptions;
                 if ($this->directories['table'] || $this->directories['view']) {
                     $dirname = dirname($filename);
-                    $options['callback'] = array(
+                    $options['callback'] = [
                         '!include' => function ($value) use ($dirname) {
-                            return Utility::yaml_parse(file_get_contents("$dirname/$value"), array('builtin' => true));
+                            return Utility::yaml_parse(file_get_contents("$dirname/$value"), ['builtin' => true]);
                         },
-                    );
+                    ];
                 }
                 $schemaArray = Utility::yaml_parse(file_get_contents($filename), $options);
                 break;
@@ -369,7 +370,7 @@ class Transporter
             }
         }
 
-        $creates = $alters = $views = array();
+        $creates = $alters = $views = [];
         foreach ($schemaArray['table'] as $name => $tarray) {
             $table = $this->tableFromArray($name, $tarray);
             $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS);
@@ -427,8 +428,8 @@ class Transporter
                 $rows = Yaml::parse($contents);
                 break;
             case 'csv':
-                $rows = array();
-                $header = array();
+                $rows = [];
+                $header = [];
                 if (($handle = fopen($filename, "r")) !== false) {
                     while (($line = fgets($handle)) !== false) {
                         Utility::mb_convert_variables($to_encoding, $encoding, $line);
@@ -461,9 +462,9 @@ class Transporter
 
         if ($this->bulkmode) {
             $columns = array_keys(reset($rows));
-            $values = array();
+            $values = [];
             foreach ($rows as $row) {
-                $value = array();
+                $value = [];
                 foreach ($columns as $column) {
                     $value[] = Utility::quote($this->connection, $row[$column]);
                 }
@@ -484,17 +485,17 @@ class Transporter
     private function tableToArray(Table $table)
     {
         // entry keys
-        $entry = array(
-            'column'  => array(),
-            'index'   => array(),
-            'foreign' => array(),
+        $entry = [
+            'column'  => [],
+            'index'   => [],
+            'foreign' => [],
             'option'  => $table->getOptions(),
-        );
+        ];
 
         // add columns
         $ignoreColumnAttributes = array_flip($this->ignoreColumnOptionAttributes);
         foreach ($table->getColumns() as $column) {
-            $array = array(
+            $array = [
                 'type'                => $column->getType()->getName(),
                 'default'             => $column->getDefault(),
                 'notnull'             => $column->getNotnull(),
@@ -508,9 +509,9 @@ class Transporter
                 'comment'             => $column->getComment(),
                 'platformOptions'     => array_diff_key($column->getPlatformOptions(), $ignoreColumnAttributes),
                 'customSchemaOptions' => array_diff_key($column->getCustomSchemaOptions(), $ignoreColumnAttributes),
-            );
+            ];
             $array = Utility::array_diff_exists($array, $this->defaultColumnAttributes);
-            if (!in_array($array['type'], array('smallint', 'integer', 'bigint', 'decimal', 'float'), true)) {
+            if (!in_array($array['type'], ['smallint', 'integer', 'bigint', 'decimal', 'float'], true)) {
                 unset($array['unsigned']);
             }
             $entry['column'][$column->getName()] = $array;
@@ -526,13 +527,13 @@ class Transporter
             return strcmp($a->getName(), $b->getName());
         });
         foreach ($indexes as $index) {
-            $array = array(
+            $array = [
                 'column'  => $index->getColumns(),
                 'primary' => $index->isPrimary(),
                 'unique'  => $index->isUnique(),
                 'flag'    => $index->getFlags(),
                 'option'  => $index->getOptions(),
-            );
+            ];
             $array = Utility::array_diff_exists($array, $this->defaultIndexAttributes);
             $entry['index'][$index->getName()] = $array;
         }
@@ -543,11 +544,11 @@ class Transporter
             return strcmp($a->getName(), $b->getName());
         });
         foreach ($fkeys as $fkey) {
-            $entry['foreign'][$fkey->getName()] = array(
+            $entry['foreign'][$fkey->getName()] = [
                 'table'  => $fkey->getForeignTableName(),
                 'column' => array_combine($fkey->getLocalColumns(), $fkey->getForeignColumns()),
                 'option' => $fkey->getOptions(),
-            );
+            ];
         }
 
         return $entry;
@@ -556,7 +557,7 @@ class Transporter
     private function tableFromArray($name, array $array)
     {
         // base table
-        $table = new Table($name, array(), array(), array(), 0, $array['option']);
+        $table = new Table($name, [], [], [], 0, $array['option']);
 
         // add columns
         foreach ($array['column'] as $name => $column) {
@@ -572,7 +573,7 @@ class Transporter
             if ($index['primary']) {
                 $table->setPrimaryKey($index['column'], $name);
             }
-            else if ($index['unique']) {
+            elseif ($index['unique']) {
                 $table->addUniqueIndex($index['column'], $name, $index['option']);
             }
             else {
@@ -598,12 +599,12 @@ class Transporter
         /// this is used by display only, so very loose.
 
         $qv = Utility::quote($this->connection, 'v');
-        $quoted_chars = array(
+        $quoted_chars = [
             '"',
             "'",
             $qv[0],
             $this->connection->getDatabasePlatform()->getIdentifierQuoteCharacter(),
-        );
+        ];
 
         $delimiter = ';';
         $escaped_char = '\\';
@@ -616,7 +617,7 @@ class Transporter
         $escaping = false;
         $quotings = array_fill_keys($quoted_chars, false);
 
-        $result = array();
+        $result = [];
         foreach ($chars as $i => $c) {
             if ($c === $escaped_char) {
                 $escaping = true;

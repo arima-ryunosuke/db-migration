@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration;
 
 use Doctrine\DBAL\Connection;
@@ -62,7 +63,7 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
 
         $ref = new \ReflectionProperty('ryunosuke\\DbMigration\\Migrator', 'schemas');
         $ref->setAccessible(true);
-        $ref->setValue(array());
+        $ref->setValue([]);
 
         $unset = function ($array, $key) {
             unset($array[$key]);
@@ -109,7 +110,7 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
             return false;
         }
 
-        $dir = array_diff($dir, array('.', '..'));
+        $dir = array_diff($dir, ['.', '..']);
         foreach ($dir as $item) {
             if (!$this->rmdir_r($dir_path . '/' . $item)) {
                 return false;
@@ -143,9 +144,9 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
         foreach ($columns as $column) {
             $table->addColumn($column, $type);
         }
-        $table->setPrimaryKey(array(
+        $table->setPrimaryKey([
             reset($columns)
-        ));
+        ]);
         return $table;
     }
 
@@ -199,7 +200,7 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
                     return;
                 }
             }
-            self::assertContains($needle, array(), $message);
+            self::assertContains($needle, [], $message);
         }
         elseif (is_string($haystack)) {
             self::assertContains($needle, $haystack, $message);

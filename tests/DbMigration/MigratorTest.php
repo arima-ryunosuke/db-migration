@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration;
 
 use Doctrine\DBAL\Connection;
@@ -24,7 +25,7 @@ class MigratorTest extends AbstractTestCase
      * @param array $dmltypes
      * @return array
      */
-    private function getDML($old, $new, $table, $wheres = array(), $ignroes = array(), $dmltypes = array())
+    private function getDML($old, $new, $table, $wheres = [], $ignroes = [], $dmltypes = [])
     {
         return Migrator::getDML($old, $new, $table, (array) $wheres, (array) $ignroes, (array) $dmltypes);
     }
@@ -66,7 +67,7 @@ class MigratorTest extends AbstractTestCase
         $this->oldSchema->dropAndCreateTable($table);
         $this->newSchema->dropAndCreateTable($table);
 
-        $this->insertMultiple($this->old, 'foo', array(
+        $this->insertMultiple($this->old, 'foo', [
             '{"id":0,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":1,"c_int":2,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":2,"c_int":1,"c_float":2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
@@ -77,8 +78,8 @@ class MigratorTest extends AbstractTestCase
             '{"id":8,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":9,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":99,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-        ));
-        $this->insertMultiple($this->new, 'foo', array(
+        ]);
+        $this->insertMultiple($this->new, 'foo', [
             '{"id":-2,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":-1,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":0,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
@@ -89,7 +90,7 @@ class MigratorTest extends AbstractTestCase
             '{"id":5,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":6,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":99,"c_int":2,"c_float":1.4,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-        ));
+        ]);
     }
 
     /**
@@ -134,24 +135,24 @@ class MigratorTest extends AbstractTestCase
     function migrate_dml_ignore()
     {
         // c_int,c_float しか違いがないので無視すれば差分なしのはず
-        $dmls = $this->getDML($this->old, $this->new, 'foo', 'id = 99', array('c_int', 'c_float'));
+        $dmls = $this->getDML($this->old, $this->new, 'foo', 'id = 99', ['c_int', 'c_float']);
         $this->assertCount(0, $dmls);
 
         // 修飾してもテーブルが一致すれば同様のはず
-        $dmls = $this->getDML($this->old, $this->new, 'foo', 'id = 99', array('foo.c_int', 'foo.c_float'));
+        $dmls = $this->getDML($this->old, $this->new, 'foo', 'id = 99', ['foo.c_int', 'foo.c_float']);
         $this->assertCount(0, $dmls);
 
         // クォートできるはず
-        $dmls = $this->getDML($this->old, $this->new, 'foo', 'id = 99', array('`foo`.`c_int`', '`c_float`'));
+        $dmls = $this->getDML($this->old, $this->new, 'foo', 'id = 99', ['`foo`.`c_int`', '`c_float`']);
         $this->assertCount(0, $dmls);
 
         // テーブルが不一致なら普通に差分ありのはず
-        $dmls = $this->getDML($this->old, $this->new, 'foo', 'id = 99', array('bar.c_int', 'bar.c_float'));
+        $dmls = $this->getDML($this->old, $this->new, 'foo', 'id = 99', ['bar.c_int', 'bar.c_float']);
         $this->assertCount(1, $dmls);
 
         // INSERT には影響しないはず
         $dmls1 = $this->getDML($this->old, $this->new, 'foo', 'id = -1');
-        $dmls2 = $this->getDML($this->old, $this->new, 'foo', 'id = -1', array('c_int', 'c_float', 'c_varchar'));
+        $dmls2 = $this->getDML($this->old, $this->new, 'foo', 'id = -1', ['c_int', 'c_float', 'c_varchar']);
         $this->assertEquals($dmls1, $dmls2);
     }
 
@@ -161,7 +162,7 @@ class MigratorTest extends AbstractTestCase
     function migrate_dml_dmltypes()
     {
         // UPDATE は含まれないはず
-        $dmls = $this->getDML($this->old, $this->new, 'foo', array(), array(), array('update' => false));
+        $dmls = $this->getDML($this->old, $this->new, 'foo', [], [], ['update' => false]);
         $this->assertCount(4, $dmls);
     }
 

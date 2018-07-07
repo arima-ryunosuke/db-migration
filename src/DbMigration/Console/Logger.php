@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\DbMigration\Console;
 
 use Symfony\Component\Console\Input\InputInterface;
@@ -35,7 +36,7 @@ class Logger
         if (is_callable($message)) {
             $message = call_user_func_array($message, $args);
         }
-        else if ($args) {
+        elseif ($args) {
             $message = vsprintf($message, $args);
         }
 

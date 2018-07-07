@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use ryunosuke\DbMigration\Console\Command\AbstractCommand;
@@ -13,9 +14,9 @@ class AbstractCommandTest extends AbstractTestCase
     /** @var ConcreteCommand */
     private $command;
 
-    protected $defaultArgs = array(
+    protected $defaultArgs = [
         '-n' => true,
-    );
+    ];
 
     protected function setup()
     {
@@ -26,68 +27,68 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_choice()
     {
-        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $input = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
         // default integer
         $this->command->getQuestionHelper()->setInputStream($this->getEchoStream(' '));
-        $this->assertEquals(1, $this->command->choice('hoge', array('a', 'b', 'c'), 1));
+        $this->assertEquals(1, $this->command->choice('hoge', ['a', 'b', 'c'], 1));
         $this->assertEquals("hoge [a/B/c]:", $output->fetch());
 
         // default string
         $this->command->getQuestionHelper()->setInputStream($this->getEchoStream(' '));
-        $this->assertEquals(2, $this->command->choice('hoge', array('a', 'b', 'c'), 'c'));
+        $this->assertEquals(2, $this->command->choice('hoge', ['a', 'b', 'c'], 'c'));
         $this->assertEquals("hoge [a/b/C]:", $output->fetch());
 
         // select
         $this->command->getQuestionHelper()->setInputStream($this->getEchoStream('b'));
-        $this->assertEquals(1, $this->command->choice('hoge', array('a', 'b', 'c'), 0));
+        $this->assertEquals(1, $this->command->choice('hoge', ['a', 'b', 'c'], 0));
         $this->assertEquals("hoge [A/b/c]:", $output->fetch());
 
         // foward match
         $this->command->getQuestionHelper()->setInputStream($this->getEchoStream('cc'));
-        $this->assertEquals(2, $this->command->choice('hoge', array('aaa', 'bbb', 'cccc'), 0));
+        $this->assertEquals(2, $this->command->choice('hoge', ['aaa', 'bbb', 'cccc'], 0));
         $this->assertEquals("hoge [Aaa/bbb/cccc]:", $output->fetch());
     }
 
     function test_choice_exception()
     {
-        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $input = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
         // empty choises
         $this->assertException(new \InvalidArgumentException('empty'), function () {
-            $this->command->choice('hoge', array(''));
+            $this->command->choice('hoge', ['']);
         });
 
         // undefined default integer
         $this->assertException(new \InvalidArgumentException('is undefined'), function () {
-            $this->command->choice('hoge', array('a'), 1);
+            $this->command->choice('hoge', ['a'], 1);
         });
 
         // undefined default string
         $this->assertException(new \InvalidArgumentException('is undefined'), function () {
-            $this->command->choice('hoge', array('a'), 'b');
+            $this->command->choice('hoge', ['a'], 'b');
         });
 
         // ambiguous forward match
         $this->command->getQuestionHelper()->setInputStream($this->getEchoStream('aa'));
         $this->assertException(new \UnexpectedValueException('ambiguous'), function () {
-            $this->command->choice('hoge', array('aaA', 'aaB'));
+            $this->command->choice('hoge', ['aaA', 'aaB']);
         });
 
         // invalid answer
         $this->command->getQuestionHelper()->setInputStream($this->getEchoStream('c'));
         $this->assertException(new \UnexpectedValueException('invalid answer'), function () {
-            $this->command->choice('hoge', array('a', 'b'));
+            $this->command->choice('hoge', ['a', 'b']);
         });
     }
 
     function test_confirm()
     {
-        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $input = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -109,7 +110,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_parseDsn()
     {
-        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $input = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -133,7 +134,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_normalizeFile()
     {
-        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $input = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -143,7 +144,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_format()
     {
-        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $input = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -185,7 +186,7 @@ class ConcreteCommand extends AbstractCommand
         return parent::setInputOutput($input, $output);
     }
 
-    public function choice($message, $choices = array(), $default = 0)
+    public function choice($message, $choices = [], $default = 0)
     {
         return parent::choice($message, $choices, $default);
     }

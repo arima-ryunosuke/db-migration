@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration;
 
 use ryunosuke\DbMigration\Exportion;

@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use ryunosuke\DbMigration\Console\Command\ExportCommand;
@@ -13,16 +14,16 @@ class ExportCommandTest extends AbstractTestCase
 
         $this->oldSchema->dropAndCreateTable($this->createSimpleTable('gentable', 'integer', 'id', 'code'));
 
-        $this->old->insert('gentable', array(
+        $this->old->insert('gentable', [
             'id'   => 1,
             'code' => 10
-        ));
+        ]);
 
         $this->app->add(new ExportCommand());
 
-        $this->defaultArgs = array(
+        $this->defaultArgs = [
             'srcdsn' => $GLOBALS['old_db'],
-        );
+        ];
     }
 
     /**
@@ -33,11 +34,11 @@ class ExportCommandTest extends AbstractTestCase
         $createfile = self::$tmpdir . '/create.sql';
         !file_exists($createfile) or unlink($createfile);
 
-        $result = $this->runApp(array(
-            'files' => array(
+        $result = $this->runApp([
+            'files' => [
                 str_replace('\\', '/', $createfile),
-            )
-        ));
+            ]
+        ]);
 
         $this->assertEquals('', $result);
         $this->assertFileExists($createfile);
@@ -51,12 +52,12 @@ class ExportCommandTest extends AbstractTestCase
         $createfile = self::$tmpdir . '/create.sql';
         !file_exists($createfile) or unlink($createfile);
 
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '-vvv'  => true,
-            'files' => array(
+            'files' => [
                 str_replace('\\', '/', $createfile),
-            )
-        ));
+            ]
+        ]);
 
         $this->assertContains('CREATE TABLE gentable', $result);
         $this->assertFileExists($createfile);
@@ -67,12 +68,12 @@ class ExportCommandTest extends AbstractTestCase
      */
     function run_dml()
     {
-        $result = $this->runApp(array(
-            'files' => array(
+        $result = $this->runApp([
+            'files' => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
                 str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
-            )
-        ));
+            ]
+        ]);
 
         $this->assertEquals('', $result);
         $this->assertFileContains("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", self::$tmpdir . '/gentable.sql');
@@ -83,13 +84,13 @@ class ExportCommandTest extends AbstractTestCase
      */
     function run_dml_vvv()
     {
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '-vvv'  => true,
-            'files' => array(
+            'files' => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
                 str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
-            )
-        ));
+            ]
+        ]);
 
         $this->assertContains("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", $result);
         $this->assertFileContains("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", self::$tmpdir . '/gentable.sql');
@@ -100,13 +101,13 @@ class ExportCommandTest extends AbstractTestCase
      */
     function run_dml_where()
     {
-        $this->runApp(array(
+        $this->runApp([
             '--where' => 'gentable.id=-1',
-            'files'   => array(
+            'files'   => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
                 str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
-            )
-        ));
+            ]
+        ]);
 
         $this->assertStringEqualsFile(self::$tmpdir . '/gentable.sql', "\n");
     }
@@ -116,13 +117,13 @@ class ExportCommandTest extends AbstractTestCase
      */
     function run_dml_ignore()
     {
-        $this->runApp(array(
+        $this->runApp([
             '--ignore' => 'gentable.id',
-            'files'    => array(
+            'files'    => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
                 str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
-            )
-        ));
+            ]
+        ]);
 
         $this->assertFileContains("INSERT INTO `gentable` (`code`, `id`) VALUES ('10', '0')", self::$tmpdir . '/gentable.sql', "\n");
     }
@@ -132,12 +133,12 @@ class ExportCommandTest extends AbstractTestCase
      */
     function run_data()
     {
-        $result = $this->runApp(array(
+        $result = $this->runApp([
             '--migration' => 'gentable',
-            'files'       => array(
+            'files'       => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
-            )
-        ));
+            ]
+        ]);
 
         $this->assertEquals('', $result);
         $this->assertFileNotContains('gentable', self::$tmpdir . '/table.sql');
@@ -148,10 +149,10 @@ class ExportCommandTest extends AbstractTestCase
      */
     function run_notfile()
     {
-        $this->assertExceptionMessage('is directory', $this->runApp, array(
-            'files' => array(
+        $this->assertExceptionMessage('is directory', $this->runApp, [
+            'files' => [
                 $this->getFile(null)
-            )
-        ));
+            ]
+        ]);
     }
 }

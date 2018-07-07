@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration\Console;
 
 use ryunosuke\DbMigration\Console\Logger;
@@ -12,7 +13,7 @@ class LoggerTest extends AbstractTestCase
     public function test_level()
     {
         $output = new BufferedOutput();
-        $logger = new Logger(new ArrayInput(array()), $output);
+        $logger = new Logger(new ArrayInput([]), $output);
 
         $all = function (Logger $logger) {
             $logger->log('_log');
@@ -46,7 +47,7 @@ class LoggerTest extends AbstractTestCase
     public function test_write()
     {
         $output = new BufferedOutput();
-        $logger = new Logger(new ArrayInput(array()), $output);
+        $logger = new Logger(new ArrayInput([]), $output);
 
         $logger->log('string');
         $this->assertEquals("string", trim($output->fetch()));
@@ -54,14 +55,14 @@ class LoggerTest extends AbstractTestCase
         $logger->log('sprintf%04d%s', 123, 'string');
         $this->assertEquals("sprintf0123string", trim($output->fetch()));
 
-        $logger->log('json_encode', array(123, 's' => 'string'));
+        $logger->log('json_encode', [123, 's' => 'string']);
         $this->assertEquals('{"0":123,"s":"string"}', trim($output->fetch()));
     }
 
     public function test_return()
     {
         $output = new BufferedOutput();
-        $logger = new Logger(new ArrayInput(array()), $output);
+        $logger = new Logger(new ArrayInput([]), $output);
 
         $this->assertNull($logger->trace('hogera'));
         $this->assertEquals('hogera', $logger->log('hogera'));

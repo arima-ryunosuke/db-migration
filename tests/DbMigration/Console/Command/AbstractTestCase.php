@@ -15,7 +15,7 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
 
     protected $commandName;
 
-    protected $defaultArgs = array();
+    protected $defaultArgs = [];
 
     protected function setup()
     {
@@ -58,9 +58,9 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
      */
     protected function runApp($inputArray)
     {
-        $inputArray = array(
+        $inputArray = [
                 'command' => $this->commandName
-            ) + $inputArray + $this->defaultArgs;
+            ] + $inputArray + $this->defaultArgs;
 
         $input = new ArrayInput($inputArray);
         $output = new BufferedOutput();

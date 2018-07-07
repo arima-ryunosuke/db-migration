@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\DbMigration;
 
 class Exportion implements \JsonSerializable

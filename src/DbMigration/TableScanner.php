@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
@@ -67,7 +68,7 @@ class TableScanner
      * @param array $filterCondition
      * @param array $ignoreColumn
      */
-    public function __construct(Connection $conn, Table $table, $filterCondition, $ignoreColumn = array())
+    public function __construct(Connection $conn, Table $table, $filterCondition, $ignoreColumn = [])
     {
         if (!$table->hasPrimaryKey()) {
             throw new MigrationException("has no primary key.");
@@ -92,14 +93,14 @@ class TableScanner
         $this->filterCondition = $this->parseCondition($filterCondition, $ichar);
 
         // ignore columns
-        $this->ignoreColumns = array();
+        $this->ignoreColumns = [];
         foreach ($ignoreColumn as $icol) {
             $modifier = $table->getName();
             if (strpos($icol, '.') !== false) {
                 list($modifier, $icol) = explode('.', $icol);
             }
-            if (str_replace(array('`', '"', '[', ']'), '', $modifier) === $table->getName()) {
-                $this->ignoreColumns[str_replace(array('`', '"', '[', ']'), '', $icol)] = true;
+            if (str_replace(['`', '"', '[', ']'], '', $modifier) === $table->getName()) {
+                $this->ignoreColumns[str_replace(['`', '"', '[', ']'], '', $icol)] = true;
             }
         }
     }
@@ -157,7 +158,7 @@ class TableScanner
      */
     public function getDeleteSql(array $tuples, TableScanner $that)
     {
-        $sqls = array();
+        $sqls = [];
         for ($page = 0; true; $page++) {
             $oldrows = $that->getRecordFromPrimaryKeys($tuples, true, $page);
 
@@ -194,7 +195,7 @@ class TableScanner
     public function getInsertSql(array $tuples, TableScanner $that)
     {
         $isMysql = $this->conn->getDatabasePlatform() instanceof MySqlPlatform;
-        $sqls = array();
+        $sqls = [];
         $columnString = implode(', ', Utility::quoteIdentifier($this->conn, array_keys($this->columns)));
         for ($page = 0; true; $page++) {
             $newrows = $that->getRecordFromPrimaryKeys($tuples, false, $page);
@@ -236,7 +237,7 @@ class TableScanner
      */
     public function getUpdateSql(array $tuples, TableScanner $that)
     {
-        $sqls = array();
+        $sqls = [];
         for ($page = 0; true; $page++) {
             $oldrows = $this->getRecordFromPrimaryKeys($tuples, true, $page);
             $newrows = $that->getRecordFromPrimaryKeys($tuples, true, $page);
@@ -288,7 +289,7 @@ class TableScanner
             ORDER BY {$this->primaryKeyString}
         ";
 
-        $result = array();
+        $result = [];
         foreach ($this->conn->query($sql) as $row) {
             $id = implode("\t", $row);
             $result[$id] = $row;
@@ -324,7 +325,7 @@ class TableScanner
                 if ($column->getDefault() !== null) {
                     $row[$name] = $column->getDefault();
                 }
-                else if (!$column->getNotnull()) {
+                elseif (!$column->getNotnull()) {
                     $row[$name] = null;
                 }
                 else {
@@ -369,10 +370,10 @@ class TableScanner
         $identifier = "$icharactor?([_a-z][_a-z0-9]*)$icharactor?";
         $tableName = $this->table->getName();
 
-        $wheres = array();
+        $wheres = [];
         foreach ((array) $conds as $cond) {
             if (preg_match_all("/($identifier\\.)?$identifier/i", $cond, $matches)) {
-                $result = array();
+                $result = [];
                 foreach ($matches[0] as $i => $dummy) {
                     $key = $matches[2][$i];
                     $val = $matches[3][$i];
@@ -461,13 +462,13 @@ class TableScanner
             if (count($first) === 1) {
                 reset($first);
                 $column = key($first);
-                $values = array();
+                $values = [];
                 foreach ($whereArray as $where) {
                     $values[] = $this->conn->quote($where[$column]);
                 }
                 return '(' . $this->conn->quoteIdentifier($column) . ' IN (' . implode(',', $values) . '))';
             }
-            $or = array();
+            $or = [];
             foreach ($whereArray as $values) {
                 $or[] = $this->buildWhere($values);
             }

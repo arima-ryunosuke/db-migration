@@ -92,9 +92,9 @@ abstract class AbstractCommand extends Command
         unset($params['url']);
 
         if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
-            $params += array(
+            $params += [
                 'user' => (posix_getpwuid(posix_geteuid())['name']),
-            );
+            ];
         }
 
         return $params;
