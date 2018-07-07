@@ -64,15 +64,28 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
         $ref->setAccessible(true);
         $ref->setValue(array());
 
+        $unset = function ($array, $key) {
+            unset($array[$key]);
+            return $array;
+        };
+
+        $oldParams = $this->parseDsn($GLOBALS['old_db']);
+        $newParams = $this->parseDsn($GLOBALS['new_db']);
+        $oldDbname = $oldParams['dbname'];
+        $newDbname = $newParams['dbname'];
+
         // drop schema
-        $this->connection = $this->getConnection('old', '');
-        $schema = $this->connection->getSchemaManager();
-        $schema->dropAndCreateDatabase($GLOBALS['old_db_name']);
-        $schema->dropAndCreateDatabase($GLOBALS['new_db_name']);
+        $c = DriverManager::getConnection($unset($oldParams, 'dbname'));
+        $c->getSchemaManager()->dropAndCreateDatabase($oldDbname);
+        $c->close();
+        $c = DriverManager::getConnection($unset($newParams, 'dbname'));
+        $c->getSchemaManager()->dropAndCreateDatabase($newDbname);
+        $c->close();
 
         // get connection
-        $this->old = $this->getConnection('old');
-        $this->new = $this->getConnection('new');
+        $this->connection = DriverManager::getConnection($unset($oldParams, 'dbname'));
+        $this->old = DriverManager::getConnection($oldParams);
+        $this->new = DriverManager::getConnection($newParams);
 
         // get schema
         $this->oldSchema = $this->old->getSchemaManager();
@@ -114,31 +127,13 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
         $this->new->close();
     }
 
-    public function getConnection($prefix, $dbname = null)
+    public function parseDsn($dsn)
     {
-        $g_keys = array(
-            'type'     => "{$prefix}_db_type",
-            'host'     => "{$prefix}_db_host",
-            'port'     => "{$prefix}_db_port",
-            'name'     => "{$prefix}_db_name",
-            'username' => "{$prefix}_db_username",
-            'password' => "{$prefix}_db_password"
-        );
-
-        $params = array(
-            'driver'   => $GLOBALS[$g_keys['type']],
-            'host'     => $GLOBALS[$g_keys['host']],
-            'port'     => $GLOBALS[$g_keys['port']],
-            'dbname'   => $GLOBALS[$g_keys['name']],
-            'user'     => $GLOBALS[$g_keys['username']],
-            'password' => $GLOBALS[$g_keys['password']]
-        );
-
-        if ($dbname !== null) {
-            $params['dbname'] = $dbname;
-        }
-
-        return DriverManager::getConnection($params);
+        $parseDatabaseUrl = new \ReflectionMethod('\\Doctrine\\DBAL\\DriverManager', 'parseDatabaseUrl');
+        $parseDatabaseUrl->setAccessible(true);
+        $params = $parseDatabaseUrl->invoke(null, ['url' => $dsn]);
+        unset($params['url']);
+        return $params;
     }
 
     public function createSimpleTable($name, $type)

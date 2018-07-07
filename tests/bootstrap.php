@@ -12,6 +12,20 @@ if (!defined('YAML_LN_BREAK')) {
     define('YAML_LN_BREAK', 2);
 }
 
+if (!function_exists('posix_geteuid')) {
+    function posix_geteuid()
+    {
+        return 999;
+    }
+}
+
+if (!function_exists('posix_getpwuid')) {
+    function posix_getpwuid($uid)
+    {
+        return ['name' => $uid === 999 ? 'dummyuser' : 'unknownuser'];
+    }
+}
+
 if (!function_exists('yaml_parse')) {
     function yaml_parse($input, $pos, &$ndocs, $callbacks)
     {
