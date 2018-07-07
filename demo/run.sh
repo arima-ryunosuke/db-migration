@@ -7,16 +7,17 @@ function techo {
 }
 
 techo "import current database definitation. (imitate running database)"
-vendor/bin/doctrine-dbal dbal:migrate demo/current/* --init
+php dbmigration.phar import mysql://127.0.0.1/demo_migration demo/current/* -n -v
 
-techo "generate current database definitation and records. (as sql)"
-vendor/bin/doctrine-dbal dbal:generate /tmp/schema.sql /tmp/RecordTable.sql -m migration -v
+techo "export current database definitation and records. (as sql)"
+php dbmigration.phar export mysql://127.0.0.1/demo_migration /tmp/schema.sql /tmp/RecordTable.sql -m demo/migration -v
 
-techo "generate current database definitation and records. (as yml)"
-vendor/bin/doctrine-dbal dbal:generate /tmp/schema.yml /tmp/RecordTable.yml -m migration -v
+techo "export current database definitation and records. (as yml)"
+php dbmigration.phar export mysql://127.0.0.1/demo_migration /tmp/schema.yml /tmp/RecordTable.yml -m demo/migration -v
 
-techo "migrate latest database definitation. (exe no-interaction)"
-vendor/bin/doctrine-dbal dbal:migrate demo/latest/* --no-interaction -m demo/migration -v -k
+techo "migrate latest database definitation. (no-interaction)"
+php dbmigration.phar import mysql://127.0.0.1/demo_latest demo/latest/* -m demo/migration -n -v
+php dbmigration.phar migrate mysql://127.0.0.1/demo_migration mysql://127.0.0.1/demo_latest -m demo/migration -n -v
 
 techo "confirm no diff"
-vendor/bin/doctrine-dbal dbal:migrate demo/latest/* -m migration --check
+php dbmigration.phar migrate mysql://127.0.0.1/demo_migration mysql://127.0.0.1/demo_latest -m demo/migration --check
