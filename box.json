@@ -1,0 +1,32 @@
+{
+  "compression": "GZ",
+  "chmod": "0755",
+  "files": [
+    "vendor/autoload.php"
+  ],
+  "finder": [
+    {
+      "name": "*.php",
+      "exclude": [
+        "Examples",
+        "tests",
+        "Test",
+        "unitTests"
+      ],
+      "in": [
+        "src",
+        "vendor/composer",
+        "vendor/doctrine",
+        "vendor/jdorn",
+        "vendor/psr",
+        "vendor/symfony/console",
+        "vendor/symfony/debug",
+        "vendor/symfony/polyfill-mbstring",
+        "vendor/symfony/yaml"
+      ]
+    }
+  ],
+  "main": "bin/dbmigration",
+  "output": "dbmigration.phar",
+  "stub": true
+}
