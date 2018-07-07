@@ -1,4 +1,5 @@
 <?php
+
 namespace ryunosuke\DbMigration\Console\Command;
 
 use ryunosuke\DbMigration\Console\Logger;
@@ -34,7 +35,7 @@ abstract class AbstractCommand extends Command
         $this->logger = new Logger($input, $output);
     }
 
-    protected function choice($message, $choices = array(), $default = 0)
+    protected function choice($message, $choices = [], $default = 0)
     {
         // filter and check $choices
         $choices = array_filter((array) $choices, 'strlen');
@@ -80,6 +81,67 @@ abstract class AbstractCommand extends Command
 
     protected function confirm($message, $default = true)
     {
-        return $this->choice($message, array('y', 'n'), $default ? 0 : 1) === 0;
+        return $this->choice($message, ['y', 'n'], $default ? 0 : 1) === 0;
+    }
+
+    protected function parseDsn($dsn)
+    {
+        $parseDatabaseUrl = new \ReflectionMethod('\\Doctrine\\DBAL\\DriverManager', 'parseDatabaseUrl');
+        $parseDatabaseUrl->setAccessible(true);
+        $params = $parseDatabaseUrl->invoke(null, ['url' => $dsn]);
+        unset($params['url']);
+
+        if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
+            $params += array(
+                'user' => (posix_getpwuid(posix_geteuid())['name']),
+            );
+        }
+
+        return $params;
+    }
+
+    protected function normalizeFile($files)
+    {
+        $result = [];
+        foreach ($files as $file) {
+            $filePath = realpath($file);
+
+            if (false === $filePath) {
+                $filePath = $file;
+            }
+
+            if (is_dir($filePath)) {
+                throw new \InvalidArgumentException(sprintf("'<info>%s</info>' is directory.", $filePath));
+            }
+
+            $result[] = $filePath;
+        }
+        return $result;
+    }
+
+    public function formatSql($sql)
+    {
+        $sql .= ';';
+        switch ($this->input->getOption('format')) {
+            case 'pretty':
+                $sql = \SqlFormatter::format($sql, true);
+                break;
+            case 'format':
+                $sql = \SqlFormatter::format($sql, false);
+                break;
+            case 'highlight':
+                $sql = \SqlFormatter::highlight($sql);
+                break;
+            case 'compress':
+                $sql = \SqlFormatter::compress($sql);
+                break;
+        }
+
+        $omitlength = intval($this->input->getOption('omit')) ?: 65535;
+        if (mb_strlen($sql) > $omitlength) {
+            $sql = mb_strimwidth($sql, 0, $omitlength, "\n...(omitted)");
+        }
+
+        return $sql;
     }
 }

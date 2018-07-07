@@ -1,9 +1,8 @@
 <?php
+
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
-use Doctrine\DBAL\Tools\Console\Helper\ConnectionHelper;
 use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Helper\HelperSet;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 
@@ -22,14 +21,9 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
     {
         parent::setUp();
 
-        $helperSet = new HelperSet(array(
-            'db' => new ConnectionHelper($this->old)
-        ));
-
         $this->app = new Application('Test');
         $this->app->setCatchExceptions(false);
         $this->app->setAutoExit(false);
-        $this->app->setHelperSet($helperSet);
     }
 
     protected function getFile($filename)
@@ -65,7 +59,7 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
     protected function runApp($inputArray)
     {
         $inputArray = array(
-                'command' => 'dbal:' . $this->commandName
+                'command' => $this->commandName
             ) + $inputArray + $this->defaultArgs;
 
         $input = new ArrayInput($inputArray);

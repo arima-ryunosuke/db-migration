@@ -1,11 +1,11 @@
 <?php
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
-use ryunosuke\DbMigration\Console\Command\GenerateCommand;
+use ryunosuke\DbMigration\Console\Command\ExportCommand;
 
-class GenerateCommandTest extends AbstractTestCase
+class ExportCommandTest extends AbstractTestCase
 {
-    protected $commandName = 'generate';
+    protected $commandName = 'export';
 
     protected function setup()
     {
@@ -18,9 +18,11 @@ class GenerateCommandTest extends AbstractTestCase
             'code' => 10
         ));
 
-        $command = new GenerateCommand();
+        $this->app->add(new ExportCommand());
 
-        $this->app->add($command);
+        $this->defaultArgs = array(
+            'srcdsn' => $GLOBALS['old_db'],
+        );
     }
 
     /**

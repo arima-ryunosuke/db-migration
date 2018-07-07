@@ -4,6 +4,7 @@ namespace ryunosuke\Test\DbMigration\Console\Command;
 use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -25,7 +26,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_choice()
     {
-        $input = new ArrayInput(array());
+        $input = new ArrayInput(array(), $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -52,7 +53,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_choice_exception()
     {
-        $input = new ArrayInput(array());
+        $input = new ArrayInput(array(), $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -86,7 +87,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_confirm()
     {
-        $input = new ArrayInput(array());
+        $input = new ArrayInput(array(), $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -105,10 +106,80 @@ class AbstractCommandTest extends AbstractTestCase
         $this->assertTrue($this->command->confirm('hoge', false));
         $this->assertEquals("hoge [y/N]:", $output->fetch());
     }
+
+    function test_parseDsn()
+    {
+        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $output = new BufferedOutput();
+        $this->command->setInputOutput($input, $output);
+
+        $this->assertEquals([
+            'driver'   => 'pdo_mysql',
+            'host'     => 'hostname',
+            'port'     => '3306',
+            'user'     => 'user',
+            'password' => 'pass',
+            'dbname'   => 'dbname',
+            'charset'  => 'utf8',
+        ], $this->command->parseDsn('mysql://user:pass@hostname:3306/dbname?charset=utf8'));
+
+        $this->assertEquals([
+            'driver' => 'pdo_sqlite',
+            'host'   => 'hostname',
+            'user'   => (posix_getpwuid(posix_geteuid())['name']),
+            'path'   => 'dbname',
+        ], $this->command->parseDsn('sqlite://hostname/dbname'));
+    }
+
+    function test_normalizeFile()
+    {
+        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $output = new BufferedOutput();
+        $this->command->setInputOutput($input, $output);
+
+        $this->assertEquals([__FILE__, 'hoge'], $this->command->normalizeFile([__FILE__, 'hoge']));
+        $this->assertExceptionMessage('is directory', function () { $this->command->normalizeFile([__DIR__]); });
+    }
+
+    function test_format()
+    {
+        $input = new ArrayInput(array(), $this->command->getDefinition());
+        $output = new BufferedOutput();
+        $this->command->setInputOutput($input, $output);
+
+        $input->setOption('format', '');
+        $this->assertEquals('SELECT hoge FROM tablename;', $this->command->formatSql('SELECT hoge FROM tablename'));
+
+        $input->setOption('format', 'compress');
+        $this->assertContains('SELECT hoge FROM tablename;', $this->command->formatSql('SELECT   hoge FROM    tablename'));
+
+        $input->setOption('format', 'pretty');
+        $this->assertContains("[0m", $this->command->formatSql('SELECT hoge FROM tablename'));
+        $this->assertContains("\n", $this->command->formatSql('SELECT hoge FROM tablename'));
+
+        $input->setOption('format', 'format');
+        $this->assertContains("\n", $this->command->formatSql('SELECT hoge FROM tablename'));
+
+        $input->setOption('format', 'highlight');
+        $this->assertContains("[0m", $this->command->formatSql('SELECT hoge FROM tablename'));
+
+        $input->setOption('omit', '24');
+        $input->setOption('format', '');
+        $this->assertEquals("SELECT hoge\n...(omitted)", $this->command->formatSql('SELECT hoge FROM tablename'));
+    }
 }
 
 class ConcreteCommand extends AbstractCommand
 {
+    protected function configure()
+    {
+        $this->setName('concrete');
+        $this->setDefinition([
+            new InputOption('format', null, InputOption::VALUE_OPTIONAL),
+            new InputOption('omit', null, InputOption::VALUE_REQUIRED),
+        ]);
+    }
+
     public function setInputOutput(InputInterface $input, OutputInterface $output)
     {
         return parent::setInputOutput($input, $output);
@@ -122,5 +193,20 @@ class ConcreteCommand extends AbstractCommand
     public function confirm($message, $default = true)
     {
         return parent::confirm($message, $default);
+    }
+
+    public function parseDsn($dsn)
+    {
+        return parent::parseDsn($dsn);
+    }
+
+    public function normalizeFile($files)
+    {
+        return parent::normalizeFile($files);
+    }
+
+    public function formatSql($sql)
+    {
+        return parent::formatSql($sql);
     }
 }
