@@ -164,7 +164,7 @@ class MigrateCommandTest extends AbstractTestCase
 
         /** @var MigrateCommand $command */
         $command = $this->app->get('migrate');
-        $command->getQuestionHelper()->setInputStream($this->getEchoStream('y', ['n' => 3], 'y'));
+        $command->getHelper('question')->setInputStream($this->getEchoStream('y', ['n' => 3], 'y'));
 
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
@@ -175,7 +175,7 @@ class MigrateCommandTest extends AbstractTestCase
 
         /** @var MigrateCommand $command */
         $command = $this->app->get('migrate');
-        $command->getQuestionHelper()->setInputStream($this->getEchoStream(['p' => 3], 'y'));
+        $command->getHelper('question')->setInputStream($this->getEchoStream(['p' => 3], 'y'));
 
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
@@ -412,7 +412,7 @@ return [
 
         /** @var MigrateCommand $command */
         $command = $this->app->get('migrate');
-        $command->getQuestionHelper()->setInputStream($this->getEchoStream(['y' => 100]));
+        $command->getHelper('question')->setInputStream($this->getEchoStream(['y' => 100]));
 
         $result = $this->runApp([]);
 

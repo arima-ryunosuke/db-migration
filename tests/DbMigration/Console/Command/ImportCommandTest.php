@@ -2,8 +2,6 @@
 
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
-use Doctrine\DBAL\Logging\DebugStack;
-use Doctrine\DBAL\Schema\View;
 use ryunosuke\DbMigration\Console\Command\ImportCommand;
 
 class ImportCommandTest extends AbstractTestCase
@@ -53,7 +51,7 @@ class ImportCommandTest extends AbstractTestCase
 
         /** @var ImportCommand $command */
         $command = $this->app->get('import');
-        $command->getQuestionHelper()->setInputStream($this->getEchoStream(['n' => 100]));
+        $command->getHelper('question')->setInputStream($this->getEchoStream(['n' => 100]));
         $this->assertExceptionMessage("canceled", $this->runApp, [
             '-v'    => true,
             'files' => [

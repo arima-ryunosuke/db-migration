@@ -4,16 +4,12 @@ namespace ryunosuke\DbMigration\Console\Command;
 
 use ryunosuke\DbMigration\Console\Logger;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 
 abstract class AbstractCommand extends Command
 {
-    /** @var QuestionHelper */
-    private $questionHelper;
-
     /** @var InputInterface */
     protected $input;
 
@@ -22,11 +18,6 @@ abstract class AbstractCommand extends Command
 
     /** @var Logger */
     protected $logger;
-
-    public function getQuestionHelper()
-    {
-        return $this->questionHelper ?: $this->questionHelper = new QuestionHelper();
-    }
 
     protected function setInputOutput(InputInterface $input, OutputInterface $output)
     {
@@ -61,7 +52,7 @@ abstract class AbstractCommand extends Command
         // question
         $selection = implode('/', $choices);
         $question = new Question("<question>{$message} [{$selection}]:</question>", $default);
-        $answer = $this->getQuestionHelper()->ask($this->input, $this->output, $question);
+        $answer = $this->getHelper('question')->ask($this->input, $this->output, $question);
 
         // return answer index
         $return = null;
