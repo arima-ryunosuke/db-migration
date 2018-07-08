@@ -1,6 +1,9 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
+// force interactive (Application::configureIO)
+putenv('SHELL_INTERACTIVE=1');
+
 if (DIRECTORY_SEPARATOR === '\\') {
     setlocale(LC_CTYPE, 'C');
 }
