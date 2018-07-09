@@ -50,14 +50,14 @@ EOT
         $files = $this->normalizeFile($this->input->getArgument('files'));
 
         // get target Connection
-        $params = $this->parseDsn($this->input->getArgument('dstdsn'));
+        $dstdsn = $this->input->getArgument('dstdsn');
+        $params = $this->parseDsn($dstdsn);
         $dbname = $params['dbname'] ?? md5(implode('', array_map('filemtime', $files)));
         unset($params['dbname']);
         DriverManager::getConnection($params)->getSchemaManager()->dropAndCreateDatabase($dbname);
         $params['dbname'] = $dbname;
         $conn = DriverManager::getConnection($params);
 
-        $dstdsn = @sprintf("%s://%s:%s/%s", $params['driver'], $params['host'], $params['port'], $params['dbname']);
         if (!$this->confirm("recreate <error>$dstdsn</error> really?", true)) {
             throw new CancelException('canceled.');
         }

@@ -88,6 +88,12 @@ abstract class AbstractCommand extends Command
             ];
         }
 
+        if (isset($params['password']) && $params['password'] === '') {
+            $question = new Question("<question>input password of $dsn: </question>");
+            $question->setHidden(getenv('SHELL_INTERACTIVE') === false); // for test
+            $params['password'] = $this->getHelper('question')->ask($this->input, $this->output, $question);
+        }
+
         return $params;
     }
 

@@ -132,6 +132,15 @@ class AbstractCommandTest extends AbstractTestCase
             'user'   => (posix_getpwuid(posix_geteuid())['name']),
             'path'   => 'dbname',
         ], $this->command->parseDsn('sqlite://hostname/dbname'));
+
+        $this->command->getHelper('question')->setInputStream($this->getEchoStream('this_is_password'));
+        $this->assertEquals([
+            'driver'   => 'pdo_sqlite',
+            'host'     => 'hostname',
+            'user'     => 'user',
+            'password' => 'this_is_password',
+            'path'     => 'dbname',
+        ], $this->command->parseDsn('sqlite://user:@hostname/dbname'));
     }
 
     function test_normalizeFile()
