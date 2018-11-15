@@ -20,6 +20,10 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.2
+
+- [feature] migration の affected rows を表示するように変更
+
 ## 2.0.1
 
 - [feature] パスワード入力プロンプトに対応
