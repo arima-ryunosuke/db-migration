@@ -36,10 +36,10 @@ class MigrationTableTest extends AbstractTestCase
         $migrationTable->drop();
         $migrationTable->create();
 
-        $migrationTable->apply('1.sql', 'insert into ttt values("from sql")');
-        $migrationTable->apply('2.php', '<?php return "insert into ttt values(\"from php(return)\")";');
-        $migrationTable->apply('3.php', '<?php $connection->insert("ttt", array("name" => "from php(code)"));');
-        $migrationTable->apply('4.php', '<?php return function($connection){$connection->insert("ttt", array("name" => "from php(mixed code)"));return "insert into ttt values(\"from php(mixed closure)\")";};');
+        $this->assertEquals(1, $migrationTable->apply('1.sql', 'insert into ttt values("from sql")'));
+        $this->assertEquals(1, $migrationTable->apply('2.php', '<?php return "insert into ttt values(\"from php(return)\")";'));
+        $this->assertEquals(0, $migrationTable->apply('3.php', '<?php $connection->insert("ttt", array("name" => "from php(code)"));'));
+        $this->assertEquals(1, $migrationTable->apply('4.php', '<?php return function($connection){$connection->insert("ttt", array("name" => "from php(mixed code)"));return "insert into ttt values(\"from php(mixed closure)\")";};'));
 
         // attached
         $this->assertEquals(array('1.sql', '2.php', '3.php', '4.php'), array_keys($migrationTable->fetch()));
@@ -52,6 +52,9 @@ class MigrationTableTest extends AbstractTestCase
             ['name' => 'from php(return)'],
             ['name' => 'from sql'],
         ), $this->old->fetchAll('select * from ttt'));
+
+        $this->assertEquals(5, $migrationTable->apply('11.sql', 'update ttt set name = concat(name, " suffix")'));
+        $this->assertEquals(4, $migrationTable->apply('12.sql', 'delete from ttt where name <> "from sql suffix"'));
 
         // throws
         $this->setExpectedException('\InvalidArgumentException');

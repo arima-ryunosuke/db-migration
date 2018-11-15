@@ -573,7 +573,8 @@ EOT
                 $srcConn->beginTransaction();
 
                 try {
-                    $migrationTable->apply($version, $sql);
+                    $affected = $migrationTable->apply($version, $sql);
+                    $this->logger->log("-- <comment>Affected rows: $affected</comment>");
 
                     $srcConn->commit();
                 }
