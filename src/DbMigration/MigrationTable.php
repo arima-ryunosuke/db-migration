@@ -70,13 +70,14 @@ class MigrationTable
 
     public function apply($version, $content)
     {
+        $affected = 0;
         $ext = pathinfo($version, PATHINFO_EXTENSION);
         switch ($ext) {
             default:
                 throw new \InvalidArgumentException("'$ext' is not supported.");
 
             case 'sql':
-                $this->connection->exec($content);
+                $affected += $this->connection->exec($content);
                 break;
             case 'php':
                 $connection = $this->connection;
@@ -86,12 +87,13 @@ class MigrationTable
                 }
                 foreach ((array) $return as $sql) {
                     if ($sql) {
-                        $this->connection->exec($sql);
+                        $affected += $this->connection->exec($sql);
                     }
                 }
                 break;
         }
         $this->attach($version);
+        return $affected;
     }
 
     public function attach($version)
