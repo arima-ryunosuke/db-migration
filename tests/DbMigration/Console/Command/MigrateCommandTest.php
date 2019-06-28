@@ -235,6 +235,32 @@ class MigrateCommandTest extends AbstractTestCase
     /**
      * @test
      */
+    function run_trigger()
+    {
+        $this->old->exec('CREATE TRIGGER trg_remove BEFORE INSERT ON migtable FOR EACH ROW DELETE FROM migtable');
+        $this->old->exec('CREATE TRIGGER trg_change BEFORE UPDATE ON migtable FOR EACH ROW DELETE FROM migtable');
+        $this->new->exec(file_get_contents($this->getFile('table.sql')));
+        $this->new->exec('CREATE TRIGGER trg_create AFTER UPDATE ON migtable FOR EACH ROW DELETE FROM migtable');
+        $this->new->exec('CREATE TRIGGER trg_change AFTER UPDATE ON migtable FOR EACH ROW
+BEGIN
+  INSERT INTO migtable VALUES();
+  DELETE FROM migtable;
+END');
+
+        $result = $this->runApp([
+            '-v'       => true,
+        ]);
+
+        $this->assertContains('CREATE TRIGGER trg_create AFTER UPDATE', $result);
+        $this->assertContains('DROP TRIGGER trg_change', $result);
+        $this->assertContains('CREATE TRIGGER trg_change AFTER UPDATE', $result);
+        $this->assertContains('DROP TRIGGER trg_remove', $result);
+        $this->assertNotContains('CREATE TRIGGER trg_remove', $result);
+    }
+
+    /**
+     * @test
+     */
     function run_view()
     {
         $result = $this->runApp([

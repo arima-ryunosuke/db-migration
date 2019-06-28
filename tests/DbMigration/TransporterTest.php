@@ -57,6 +57,19 @@ class TransporterTest extends AbstractTestCase
         }
         $this->oldSchema->dropAndCreateTable($table);
 
+        $table = new Table('zzz');
+        $table->addColumn('id', 'integer');
+        $table->setPrimaryKey(['id']);
+        $table->addTrigger('trg1', 'INSERT INTO hoge VALUES()', [
+            'Timing' => 'BEFORE',
+            'Event'  => 'UPDATE',
+        ]);
+        $table->addTrigger('trg2', 'INSERT INTO hoge VALUES()', [
+            'Timing' => 'AFTER',
+            'Event'  => 'DELETE',
+        ]);
+        $this->oldSchema->dropAndCreateTable($table);
+
         $view = new View('vvview', 'select * from hoge');
         $this->oldSchema->dropAndCreateView($view);
 
@@ -113,6 +126,11 @@ class TransporterTest extends AbstractTestCase
         $this->assertEquals($php, $json);
         $this->assertEquals($json, $yaml);
         $this->assertEquals($yaml, $php);
+
+        $this->assertArrayHasKey('table', $php);
+        $this->assertArrayHasKey('zzz', $php['table']);
+        $this->assertArrayHasKey('trigger', $php['table']['zzz']);
+        $this->assertArrayHasKey('trg1', $php['table']['zzz']['trigger']);
 
         $this->assertException(new \DomainException("is not supported"), function () {
             $this->transporter->exportDDL(self::$tmpdir . '/table.ext');
@@ -249,6 +267,7 @@ class TransporterTest extends AbstractTestCase
             $this->transporter->importDDL(self::$tmpdir . "/table.$ext");
             $this->assertTrue($this->oldSchema->tablesExist('hoge'));
             $this->assertTrue($this->oldSchema->tablesExist('fuga'));
+            $this->assertEquals(['trg1', 'trg2'], array_keys($this->oldSchema->listTableDetails('zzz')->getTriggers()));
             $this->assertEquals(['vvview'], array_keys($this->oldSchema->listViews()));
         }
 
@@ -525,6 +544,7 @@ class TransporterTest extends AbstractTestCase
         'fuga'   => include 'table/fuga.php',
         'hoge'   => include 'table/hoge.php',
         'parent' => include 'table/parent.php',
+        'zzz'    => include 'table/zzz.php',
     ],
     'view'     => [
         'vvview' => include 'view/vvview.php',
@@ -541,6 +561,7 @@ table:
   fuga: !include table/fuga.yaml
   hoge: !include table/hoge.yaml
   parent: !include table/parent.yaml
+  zzz: !include table/zzz.yaml
 view:
   vvview: !include view/vvview.yaml
 ...
@@ -554,7 +575,8 @@ view:
         "child": "!include: table/child.json",
         "fuga": "!include: table/fuga.json",
         "hoge": "!include: table/hoge.json",
-        "parent": "!include: table/parent.json"
+        "parent": "!include: table/parent.json",
+        "zzz": "!include: table/zzz.json"
     },
     "view": {
         "vvview": "!include: view/vvview.json"
@@ -614,6 +636,6 @@ view:
         $this->transporter->setYmlOption('inline', 4);
         $this->transporter->setYmlOption('indent', 1);
         $this->transporter->exportDDL(self::$tmpdir . '/table.yml');
-        $this->assertFileContains('   PRIMARY: { column: [id, pid], primary: true, unique: true }', self::$tmpdir . '/table.yml');
+        $this->assertFileContains('   PRIMARY: { column: [id, pid], primary: true, unique: true, option: { lengths: [null, null] } }', self::$tmpdir . '/table.yml');
     }
 }

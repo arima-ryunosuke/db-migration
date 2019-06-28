@@ -8,6 +8,7 @@ use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Schema\Trigger;
 use Symfony\Component\Yaml\Yaml;
 
 class Transporter
@@ -130,7 +131,7 @@ class Transporter
                 if (Migrator::filterTable($table->getName(), $includes, $excludes) > 0) {
                     continue;
                 }
-                $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS);
+                $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS | AbstractPlatform::CREATE_TRIGGERS);
                 $creates[] = \SqlFormatter::format(array_shift($sqls), false);
                 $alters = array_merge($alters, $sqls);
             }
@@ -373,7 +374,7 @@ class Transporter
         $creates = $alters = $views = [];
         foreach ($schemaArray['table'] as $name => $tarray) {
             $table = $this->tableFromArray($name, $tarray);
-            $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS);
+            $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS | AbstractPlatform::CREATE_TRIGGERS);
             $creates[] = array_shift($sqls);
             $alters = array_merge($alters, $sqls);
         }
@@ -489,6 +490,7 @@ class Transporter
             'column'  => [],
             'index'   => [],
             'foreign' => [],
+            'trigger' => [],
             'option'  => $table->getOptions(),
         ];
 
@@ -551,16 +553,28 @@ class Transporter
             ];
         }
 
+        // add trigger
+        $triggers = $table->getTriggers();
+        uasort($triggers, function (Trigger $a, Trigger $b) {
+            return strcmp($a->getName(), $b->getName());
+        });
+        foreach ($triggers as $trigger) {
+            $entry['trigger'][$trigger->getName()] = [
+                'statement' => $trigger->getStatement(),
+                'option'    => $trigger->getOptions(),
+            ];
+        }
+
         return $entry;
     }
 
     private function tableFromArray($name, array $array)
     {
         // base table
-        $table = new Table($name, [], [], [], 0, $array['option']);
+        $table = new Table($name, [], [], [], [], 0, $array['option']);
 
         // add columns
-        foreach ($array['column'] as $name => $column) {
+        foreach ($array['column'] ?? [] as $name => $column) {
             $type = $column['type'];
             unset($column['type']);
             $column += $this->defaultColumnAttributes;
@@ -568,7 +582,7 @@ class Transporter
         }
 
         // add indexes
-        foreach ($array['index'] as $name => $index) {
+        foreach ($array['index'] ?? [] as $name => $index) {
             $index += $this->defaultIndexAttributes;
             if ($index['primary']) {
                 $table->setPrimaryKey($index['column'], $name);
@@ -582,8 +596,13 @@ class Transporter
         }
 
         // add foreign keys
-        foreach ($array['foreign'] as $name => $fkey) {
+        foreach ($array['foreign'] ?? [] as $name => $fkey) {
             $table->addForeignKeyConstraint($fkey['table'], array_keys($fkey['column']), array_values($fkey['column']), $fkey['option'], $name);
+        }
+
+        // add triggers
+        foreach ($array['trigger'] ?? [] as $name => $trigger) {
+            $table->addTrigger($name, $trigger['statement'], $trigger['option']);
         }
 
         // ignore implicit index
