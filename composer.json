@@ -55,7 +55,9 @@
       "vendor/bin/phpunit --configuration=tests/phpunit.xml"
     ],
     "pharize": [
-      "bin/box.phar build -c box.json"
+      "@composer dump-autoload --no-dev",
+      "bin/box.phar build -c box.json",
+      "@composer dump-autoload"
     ]
   }
 }
