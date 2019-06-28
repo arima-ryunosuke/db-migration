@@ -25,3 +25,17 @@ CREATE TABLE RecordTable (
   value INT(11) NOT NULL,
   PRIMARY KEY (id)
 );
+
+CREATE TABLE TriggerTable (
+  id INT(10) UNSIGNED NOT NULL,
+  PRIMARY KEY (id)
+);
+CREATE TRIGGER trg1 BEFORE INSERT ON TriggerTable FOR EACH ROW
+  INSERT INTO TriggerTable VALUES() -- dummy statement
+;
+CREATE TRIGGER trg2 BEFORE UPDATE ON TriggerTable FOR EACH ROW
+  INSERT INTO TriggerTable VALUES() -- dummy statement
+;
+CREATE TRIGGER trg3 BEFORE DELETE ON TriggerTable FOR EACH ROW
+  INSERT INTO TriggerTable VALUES() -- dummy statement
+;
