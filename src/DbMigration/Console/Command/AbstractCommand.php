@@ -82,6 +82,20 @@ abstract class AbstractCommand extends Command
         $params = $parseDatabaseUrl->invoke(null, ['url' => $dsn]);
         unset($params['url']);
 
+        // for .my.cnf
+        if (isset($_SERVER['HOME']) && stripos($params['driver'], 'mysql') !== false) {
+            $mycnf = $_SERVER['HOME'] . '/.my.cnf';
+            if (is_readable($mycnf)) {
+                $mycnfini = parse_ini_file($mycnf, true);
+                if (!isset($params['user']) && isset($mycnfini['client']['user'])) {
+                    $params['user'] = $mycnfini['client']['user'];
+                }
+                if (!isset($params['password']) && isset($mycnfini['client']['password'])) {
+                    $params['password'] = $mycnfini['client']['password'];
+                }
+            }
+        }
+
         if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
             $params += [
                 'user' => (posix_getpwuid(posix_geteuid())['name']),

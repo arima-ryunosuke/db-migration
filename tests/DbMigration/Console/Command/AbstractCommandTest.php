@@ -141,6 +141,21 @@ class AbstractCommandTest extends AbstractTestCase
             'password' => 'this_is_password',
             'path'     => 'dbname',
         ], $this->command->parseDsn('sqlite://user:@hostname/dbname'));
+
+        $home = $_SERVER['HOME'] ?? null;
+        $_SERVER['HOME'] = sys_get_temp_dir();
+        file_put_contents($_SERVER['HOME'] . '/.my.cnf', '[client]
+user = hoge
+password = fuga
+');
+        $this->assertEquals([
+            'driver'   => 'pdo_mysql',
+            'host'     => 'hostname',
+            'user'     => 'hoge',
+            'password' => 'fuga',
+            'dbname'   => 'dbname',
+        ], $this->command->parseDsn('mysql://hostname/dbname'));
+        $_SERVER['HOME'] = $home;
     }
 
     function test_normalizeFile()
