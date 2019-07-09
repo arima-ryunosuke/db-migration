@@ -395,10 +395,16 @@ class TransporterTest extends AbstractTestCase
         $table->addForeignKeyConstraint('parent', ['id1'], ['id'], [], 'fk_zzz');
         $table->addForeignKeyConstraint('parent', ['id2'], ['id'], [], 'fk_yyy');
         $table->addForeignKeyConstraint('parent', ['id3'], ['id'], [], 'fk_xxx');
+        $table->addOption('collation', 'utf8_bin');
 
         $tablearray = $method->invoke($this->transporter, $table);
+        $this->assertEquals(['id1', 'id2', 'id3'], array_keys($tablearray['column']));
         $this->assertEquals(['primary', 'idx_xxx', 'idx_yyy', 'idx_zzz'], array_keys($tablearray['index']));
         $this->assertEquals(['fk_xxx', 'fk_yyy', 'fk_zzz'], array_keys($tablearray['foreign']));
+        $this->assertEquals([
+            'collation' => 'utf8_bin',
+            'charset'   => 'utf8',
+        ], $tablearray['option']);
     }
 
     /**

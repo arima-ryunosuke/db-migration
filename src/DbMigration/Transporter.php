@@ -485,13 +485,18 @@ class Transporter
 
     private function tableToArray(Table $table)
     {
+        $options = $table->getOptions();
+        if (!isset($options['charset']) && isset($options['collation'])) {
+            $options['charset'] = explode('_', $options['collation'])[0];
+        }
+
         // entry keys
         $entry = [
             'column'  => [],
             'index'   => [],
             'foreign' => [],
             'trigger' => [],
-            'option'  => $table->getOptions(),
+            'option'  => $options,
         ];
 
         // add columns
