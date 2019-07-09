@@ -20,6 +20,11 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.4
+
+- [feature] $HOME/.my.cnf の読み込みに対応
+- [fixbug] utf8mb4 で charset が utf8 になる不具合を修正
+
 ## 2.0.3
 
 - [feature] トリガー対応
