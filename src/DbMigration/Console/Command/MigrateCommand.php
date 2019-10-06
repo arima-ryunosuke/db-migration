@@ -7,7 +7,7 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Table;
 use ryunosuke\DbMigration\Exception\MigrationException;
 use ryunosuke\DbMigration\MigrationTable;
-use ryunosuke\DbMigration\Migrator;
+use ryunosuke\DbMigration\Transporter;
 use ryunosuke\DbMigration\Utility;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -16,6 +16,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class MigrateCommand extends AbstractCommand
 {
+    /** @var Transporter */
+    private $transporter;
+
     /**
      * {@inheritdoc}
      */
@@ -65,6 +68,9 @@ EOT
         $srcConn = DriverManager::getConnection($this->parseDsn($this->input->getArgument('srcdsn')));
         $dstConn = DriverManager::getConnection($this->parseDsn($this->input->getArgument('dstdsn')));
 
+        $this->transporter = new Transporter($srcConn);
+        $this->transporter->enableView(!$this->input->getOption('noview'));
+
         // migrate
         try {
             // pre migration
@@ -103,12 +109,11 @@ EOT
         if ($this->input->getOption('migration')) {
             $excludes[] = '^' . basename($this->input->getOption('migration')) . '$';
         }
-        $noview = $this->input->getOption('noview');
 
         $this->logger->log("-- <comment>diff DDL</comment>");
 
         // get ddl
-        $sqls = Migrator::getDDL($srcConn, $dstConn, $includes, $excludes, $noview);
+        $sqls = $this->transporter->migrateDDL($dstConn, $includes, $excludes);
         if (!$sqls) {
             $this->logger->log("-- no diff schema.");
             return;
@@ -136,7 +141,7 @@ EOT
 
         // reconnect if exec ddl. for recreate schema (Migrator::getSchema)
         if ($execed) {
-            Migrator::setSchema($srcConn, null);
+            Utility::getSchema($srcConn, true);
         }
     }
 
@@ -164,8 +169,10 @@ EOT
 
         $this->logger->log("-- <comment>diff DML</comment>");
 
-        $dsttables = Migrator::getSchema($dstConn)->getTables();
-        $maxlength = $dsttables ? max(array_map(function (Table $table) { return strlen($table->getName()); }, $dsttables)) + 1 : 0;
+        $mapname = function (Table $table) { return $table->getName(); };
+        $srctables = array_flip(array_map($mapname, Utility::getSchema($srcConn)->getTables()));
+        $dsttables = Utility::getSchema($dstConn)->getTables();
+        $maxlength = $dsttables ? max(array_map('strlen', array_map($mapname, $dsttables))) + 1 : 0;
         $dmlflag = false;
         foreach ($dsttables as $table) {
             $tablename = $table->getName();
@@ -182,7 +189,7 @@ EOT
             }
 
             // skip to not exists tables
-            if (!Migrator::getSchema($srcConn)->hasTable($tablename)) {
+            if (!isset($srctables[$tablename])) {
                 $this->logger->info("-- $title is skipped by not exists.");
                 continue;
             }
@@ -196,7 +203,7 @@ EOT
             // get dml
             $sqls = null;
             try {
-                $sqls = Migrator::getDML($srcConn, $dstConn, $tablename, $wheres, $ignores, $dmltypes);
+                $sqls = $this->transporter->migrateDML($dstConn, $tablename, $wheres, $ignores, $dmltypes);
             }
             catch (MigrationException $ex) {
                 $this->logger->info("-- $title is skipped by " . $ex->getMessage());

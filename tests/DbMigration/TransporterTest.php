@@ -3,9 +3,12 @@
 namespace ryunosuke\Test\DbMigration;
 
 use Doctrine\DBAL\Schema\Index;
+use Doctrine\DBAL\Schema\SchemaException;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\View;
+use ryunosuke\DbMigration\Exception\MigrationException;
 use ryunosuke\DbMigration\Transporter;
+use ryunosuke\DbMigration\Utility;
 use Symfony\Component\Yaml\Yaml;
 
 class TransporterTest extends AbstractTestCase
@@ -81,11 +84,73 @@ class TransporterTest extends AbstractTestCase
             ];
         }, range(1, 10)));
 
+
+        // create migration table different name
+        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('hogera', 'integer', 'id'));
+        $this->newSchema->dropAndCreateTable($this->createSimpleTable('fugata', 'integer', 'id'));
+
+        // create migration table no pkey
+        $table = $this->createSimpleTable('nopkey', 'integer', 'id');
+        $table->dropPrimaryKey();
+        $this->oldSchema->dropAndCreateTable($table);
+        $this->newSchema->dropAndCreateTable($table);
+
+        // create migration table different pkey
+        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('diffpkey', 'integer', 'id'));
+        $this->newSchema->dropAndCreateTable($this->createSimpleTable('diffpkey', 'integer', 'seq'));
+
+        // create migration table different column
+        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('diffcolumn', 'integer', 'id'));
+        $this->newSchema->dropAndCreateTable($this->createSimpleTable('diffcolumn', 'integer', 'id', 'seq'));
+
+        // create migration table different type
+        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('difftype', 'string', 'id'));
+        $this->newSchema->dropAndCreateTable($this->createSimpleTable('difftype', 'integer', 'id'));
+
+        // create migration table different record
+        $table = $this->createSimpleTable('foo', 'integer', 'id');
+        $table->addColumn('c_int', 'integer');
+        $table->addColumn('c_float', 'float');
+        $table->addColumn('c_varchar', 'string');
+        $table->addColumn('c_text', 'text');
+        $table->addColumn('c_datetime', 'datetime');
+
+        $this->oldSchema->dropAndCreateTable($table);
+        $this->newSchema->dropAndCreateTable($table);
+
+        $this->insertMultiple($this->old, 'foo', [
+            '{"id":0,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":1,"c_int":2,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":2,"c_int":1,"c_float":2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":3,"c_int":1,"c_float":1,"c_varchar":"charX","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":4,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"textX","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":5,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"1999-01-01 00:00:00"}',
+            '{"id":6,"c_int":2,"c_float":2,"c_varchar":"charX","c_text":"textX","c_datetime":"1999-01-01 00:00:00"}',
+            '{"id":8,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":9,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":99,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+        ]);
+        $this->insertMultiple($this->new, 'foo', [
+            '{"id":-2,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":-1,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":0,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":1,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":2,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":3,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":4,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":5,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":6,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+            '{"id":99,"c_int":2,"c_float":1.4,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
+        ]);
+
         $this->transporter = new Transporter($this->old);
         $this->refClass = new \ReflectionClass($this->transporter);
 
         $this->transporter->setDirectory('table', null);
         $this->transporter->setDirectory('view', null);
+
+        Utility::getSchema($this->old, true);
+        Utility::getSchema($this->new, true);
     }
 
     /**
@@ -149,15 +214,15 @@ class TransporterTest extends AbstractTestCase
 
         $this->transporter->exportDDL(self::$tmpdir . '/table.yaml', ['.*g.*'], []);
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/table.yaml'));
-        $this->assertEquals(['fuga', 'hoge'], array_keys($yaml['table']));
+        $this->assertEquals(['fuga', 'hoge', 'hogera'], array_keys($yaml['table']));
 
         $this->transporter->exportDDL(self::$tmpdir . '/table.yaml', ['hoge', 'fuga'], []);
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/table.yaml'));
-        $this->assertEquals(['fuga', 'hoge'], array_keys($yaml['table']));
+        $this->assertEquals(['fuga', 'hoge', 'hogera'], array_keys($yaml['table']));
 
         $this->transporter->exportDDL(self::$tmpdir . '/table.yaml', ['.*g.*'], ['fuga']);
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/table.yaml'));
-        $this->assertEquals(['hoge'], array_keys($yaml['table']));
+        $this->assertEquals(['hoge', 'hogera'], array_keys($yaml['table']));
     }
 
     /**
@@ -358,6 +423,115 @@ class TransporterTest extends AbstractTestCase
         $this->assertEquals(3, $this->old->fetchColumn('SELECT COUNT(*) FROM hoge'));
     }
 
+
+    /**
+     * @test
+     */
+    function migrateDdl()
+    {
+        $ddls = $this->transporter->migrateDDL($this->new);
+
+        $this->assertContainsString('CREATE TABLE fugata', $ddls);
+        $this->assertContainsString('DROP TABLE hogera', $ddls);
+    }
+
+    /**
+     * @test
+     */
+    function migrateDml()
+    {
+        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['1']);
+        $this->assertCount(11, $dmls);
+
+        foreach ($dmls as $sql) {
+            $this->old->exec($sql);
+        }
+
+        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['1']);
+        $this->assertCount(0, $dmls);
+    }
+
+    /**
+     * @test
+     */
+    function migrateDml_where()
+    {
+        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = -1']);
+        $this->assertCount(1, $dmls);
+    }
+
+    /**
+     * @test
+     */
+    function migrateDml_ignore()
+    {
+        // c_int,c_float しか違いがないので無視すれば差分なしのはず
+        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = 99'], ['c_int', 'c_float']);
+        $this->assertCount(0, $dmls);
+
+        // 修飾してもテーブルが一致すれば同様のはず
+        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = 99'], ['foo.c_int', 'foo.c_float']);
+        $this->assertCount(0, $dmls);
+
+        // クォートできるはず
+        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = 99'], ['`foo`.`c_int`', '`c_float`']);
+        $this->assertCount(0, $dmls);
+
+        // テーブルが不一致なら普通に差分ありのはず
+        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = 99'], ['bar.c_int', 'bar.c_float']);
+        $this->assertCount(1, $dmls);
+
+        // INSERT には影響しないはず
+        $dmls1 = $this->transporter->migrateDML($this->new, 'foo', ['id = -1']);
+        $dmls2 = $this->transporter->migrateDML($this->new, 'foo', ['id = -1'], ['c_int', 'c_float', 'c_varchar']);
+        $this->assertEquals($dmls1, $dmls2);
+    }
+
+    /**
+     * @test
+     */
+    function migrateDml_dmltypes()
+    {
+        // UPDATE は含まれないはず
+        $dmls = $this->transporter->migrateDML($this->new, 'foo', [], [], ['update' => false]);
+        $this->assertCount(4, $dmls);
+    }
+
+    /**
+     * @test
+     */
+    function migrateDml_name()
+    {
+        $e = new SchemaException("There is no table with name", SchemaException::TABLE_DOESNT_EXIST);
+        $migrateDml = [$this->transporter, 'migrateDml'];
+
+        $this->assertException($e, $migrateDml, $this->new, 'notable', ['1']);
+    }
+
+    /**
+     * @test
+     */
+    function migrateDml_nopkey()
+    {
+        $e = new MigrationException("has no primary key");
+        $migrateDml = [$this->transporter, 'migrateDml'];
+
+        $this->assertException($e, $migrateDml, $this->new, 'nopkey', ['1']);
+    }
+
+    /**
+     * @test
+     */
+    function migrateDml_equals()
+    {
+        $e = new MigrationException("has different definition");
+        $migrateDml = [$this->transporter, 'migrateDml'];
+
+        $this->assertException($e, $migrateDml, $this->new, 'diffpkey', ['1']);
+        $this->assertException($e, $migrateDml, $this->new, 'diffcolumn', ['1']);
+        $this->assertException($e, $migrateDml, $this->new, 'difftype', ['1']);
+    }
+
     /**
      * @test
      */
@@ -546,11 +720,17 @@ class TransporterTest extends AbstractTestCase
 [
     'platform' => 'mysql',
     'table'    => [
-        'child'  => include 'table/child.php',
-        'fuga'   => include 'table/fuga.php',
-        'hoge'   => include 'table/hoge.php',
-        'parent' => include 'table/parent.php',
-        'zzz'    => include 'table/zzz.php',
+        'child'      => include 'table/child.php',
+        'diffcolumn' => include 'table/diffcolumn.php',
+        'diffpkey'   => include 'table/diffpkey.php',
+        'difftype'   => include 'table/difftype.php',
+        'foo'        => include 'table/foo.php',
+        'fuga'       => include 'table/fuga.php',
+        'hoge'       => include 'table/hoge.php',
+        'hogera'     => include 'table/hogera.php',
+        'nopkey'     => include 'table/nopkey.php',
+        'parent'     => include 'table/parent.php',
+        'zzz'        => include 'table/zzz.php',
     ],
     'view'     => [
         'vvview' => include 'view/vvview.php',
@@ -564,8 +744,14 @@ class TransporterTest extends AbstractTestCase
 platform: mysql
 table:
   child: !include table/child.yaml
+  diffcolumn: !include table/diffcolumn.yaml
+  diffpkey: !include table/diffpkey.yaml
+  difftype: !include table/difftype.yaml
+  foo: !include table/foo.yaml
   fuga: !include table/fuga.yaml
   hoge: !include table/hoge.yaml
+  hogera: !include table/hogera.yaml
+  nopkey: !include table/nopkey.yaml
   parent: !include table/parent.yaml
   zzz: !include table/zzz.yaml
 view:
@@ -579,8 +765,14 @@ view:
     "platform": "mysql",
     "table": {
         "child": "!include: table/child.json",
+        "diffcolumn": "!include: table/diffcolumn.json",
+        "diffpkey": "!include: table/diffpkey.json",
+        "difftype": "!include: table/difftype.json",
+        "foo": "!include: table/foo.json",
         "fuga": "!include: table/fuga.json",
         "hoge": "!include: table/hoge.json",
+        "hogera": "!include: table/hogera.json",
+        "nopkey": "!include: table/nopkey.json",
         "parent": "!include: table/parent.json",
         "zzz": "!include: table/zzz.json"
     },

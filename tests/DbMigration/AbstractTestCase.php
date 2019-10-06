@@ -61,10 +61,6 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
         $this->rmdir_r(self::$tmpdir);
         is_dir(self::$tmpdir) or mkdir(self::$tmpdir, 0777, true);
 
-        $ref = new \ReflectionProperty('ryunosuke\\DbMigration\\Migrator', 'schemas');
-        $ref->setAccessible(true);
-        $ref->setValue([]);
-
         $unset = function ($array, $key) {
             unset($array[$key]);
             return $array;

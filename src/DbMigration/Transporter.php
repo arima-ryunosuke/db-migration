@@ -4,11 +4,12 @@ namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Schema\AbstractSchemaManager;
+use Doctrine\DBAL\Schema\Comparator;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\Trigger;
+use ryunosuke\DbMigration\Exception\MigrationException;
 use Symfony\Component\Yaml\Yaml;
 
 class Transporter
@@ -18,9 +19,6 @@ class Transporter
 
     /** @var AbstractPlatform */
     private $platform;
-
-    /** @var AbstractSchemaManager */
-    private $schema;
 
     /** @var bool */
     private $viewEnabled = true;
@@ -70,7 +68,6 @@ class Transporter
     {
         $this->connection = $connection;
         $this->platform = $connection->getDatabasePlatform();
-        $this->schema = $connection->getSchemaManager();
     }
 
     public function enableView($enabled)
@@ -100,12 +97,13 @@ class Transporter
 
     public function exportDDL($filename, $includes = [], $excludes = [])
     {
+        $schema = Utility::getSchema($this->connection);
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
 
         // SQL is special
         if ($ext === 'sql') {
             $creates = $alters = $views = [];
-            foreach ($this->schema->listTables() as $table) {
+            foreach ($schema->getTables() as $table) {
                 if (Utility::filterTable($table->getName(), $includes, $excludes) > 0) {
                     continue;
                 }
@@ -114,7 +112,7 @@ class Transporter
                 $alters = array_merge($alters, $sqls);
             }
             if ($this->viewEnabled) {
-                foreach ($this->schema->listViews() as $view) {
+                foreach ($schema->getViews() as $view) {
                     if (Utility::filterTable($view->getName(), $includes, $excludes) > 0) {
                         continue;
                     }
@@ -131,7 +129,7 @@ class Transporter
                 'table'    => [],
                 'view'     => [],
             ];
-            foreach ($this->schema->listTables() as $table) {
+            foreach ($schema->getTables() as $table) {
                 if (Utility::filterTable($table->getName(), $includes, $excludes) > 0) {
                     continue;
                 }
@@ -145,7 +143,7 @@ class Transporter
                 $schemaArray['table'][$table->getName()] = $tarray;
             }
             if ($this->viewEnabled) {
-                foreach ($this->connection->getSchemaManager()->listViews() as $view) {
+                foreach ($schema->getViews() as $view) {
                     if (Utility::filterTable($view->getName(), $includes, $excludes) > 0) {
                         continue;
                     }
@@ -226,7 +224,7 @@ class Transporter
 
         // create TableScanner
         $tablename = basename($filename, ".$ext");
-        $table = $this->schema->listTableDetails($tablename);
+        $table = Utility::getSchema($this->connection)->getTable($tablename);
         $scanner = new TableScanner($this->connection, $table, $filterCondition, $ignoreColumn);
 
         // for too many records
@@ -429,6 +427,87 @@ class Transporter
         $this->insert(basename($filename, ".$ext"), $rows);
 
         return $rows;
+    }
+
+    public function migrateDDL(Connection $target, $includes = [], $excludes = [])
+    {
+        $oldSchema = Utility::getSchema($this->connection);
+        $newSchema = Utility::getSchema($target);
+        $diff = Comparator::compareSchemas($oldSchema, $newSchema);
+
+        foreach ($diff->newTables as $name => $table) {
+            $filterdResult = Utility::filterTable($name, $includes, $excludes);
+            if ($filterdResult > 0) {
+                unset($diff->newTables[$name]);
+            }
+        }
+
+        foreach ($diff->changedTables as $name => $table) {
+            $filterdResult = Utility::filterTable($name, $includes, $excludes);
+            if ($filterdResult > 0) {
+                unset($diff->changedTables[$name]);
+            }
+        }
+
+        foreach ($diff->removedTables as $name => $table) {
+            $filterdResult = Utility::filterTable($name, $includes, $excludes);
+            if ($filterdResult > 0) {
+                unset($diff->removedTables[$name]);
+            }
+        }
+
+        if (!$this->viewEnabled) {
+            $diff->newViews = [];
+            $diff->changedViews = [];
+            $diff->removedViews = [];
+        }
+
+        return $diff->toSql($this->connection->getDatabasePlatform());
+    }
+
+    public function migrateDML(Connection $target, $table, array $wheres = [], array $ignores = [], $dmltypes = [])
+    {
+        // result dmls
+        $dmls = [];
+
+        // scanner objects
+        $oldSchema = Utility::getSchema($this->connection);
+        $newSchema = Utility::getSchema($target);
+        $oldScanner = new TableScanner($this->connection, $oldSchema->getTable($table), $wheres, $ignores);
+        $newScanner = new TableScanner($target, $newSchema->getTable($table), $wheres, $ignores);
+
+        // check different column definitation
+        if (!$oldScanner->equals($newScanner)) {
+            throw new MigrationException("has different definition between schema.");
+        }
+
+        // primary key tuples
+        $oldTuples = $oldScanner->getPrimaryRows();
+        $newTuples = $newScanner->getPrimaryRows();
+
+        $defaulttypes = [
+            'insert' => true,
+            'delete' => true,
+            'update' => true,
+        ];
+        $dmltypes += $defaulttypes;
+
+        // DELETE if old only
+        if ($dmltypes['delete'] && $tuples = array_diff_key($oldTuples, $newTuples)) {
+            $dmls = array_merge($dmls, $oldScanner->getDeleteSql($tuples, $oldScanner));
+        }
+
+        // UPDATE if common
+        if ($dmltypes['update'] && $tuples = array_intersect_key($oldTuples, $newTuples)) {
+            $dmls = array_merge($dmls, $oldScanner->getUpdateSql($tuples, $newScanner));
+        }
+
+        // INSERT if new only
+        if ($dmltypes['insert'] && $tuples = array_diff_key($newTuples, $oldTuples)) {
+            $dmls = array_merge($dmls, $oldScanner->getInsertSql($tuples, $newScanner));
+        }
+
+        return $dmls;
     }
 
     private function insert($tablename, $rows)
