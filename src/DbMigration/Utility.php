@@ -3,10 +3,25 @@
 namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Schema\Schema;
 use Symfony\Component\Yaml\Yaml;
 
 class Utility
 {
+    public static function getSchema(Connection $connection, $delete = false)
+    {
+        /** @var Schema[] $cache */
+        static $cache = [];
+        $cacheid = spl_object_hash($connection->getWrappedConnection());
+        if ($delete) {
+            $cache[$cacheid] = null;
+        }
+        elseif (!isset($cache[$cacheid])) {
+            $cache[$cacheid] = $connection->getSchemaManager()->createSchema();
+        }
+        return $cache[$cacheid];
+    }
+
     public static function quote(Connection $connection, $value)
     {
         if (is_array($value)) {

@@ -7,6 +7,14 @@ use ryunosuke\DbMigration\Utility;
 
 class UtilityTest extends AbstractTestCase
 {
+    function test_getSchema()
+    {
+        $this->assertSame(Utility::getSchema($this->old), Utility::getSchema($this->old));
+        $this->assertNotSame(Utility::getSchema($this->old), Utility::getSchema($this->new));
+        $this->assertNull(Utility::getSchema($this->old, true));
+        $this->assertNull(Utility::getSchema($this->new, true));
+    }
+
     function test_quote()
     {
         $this->assertEquals("NULL", Utility::quote($this->connection, null));
