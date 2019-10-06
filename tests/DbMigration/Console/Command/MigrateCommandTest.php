@@ -248,7 +248,7 @@ BEGIN
 END');
 
         $result = $this->runApp([
-            '-v'       => true,
+            '-v' => true,
         ]);
 
         $this->assertContains('CREATE TRIGGER trg_create AFTER UPDATE', $result);
@@ -462,9 +462,7 @@ return [
             '--check'     => true,
         ]);
 
-        // if dryrun, old DB queries are "SELECT" only
-        foreach ($logger->queries as $query) {
-            $this->assertRegExp('#^SELECT|SHOW#i', ltrim($query['sql']));
-        }
+        // if dryrun, old DB queries are empty
+        $this->assertEmpty($logger->queries);
     }
 }

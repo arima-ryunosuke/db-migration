@@ -6,8 +6,9 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Table;
+use PHPUnit\Framework\Error\Error;
 
-abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
+abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 {
     protected static $tmpdir;
 
@@ -165,7 +166,7 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
         try {
             call_user_func_array($callback, array_slice(func_get_args(), 2));
         }
-        catch (\PHPUnit_Framework_Exception $ex) {
+        catch (Error $ex) {
             throw $ex;
         }
         catch (\Exception $ex) {

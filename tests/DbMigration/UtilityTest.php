@@ -92,7 +92,7 @@ class UtilityTest extends AbstractTestCase
             'b' => new \stdClass()
         ], [
             'callback' => [
-                'stdClass' => function ($data) {
+                'stdClass' => function () {
                     return [
                         'tag'  => '!hoge',
                         'data' => 'data',

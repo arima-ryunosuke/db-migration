@@ -2,6 +2,7 @@
 
 namespace ryunosuke\Test\DbMigration;
 
+use InvalidArgumentException;
 use ryunosuke\DbMigration\MigrationTable;
 
 class MigrationTableTest extends AbstractTestCase
@@ -58,7 +59,7 @@ class MigrationTableTest extends AbstractTestCase
         $this->assertEquals(4, $migrationTable->apply('12.sql', 'delete from ttt where name <> "from sql suffix"'));
 
         // throws
-        $this->setExpectedException('\InvalidArgumentException');
+        $this->expectException(InvalidArgumentException::class);
         $migrationTable->apply('bad.SQL', 'insert into ttt values("bad")');
     }
 

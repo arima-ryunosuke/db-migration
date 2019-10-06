@@ -35,10 +35,10 @@ class TableScannerTest extends AbstractTestCase
         $table_fuga->setPrimaryKey(['id1', 'id2']);
         $this->oldSchema->dropAndCreateTable($table_fuga);
 
-        $this->scanner = new TableScanner($this->old, $table_hoge, 'TRUE');
+        $this->scanner = new TableScanner($this->old, $table_hoge, ['TRUE']);
         $this->refClass = new \ReflectionClass($this->scanner);
 
-        $this->scanner_fuga = new TableScanner($this->old, $table_fuga, 'TRUE');
+        $this->scanner_fuga = new TableScanner($this->old, $table_fuga, ['TRUE']);
     }
 
     private function invoke($methodName, $args)
@@ -189,7 +189,7 @@ class TableScannerTest extends AbstractTestCase
 
         $con->getSchemaManager()->dropAndCreateTable($table);
 
-        $scanner = new TableScanner($con, $table, '1');
+        $scanner = new TableScanner($con, $table, ['1']);
 
         $this->assertEquals([
             'id'       => 0,
@@ -216,8 +216,8 @@ class TableScannerTest extends AbstractTestCase
 
         $this->insertMultiple($new, 'hogetable', [['id' => 1]]);
 
-        $scanner = new TableScanner($old, $table, '1');
-        $inserts = $scanner->getInsertSql([['id' => 1]], new TableScanner($new, $table, '1'));
+        $scanner = new TableScanner($old, $table, ['1']);
+        $inserts = $scanner->getInsertSql([['id' => 1]], new TableScanner($new, $table, ['1']));
 
         // sqlite no support INSERT SET syntax. Therefore VALUES (value)
         $this->assertContains('INSERT INTO "hogetable" ("id") VALUES', $inserts[0]);
