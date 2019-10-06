@@ -13,55 +13,37 @@ use Symfony\Component\Yaml\Yaml;
 
 class Transporter
 {
-    /**
-     * @var Connection
-     */
+    /** @var Connection */
     private $connection;
 
-    /**
-     * @var AbstractPlatform
-     */
+    /** @var AbstractPlatform */
     private $platform;
 
-    /**
-     * @var AbstractSchemaManager
-     */
+    /** @var AbstractSchemaManager */
     private $schema;
 
-    /**
-     * @var bool
-     */
+    /** @var bool */
     private $viewEnabled = true;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $bulkmode = false;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $encodings = [];
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $directories = [
         'table' => null,
         'view'  => null,
     ];
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $ymlOptions = [
         'inline' => 4,
         'indent' => 4,
     ];
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $defaultColumnAttributes = [
         'length'           => null,
         'precision'        => 10,
@@ -71,18 +53,14 @@ class Transporter
         'columnDefinition' => null,
     ];
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $defaultIndexAttributes = [
         'primary' => false,
         'flag'    => [],
         'option'  => [],
     ];
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $ignoreColumnOptionAttributes = [
         // for ryunosuke/dbal
         'beforeColumn',
@@ -128,7 +106,7 @@ class Transporter
         if ($ext === 'sql') {
             $creates = $alters = $views = [];
             foreach ($this->schema->listTables() as $table) {
-                if (Migrator::filterTable($table->getName(), $includes, $excludes) > 0) {
+                if (Utility::filterTable($table->getName(), $includes, $excludes) > 0) {
                     continue;
                 }
                 $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS | AbstractPlatform::CREATE_TRIGGERS);
@@ -137,7 +115,7 @@ class Transporter
             }
             if ($this->viewEnabled) {
                 foreach ($this->schema->listViews() as $view) {
-                    if (Migrator::filterTable($view->getName(), $includes, $excludes) > 0) {
+                    if (Utility::filterTable($view->getName(), $includes, $excludes) > 0) {
                         continue;
                     }
                     $sql = $this->platform->getCreateViewSQL($view->getName(), $view->getSql());
@@ -154,7 +132,7 @@ class Transporter
                 'view'     => [],
             ];
             foreach ($this->schema->listTables() as $table) {
-                if (Migrator::filterTable($table->getName(), $includes, $excludes) > 0) {
+                if (Utility::filterTable($table->getName(), $includes, $excludes) > 0) {
                     continue;
                 }
                 if ($this->directories['table']) {
@@ -168,7 +146,7 @@ class Transporter
             }
             if ($this->viewEnabled) {
                 foreach ($this->connection->getSchemaManager()->listViews() as $view) {
-                    if (Migrator::filterTable($view->getName(), $includes, $excludes) > 0) {
+                    if (Utility::filterTable($view->getName(), $includes, $excludes) > 0) {
                         continue;
                     }
                     if ($this->directories['view']) {
@@ -226,7 +204,7 @@ class Transporter
                         }, $schemaArray['view']);
                     }
                     if ($this->directories['table'] || $this->directories['view']) {
-                        $options['callback']['ryunosuke\\DbMigration\\Exportion'] = function (Exportion $exportion) {
+                        $options['callback'][Exportion::class] = function (Exportion $exportion) {
                             return [
                                 'tag'  => '!include',
                                 'data' => $exportion->export(),
@@ -277,7 +255,7 @@ class Transporter
                 foreach ($scanner->getAllRows() as $row) {
                     $result[] = Utility::var_export($scanner->fillDefaultValue($row), true);
                 }
-                $result = "<?php return array(\n" . implode(",\n", $result) . "\n);\n";
+                $result = "<?php return [\n" . implode(",\n", $result) . "\n];\n";
                 break;
             case 'json':
                 $result = [];

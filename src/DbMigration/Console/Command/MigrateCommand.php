@@ -5,9 +5,10 @@ namespace ryunosuke\DbMigration\Console\Command;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Table;
-use ryunosuke\DbMigration\MigrationException;
+use ryunosuke\DbMigration\Exception\MigrationException;
 use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Migrator;
+use ryunosuke\DbMigration\Utility;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -170,7 +171,7 @@ EOT
             $tablename = $table->getName();
             $title = sprintf("<info>%-{$maxlength}s</info>", $tablename);
 
-            $filtered = Migrator::filterTable($tablename, $includes, $excludes);
+            $filtered = Utility::filterTable($tablename, $includes, $excludes);
             if ($filtered === 1) {
                 $this->logger->info("-- $title is skipped by include option.");
                 continue;

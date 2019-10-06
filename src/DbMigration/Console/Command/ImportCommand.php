@@ -3,7 +3,7 @@
 namespace ryunosuke\DbMigration\Console\Command;
 
 use Doctrine\DBAL\DriverManager;
-use ryunosuke\DbMigration\Console\CancelException;
+use ryunosuke\DbMigration\Exception\CancelException;
 use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Transporter;
 use Symfony\Component\Console\Input\InputArgument;

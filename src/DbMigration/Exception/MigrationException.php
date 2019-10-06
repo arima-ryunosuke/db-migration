@@ -1,6 +1,6 @@
 <?php
 
-namespace ryunosuke\DbMigration;
+namespace ryunosuke\DbMigration\Exception;
 
 class MigrationException extends \Exception
 {

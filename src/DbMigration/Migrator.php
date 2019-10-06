@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DBALException;
 use Doctrine\DBAL\Schema\Comparator;
 use Doctrine\DBAL\Schema\Schema;
+use ryunosuke\DbMigration\Exception\MigrationException;
 
 class Migrator
 {
@@ -24,26 +25,26 @@ class Migrator
      * @param bool $noview
      * @return array
      */
-    static public function getDDL($old, $new, $includes = [], $excludes = [], $noview = false)
+    public static function getDDL($old, $new, $includes = [], $excludes = [], $noview = false)
     {
         $diff = Comparator::compareSchemas(self::getSchema($old), self::getSchema($new));
 
         foreach ($diff->newTables as $name => $table) {
-            $filterdResult = self::filterTable($name, $includes, $excludes);
+            $filterdResult = Utility::filterTable($name, $includes, $excludes);
             if ($filterdResult > 0) {
                 unset($diff->newTables[$name]);
             }
         }
 
         foreach ($diff->changedTables as $name => $table) {
-            $filterdResult = self::filterTable($name, $includes, $excludes);
+            $filterdResult = Utility::filterTable($name, $includes, $excludes);
             if ($filterdResult > 0) {
                 unset($diff->changedTables[$name]);
             }
         }
 
         foreach ($diff->removedTables as $name => $table) {
-            $filterdResult = self::filterTable($name, $includes, $excludes);
+            $filterdResult = Utility::filterTable($name, $includes, $excludes);
             if ($filterdResult > 0) {
                 unset($diff->removedTables[$name]);
             }
@@ -70,7 +71,7 @@ class Migrator
      * @throws DBALException
      * @return array
      */
-    static public function getDML($old, $new, $table, array $wheres = [], array $ignores = [], $dmltypes = [])
+    public static function getDML($old, $new, $table, array $wheres = [], array $ignores = [], $dmltypes = [])
     {
         // result dmls
         $dmls = [];
@@ -115,46 +116,18 @@ class Migrator
         return $dmls;
     }
 
-    static public function setSchema(Connection $connection, Schema $schema = null)
+    public static function setSchema(Connection $connection, Schema $schema = null)
     {
         $id = spl_object_hash($connection->getWrappedConnection());
         self::$schemas[$id] = $schema;
     }
 
-    static public function getSchema(Connection $connection)
+    public static function getSchema(Connection $connection)
     {
         $id = spl_object_hash($connection->getWrappedConnection());
         if (!isset(self::$schemas[$id])) {
             self::$schemas[$id] = $connection->getSchemaManager()->createSchema();
         }
         return self::$schemas[$id];
-    }
-
-    static public function filterTable($tablename, $includes, $excludes)
-    {
-        // filter from includes
-        $flag = count($includes) > 0;
-        foreach ($includes as $include) {
-            foreach (array_map('trim', explode(',', $include)) as $regex) {
-                if (preg_match("@$regex@i", $tablename)) {
-                    $flag = false;
-                    break;
-                }
-            }
-        }
-        if ($flag) {
-            return 1;
-        }
-
-        // filter from excludes
-        foreach ($excludes as $exclude) {
-            foreach (array_map('trim', explode(',', $exclude)) as $regex) {
-                if (preg_match("@$regex@i", $tablename)) {
-                    return 2;
-                }
-            }
-        }
-
-        return 0;
     }
 }

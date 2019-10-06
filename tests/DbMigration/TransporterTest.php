@@ -488,13 +488,13 @@ class TransporterTest extends AbstractTestCase
         $supported = [
             'sql'  => "INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'あいうえお', '3.14');
 ",
-            'php'  => "<?php return array(
+            'php'  => "<?php return [
 [
     'id'   => '1',
     'name' => 'あいうえお',
     'data' => '3.14',
 ]
-);
+];
 ",
             'json' => '[
 {

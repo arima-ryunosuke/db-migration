@@ -9,14 +9,10 @@ use Doctrine\DBAL\Schema\Table;
 
 class MigrationTable
 {
-    /**
-     * @var Connection
-     */
+    /** @var Connection */
     private $connection;
 
-    /**
-     * @var Table
-     */
+    /** @var Table */
     private $table;
 
     public function __construct(Connection $connection, $tableName)

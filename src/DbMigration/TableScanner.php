@@ -5,59 +5,38 @@ namespace ryunosuke\DbMigration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Schema\Table;
+use ryunosuke\DbMigration\Exception\MigrationException;
 
 class TableScanner
 {
-    /**
-     * count of 1 page fetching
-     *
-     * @var int
-     */
+    /** @var int count of 1 page fetching */
     public static $pageCount = 10000;
 
-    /**
-     * @var \Doctrine\DBAL\Connection
-     */
+    /** @var \Doctrine\DBAL\Connection */
     private $conn;
 
-    /**
-     * @var \Doctrine\DBAL\Schema\Table
-     */
+    /** @var \Doctrine\DBAL\Schema\Table */
     private $table;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     private $quotedName;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     private $filterCondition;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $primaryKeys;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $flippedPrimaryKeys;
 
-    /**
-     * @var \Doctrine\DBAL\Schema\Column[]
-     */
+    /** * @var \Doctrine\DBAL\Schema\Column[] */
     private $columns;
 
-    /**
-     * @var string[]
-     */
+    /** @var string[] */
     private $ignoreColumns;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     private $primaryKeyString;
 
     /**
@@ -301,7 +280,7 @@ class TableScanner
     /**
      * get all rows
      *
-     * @return \PDOStatement
+     * @return \Doctrine\DBAL\Driver\Statement
      */
     public function getAllRows()
     {

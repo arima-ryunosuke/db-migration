@@ -35,6 +35,34 @@ class Utility
         return $connection->quoteIdentifier($value);
     }
 
+    public static function filterTable($tablename, $includes, $excludes)
+    {
+        // filter from includes
+        $flag = count($includes) > 0;
+        foreach ($includes as $include) {
+            foreach (array_map('trim', explode(',', $include)) as $regex) {
+                if (preg_match("@$regex@i", $tablename)) {
+                    $flag = false;
+                    break;
+                }
+            }
+        }
+        if ($flag) {
+            return 1;
+        }
+
+        // filter from excludes
+        foreach ($excludes as $exclude) {
+            foreach (array_map('trim', explode(',', $exclude)) as $regex) {
+                if (preg_match("@$regex@i", $tablename)) {
+                    return 2;
+                }
+            }
+        }
+
+        return 0;
+    }
+
     public static function var_export($value, $return = false)
     {
         $INDENT = 4;

@@ -1,6 +1,6 @@
 <?php
 
-namespace ryunosuke\DbMigration\Console;
+namespace ryunosuke\DbMigration\Exception;
 
 class CancelException extends \Exception
 {
