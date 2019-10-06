@@ -20,6 +20,13 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.5
+
+- [refactor] 内部クラスの構成を変更
+- [refactor] phpunit のバージョンアップ
+- [feature] ファイルのサフィックスでエンコーディングを明示する機能を実装
+- [change] php/json の出力フォーマットを修正
+
 ## 2.0.4
 
 - [feature] $HOME/.my.cnf の読み込みに対応
