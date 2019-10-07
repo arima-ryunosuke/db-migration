@@ -203,7 +203,7 @@ class Utility
 
     public static function mb_convert_variables($to_encoding, $from_encoding, &$vars)
     {
-        if ($to_encoding === $from_encoding) {
+        if (strlen($to_encoding) === 0 || $to_encoding === $from_encoding) {
             return $from_encoding;
         }
         return mb_convert_variables($to_encoding, $from_encoding, $vars);

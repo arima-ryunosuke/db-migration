@@ -711,6 +711,63 @@ class TransporterTest extends AbstractTestCase
         }
     }
 
+    /**
+     * @test
+     */
+    function encoding_via_filename()
+    {
+        $supported = [
+            'sql'  => "INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'あいうえお', '3.14');
+",
+            'php'  => "<?php return [
+[
+    'id'   => '1',
+    'name' => 'あいうえお',
+    'data' => '3.14',
+]
+];
+",
+            'json' => '[
+{
+    "id": "1",
+    "name": "あいうえお",
+    "data": "3.14"
+}
+]
+',
+            'yaml' => "-
+    id: '1'
+    name: あいうえお
+    data: '3.14'
+",
+            'csv'  => "id,name,data
+1,あいうえお,3.14
+",
+        ];
+        mb_convert_variables('SJIS-win', mb_internal_encoding(), $supported);
+
+        $this->old->delete('hoge', [0]);
+        $this->old->insert('hoge', [
+            'id'   => 1,
+            'name' => 'あいうえお',
+            'data' => 3.14,
+        ]);
+
+        foreach ($supported as $ext => $expected) {
+            $this->transporter->exportDML(self::$tmpdir . "/hoge.sjis-win.$ext");
+            $this->assertStringEqualsFile(self::$tmpdir . "/hoge.sjis-win.$ext", $expected);
+        }
+        foreach ($supported as $ext => $expected) {
+            $this->old->delete('hoge', [0]);
+            $this->transporter->importDML(self::$tmpdir . "/hoge.sjis-win.$ext");
+            $this->assertEquals([
+                'id'   => 1,
+                'name' => 'あいうえお',
+                'data' => 3.14,
+            ], $this->old->fetchAssoc('SELECT * FROM hoge'));
+        }
+    }
+
     static function expandDataProvider()
     {
         return [
@@ -835,5 +892,46 @@ view:
         $this->transporter->setYmlOption('indent', 1);
         $this->transporter->exportDDL(self::$tmpdir . '/table.yml');
         $this->assertFileContains('   PRIMARY: { column: [id, pid], primary: true, unique: true, option: { lengths: [null, null] } }', self::$tmpdir . '/table.yml');
+    }
+
+    /**
+     * @test
+     */
+    function parseFilename()
+    {
+        $parseFilename = $this->refClass->getMethod('parseFilename');
+        $parseFilename->setAccessible(true);
+
+        $this->assertEquals([
+            'dirname'   => '/dir',
+            'basename'  => 'x.txt',
+            'filename'  => 'x',
+            'extension' => 'txt',
+            'encoding'  => '',
+        ], $parseFilename->invoke($this->transporter, '/dir/x.txt'));
+
+        $this->assertEquals([
+            'dirname'   => '.',
+            'basename'  => 'x',
+            'filename'  => 'x',
+            'extension' => '',
+            'encoding'  => '',
+        ], $parseFilename->invoke($this->transporter, 'x'));
+
+        $this->assertEquals([
+            'dirname'   => '/dir',
+            'basename'  => 'x.utf8.txt',
+            'filename'  => 'x',
+            'extension' => 'txt',
+            'encoding'  => 'utf8',
+        ], $parseFilename->invoke($this->transporter, '/dir/x.utf8.txt'));
+
+        $this->assertEquals([
+            'dirname'   => '.',
+            'basename'  => 'x.sjis-win.txt',
+            'filename'  => 'x',
+            'extension' => 'txt',
+            'encoding'  => 'sjis-win',
+        ], $parseFilename->invoke($this->transporter, 'x.sjis-win.txt'));
     }
 }

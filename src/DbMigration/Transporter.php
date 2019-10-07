@@ -98,10 +98,10 @@ class Transporter
     public function exportDDL($filename, $includes = [], $excludes = [])
     {
         $schema = Utility::getSchema($this->connection);
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        $pathinfo = $this->parseFilename($filename);
 
         // SQL is special
-        if ($ext === 'sql') {
+        if ($pathinfo['extension'] === 'sql') {
             $creates = $alters = $views = [];
             foreach ($schema->getTables() as $table) {
                 if (Utility::filterTable($table->getName(), $includes, $excludes) > 0) {
@@ -134,8 +134,8 @@ class Transporter
                     continue;
                 }
                 if ($this->directories['table']) {
-                    $fname = $this->directories['table'] . '/' . $table->getName() . '.' . $ext;
-                    $tarray = new Exportion(dirname($filename), $fname, $this->tableToArray($table));
+                    $fname = $this->directories['table'] . '/' . $table->getName() . '.' . $pathinfo['extension'];
+                    $tarray = new Exportion($pathinfo['dirname'], $fname, $this->tableToArray($table));
                 }
                 else {
                     $tarray = $this->tableToArray($table);
@@ -148,8 +148,8 @@ class Transporter
                         continue;
                     }
                     if ($this->directories['view']) {
-                        $fname = $this->directories['view'] . '/' . $view->getName() . '.' . $ext;
-                        $varray = new Exportion(dirname($filename), $fname, ['sql' => $view->getSql()]);
+                        $fname = $this->directories['view'] . '/' . $view->getName() . '.' . $pathinfo['extension'];
+                        $varray = new Exportion($pathinfo['dirname'], $fname, ['sql' => $view->getSql()]);
                     }
                     else {
                         $varray = ['sql' => $view->getSql()];
@@ -159,9 +159,9 @@ class Transporter
             }
 
             // by Data Description Language
-            switch ($ext) {
+            switch ($pathinfo['extension']) {
                 default:
-                    throw new \DomainException("'$ext' is not supported.");
+                    throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
                 case 'php':
                     if ($this->directories['table']) {
                         $schemaArray['table'] = array_map(function (Exportion $exportion) {
@@ -220,19 +220,19 @@ class Transporter
 
     public function exportDML($filename, $filterCondition = [], $ignoreColumn = [])
     {
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        $pathinfo = $this->parseFilename($filename);
 
         // create TableScanner
-        $tablename = basename($filename, ".$ext");
+        $tablename = $pathinfo['filename'];
         $table = Utility::getSchema($this->connection)->getTable($tablename);
         $scanner = new TableScanner($this->connection, $table, $filterCondition, $ignoreColumn);
 
         // for too many records
         $current = $scanner->switchBufferedQuery(false);
 
-        switch ($ext) {
+        switch ($pathinfo['extension']) {
             default:
-                throw new \DomainException("'$ext' is not supported.");
+                throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
             case 'sql':
                 $qtable = Utility::quoteIdentifier($this->connection, $tablename);
                 $result = [];
@@ -292,21 +292,18 @@ class Transporter
         // restore
         $scanner->switchBufferedQuery($current);
 
-        if (isset($this->encodings[$ext]) && $this->encodings[$ext] != mb_internal_encoding()) {
-            $result = mb_convert_encoding($result, $this->encodings[$ext]);
-        }
-
+        Utility::mb_convert_variables($pathinfo['encoding'], mb_internal_encoding(), $result);
         Utility::file_put_contents($filename, $result);
         return $result;
     }
 
     public function importDDL($filename)
     {
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        $pathinfo = $this->parseFilename($filename);
 
-        switch ($ext) {
+        switch ($pathinfo['extension']) {
             default:
-                throw new \DomainException("'$ext' is not supported.");
+                throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
             case 'sql':
                 $contents = file_get_contents($filename);
                 $this->connection->exec($contents);
@@ -317,7 +314,7 @@ class Transporter
             case 'json':
                 $options = [];
                 if ($this->directories['table'] || $this->directories['view']) {
-                    $dirname = dirname($filename);
+                    $dirname = $pathinfo['dirname'];
                     $options['callback'] = [
                         '!include' => function ($value) use ($dirname) {
                             return Utility::json_decode(file_get_contents("$dirname/$value"));
@@ -330,7 +327,7 @@ class Transporter
             case 'yaml':
                 $options = $this->ymlOptions;
                 if ($this->directories['table'] || $this->directories['view']) {
-                    $dirname = dirname($filename);
+                    $dirname = $pathinfo['dirname'];
                     $options['callback'] = [
                         '!include' => function ($value) use ($dirname) {
                             return Utility::yaml_parse(file_get_contents("$dirname/$value"), ['builtin' => true]);
@@ -370,20 +367,15 @@ class Transporter
 
     public function importDML($filename)
     {
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-
+        $pathinfo = $this->parseFilename($filename);
         $to_encoding = mb_internal_encoding();
-        $encoding = null;
-        if (isset($this->encodings[$ext]) && $this->encodings[$ext] != $to_encoding) {
-            $encoding = $this->encodings[$ext];
-        }
 
-        switch ($ext) {
+        switch ($pathinfo['extension']) {
             default:
-                throw new \DomainException("'$ext' is not supported.");
+                throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
             case 'sql':
                 $contents = file_get_contents($filename);
-                Utility::mb_convert_variables($to_encoding, $encoding, $contents);
+                Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
                 $this->connection->exec($contents);
                 return $this->explodeSql($contents);
             case 'php':
@@ -391,17 +383,17 @@ class Transporter
                 if ($rows instanceof \Closure) {
                     $rows = $rows($this->connection);
                 }
-                Utility::mb_convert_variables($to_encoding, $encoding, $rows);
+                Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $rows);
                 break;
             case 'json':
                 $contents = file_get_contents($filename);
-                Utility::mb_convert_variables($to_encoding, $encoding, $contents);
+                Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
                 $rows = json_decode($contents, true);
                 break;
             case 'yml':
             case 'yaml':
                 $contents = file_get_contents($filename);
-                Utility::mb_convert_variables($to_encoding, $encoding, $contents);
+                Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
                 $rows = Yaml::parse($contents);
                 break;
             case 'csv':
@@ -409,7 +401,7 @@ class Transporter
                 $header = [];
                 if (($handle = fopen($filename, "r")) !== false) {
                     while (($line = fgets($handle)) !== false) {
-                        Utility::mb_convert_variables($to_encoding, $encoding, $line);
+                        Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $line);
                         $data = str_getcsv($line);
                         // first row is used as CSV header
                         if (!$header) {
@@ -424,7 +416,7 @@ class Transporter
                 break;
         }
 
-        $this->insert(basename($filename, ".$ext"), $rows);
+        $this->insert($pathinfo['filename'], $rows);
 
         return $rows;
     }
@@ -741,5 +733,24 @@ class Transporter
             trigger_error('Table::$implicitIndexes is undefined.', E_USER_NOTICE);
         }
         return $result;
+    }
+
+    public function parseFilename($filename)
+    {
+        $pathinfo = pathinfo($filename);
+        $extension = $pathinfo['extension'] ?? '';
+        $pathinfo2 = pathinfo($pathinfo['filename']);
+        $encoding = $pathinfo2['extension'] ?? '';
+        if (!strlen($encoding) && ($this->encodings[$extension] ?? '')) {
+            $encoding = $this->encodings[$extension];
+        }
+
+        return [
+            'dirname'   => $pathinfo['dirname'],
+            'basename'  => $pathinfo['basename'],
+            'filename'  => $pathinfo2['filename'],
+            'extension' => $extension,
+            'encoding'  => $encoding,
+        ];
     }
 }
