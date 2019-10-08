@@ -60,25 +60,22 @@ class UtilityTest extends AbstractTestCase
             'object'      => new \DateTime(),
         ];
         $a1 = var_export($value, true);
-        $a2 = Utility::var_export($value, true);
+        $a2 = Utility::var_export($value);
         $this->assertEquals(eval("return $a1;"), eval("return $a2;"));
 
         $a = Utility::var_export([
             'stub' => 'Stub',
             'expo' => new Exportion(sys_get_temp_dir(), 'test.php', [
                 'a' => 'a',
-            ], function ($data) { return Utility::var_export($data, true); }),
-        ], true);
+            ], function ($data) { return Utility::var_export($data); }),
+        ], 1);
         $this->assertEquals("[
-    'stub' => 'Stub',
-    'expo' => include 'test.php',
-]", $a);
+        'stub' => 'Stub',
+        'expo' => include 'test.php',
+    ]", $a);
         $this->assertStringEqualsFile(sys_get_temp_dir() . '/test.php', "[
     'a' => 'a',
 ]");
-
-        $this->expectOutputRegex('#123#');
-        Utility::var_export('123');
     }
 
     function test_yaml_emit()

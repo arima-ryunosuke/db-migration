@@ -165,15 +165,15 @@ class Transporter
                 case 'php':
                     if ($this->directories['table']) {
                         $schemaArray['table'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return "<?php return\n" . Utility::var_export($data, true) . ";\n"; });
+                            return $exportion->setProvider(function ($data) { return "<?php return " . Utility::var_export($data) . ";\n"; });
                         }, $schemaArray['table']);
                     }
                     if ($this->directories['view']) {
                         $schemaArray['view'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return "<?php return\n" . Utility::var_export($data, true) . ";\n"; });
+                            return $exportion->setProvider(function ($data) { return "<?php return " . Utility::var_export($data) . ";\n"; });
                         }, $schemaArray['view']);
                     }
-                    $content = "<?php return\n" . Utility::var_export($schemaArray, true) . ";\n";
+                    $content = "<?php return " . Utility::var_export($schemaArray) . ";\n";
                     break;
                 case 'json':
                     if ($this->directories['table']) {
@@ -251,14 +251,14 @@ class Transporter
                 }
                 $result = [];
                 foreach ($scanner->getAllRows() as $row) {
-                    $result[] = Utility::var_export($scanner->fillDefaultValue($row), true);
+                    $result[] = Utility::var_export($scanner->fillDefaultValue($row), 1);
                 }
-                $result = "<?php return [\n" . implode(",\n", $result) . "\n];\n";
+                $result = "<?php return [\n    " . implode(",\n    ", $result) . "\n];\n";
                 break;
             case 'json':
                 $result = [];
                 foreach ($scanner->getAllRows() as $row) {
-                    $result[] = Utility::json_encode($scanner->fillDefaultValue($row));
+                    $result[] = preg_replace('#(\A\\[\R)|(\R]\z)#', '', Utility::json_encode([$scanner->fillDefaultValue($row)]));
                 }
                 $result = "[\n" . implode(",\n", $result) . "\n]\n";
                 break;

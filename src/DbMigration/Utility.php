@@ -78,7 +78,7 @@ class Utility
         return 0;
     }
 
-    public static function var_export($value, $return = false)
+    public static function var_export($value, $nest = 0)
     {
         $INDENT = 4;
 
@@ -113,11 +113,7 @@ class Utility
             }
         };
 
-        $result = $export($value, 0);
-        if ($return) {
-            return $result;
-        }
-        echo $result;
+        return $export($value, $nest);
     }
 
     public static function yaml_emit($value, $options = [])

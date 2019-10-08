@@ -648,103 +648,87 @@ class TransporterTest extends AbstractTestCase
         $this->assertContains('is undefined', error_get_last()['message']);
     }
 
-    /**
-     * @test
-     */
-    function encoding()
+    static function encodeDataProvider()
     {
-        $this->transporter->setEncoding('sql', 'SJIS-win');
-        $this->transporter->setEncoding('php', 'SJIS-win');
-        $this->transporter->setEncoding('json', 'SJIS-win');
-        $this->transporter->setEncoding('yaml', 'SJIS-win');
-        $this->transporter->setEncoding('csv', 'SJIS-win');
-
         $supported = [
-            'sql'  => "INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'あいうえお', '3.14');
-",
-            'php'  => "<?php return [
-[
-    'id'   => '1',
-    'name' => 'あいうえお',
-    'data' => '3.14',
-]
+            [
+                'sql',
+                <<<SQL
+INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'あいうえお', '3.14');
+INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('2', 'かきくけこ', '6.28');
+SQL
+            ],
+            [
+                'php',
+                <<<PHP
+<?php return [
+    [
+        'id'   => '1',
+        'name' => 'あいうえお',
+        'data' => '3.14',
+    ],
+    [
+        'id'   => '2',
+        'name' => 'かきくけこ',
+        'data' => '6.28',
+    ]
 ];
-",
-            'json' => '[
-{
-    "id": "1",
-    "name": "あいうえお",
-    "data": "3.14"
-}
+PHP
+            ],
+            [
+                'json',
+                <<<JSON
+[
+    {
+        "id": "1",
+        "name": "あいうえお",
+        "data": "3.14"
+    },
+    {
+        "id": "2",
+        "name": "かきくけこ",
+        "data": "6.28"
+    }
 ]
-',
-            'yaml' => "-
+JSON
+            ],
+            [
+                'yaml',
+                <<<YAML
+-
     id: '1'
     name: あいうえお
     data: '3.14'
-",
-            'csv'  => "id,name,data
+-
+    id: '2'
+    name: かきくけこ
+    data: '6.28'
+YAML
+            ],
+            [
+                'csv',
+                <<<CSV
+id,name,data
 1,あいうえお,3.14
-",
+2,かきくけこ,6.28
+CSV
+            ],
         ];
-        mb_convert_variables('SJIS-win', mb_internal_encoding(), $supported);
-
-        $this->old->delete('hoge', [0]);
-        $this->old->insert('hoge', [
-            'id'   => 1,
-            'name' => 'あいうえお',
-            'data' => 3.14,
-        ]);
-
-        foreach ($supported as $ext => $expected) {
-            $this->transporter->exportDML(self::$tmpdir . "/hoge.$ext");
-            $this->assertStringEqualsFile(self::$tmpdir . "/hoge.$ext", $expected);
-        }
-        foreach ($supported as $ext => $expected) {
-            $this->old->delete('hoge', [0]);
-            $this->transporter->importDML(self::$tmpdir . "/hoge.$ext");
-            $this->assertEquals([
-                'id'   => 1,
-                'name' => 'あいうえお',
-                'data' => 3.14,
-            ], $this->old->fetchAssoc('SELECT * FROM hoge'));
-        }
+        array_walk_recursive($supported, function (&$v) {
+            $v = mb_convert_encoding($v, 'SJIS-win', mb_internal_encoding());
+        });
+        return $supported;
     }
 
     /**
+     * @dataProvider encodeDataProvider
+     * @param $ext
+     * @param $content
      * @test
      */
-    function encoding_via_filename()
+    function encoding($ext, $content)
     {
-        $supported = [
-            'sql'  => "INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'あいうえお', '3.14');
-",
-            'php'  => "<?php return [
-[
-    'id'   => '1',
-    'name' => 'あいうえお',
-    'data' => '3.14',
-]
-];
-",
-            'json' => '[
-{
-    "id": "1",
-    "name": "あいうえお",
-    "data": "3.14"
-}
-]
-',
-            'yaml' => "-
-    id: '1'
-    name: あいうえお
-    data: '3.14'
-",
-            'csv'  => "id,name,data
-1,あいうえお,3.14
-",
-        ];
-        mb_convert_variables('SJIS-win', mb_internal_encoding(), $supported);
+        $this->transporter->setEncoding($ext, 'SJIS-win');
 
         $this->old->delete('hoge', [0]);
         $this->old->insert('hoge', [
@@ -752,20 +736,54 @@ class TransporterTest extends AbstractTestCase
             'name' => 'あいうえお',
             'data' => 3.14,
         ]);
+        $this->old->insert('hoge', [
+            'id'   => 2,
+            'name' => 'かきくけこ',
+            'data' => 6.28,
+        ]);
 
-        foreach ($supported as $ext => $expected) {
-            $this->transporter->exportDML(self::$tmpdir . "/hoge.sjis-win.$ext");
-            $this->assertStringEqualsFile(self::$tmpdir . "/hoge.sjis-win.$ext", $expected);
-        }
-        foreach ($supported as $ext => $expected) {
-            $this->old->delete('hoge', [0]);
-            $this->transporter->importDML(self::$tmpdir . "/hoge.sjis-win.$ext");
-            $this->assertEquals([
-                'id'   => 1,
-                'name' => 'あいうえお',
-                'data' => 3.14,
-            ], $this->old->fetchAssoc('SELECT * FROM hoge'));
-        }
+        $this->transporter->exportDML(self::$tmpdir . "/hoge.$ext");
+        $this->assertStringEqualsFile(self::$tmpdir . "/hoge.$ext", "$content\n");
+
+        $this->old->delete('hoge', [0]);
+        $this->transporter->importDML(self::$tmpdir . "/hoge.$ext");
+        $this->assertEquals([
+            'id'   => 1,
+            'name' => 'あいうえお',
+            'data' => 3.14,
+        ], $this->old->fetchAssoc('SELECT * FROM hoge'));
+    }
+
+    /**
+     * @dataProvider encodeDataProvider
+     * @param $ext
+     * @param $content
+     * @test
+     */
+    function encoding_via_filename($ext, $content)
+    {
+        $this->old->delete('hoge', [0]);
+        $this->old->insert('hoge', [
+            'id'   => 1,
+            'name' => 'あいうえお',
+            'data' => 3.14,
+        ]);
+        $this->old->insert('hoge', [
+            'id'   => 2,
+            'name' => 'かきくけこ',
+            'data' => 6.28,
+        ]);
+
+        $this->transporter->exportDML(self::$tmpdir . "/hoge.sjis-win.$ext");
+        $this->assertStringEqualsFile(self::$tmpdir . "/hoge.sjis-win.$ext", "$content\n");
+
+        $this->old->delete('hoge', [0]);
+        $this->transporter->importDML(self::$tmpdir . "/hoge.sjis-win.$ext");
+        $this->assertEquals([
+            'id'   => 1,
+            'name' => 'あいうえお',
+            'data' => 3.14,
+        ], $this->old->fetchAssoc('SELECT * FROM hoge'));
     }
 
     static function expandDataProvider()
@@ -773,8 +791,7 @@ class TransporterTest extends AbstractTestCase
         return [
             [
                 'php',
-                "<?php return
-[
+                "<?php return [
     'platform' => 'mysql',
     'table'    => [
         'child'      => include 'table/child.php',
