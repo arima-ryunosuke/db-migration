@@ -23,6 +23,8 @@ class ImportCommand extends AbstractCommand
             new InputArgument('dstdsn', InputArgument::REQUIRED, 'Specify destination DSN (if not exists create database).'),
             new InputArgument('files', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
             new InputOption('migration', 'm', InputOption::VALUE_OPTIONAL, 'Specify migration directory.'),
+            new InputOption('include', 'i', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Target tables pattern (enable comma separated value)'),
+            new InputOption('exclude', 'e', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Except tables pattern (enable comma separated value)'),
             new InputOption('table-directory', null, InputOption::VALUE_OPTIONAL, 'Specify separative directory name for tables.', null),
             new InputOption('view-directory', null, InputOption::VALUE_OPTIONAL, 'Specify separative directory name for views.', null),
             new InputOption('csv-encoding', null, InputOption::VALUE_OPTIONAL, 'Specify CSV encoding.', 'SJIS-win'),
@@ -49,6 +51,10 @@ EOT
 
         $files = $this->normalizeFile($this->input->getArgument('files'));
 
+        // option
+        $includes = (array) $this->input->getOption('include');
+        $excludes = (array) $this->input->getOption('exclude');
+
         // get target Connection
         $dstdsn = $this->input->getArgument('dstdsn');
         $params = $this->parseDsn($dstdsn);
@@ -71,7 +77,7 @@ EOT
         // importDDL
         $ddlfile = array_shift($files);
         $this->logger->info("-- <info>importDDL</info> $ddlfile");
-        $sqls = $transporter->importDDL($ddlfile);
+        $sqls = $transporter->importDDL($ddlfile, $includes, $excludes);
         foreach ($sqls as $sql) {
             $this->logger->debug([$this, 'formatSql'], $sql);
         }

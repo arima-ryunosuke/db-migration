@@ -352,6 +352,33 @@ class TransporterTest extends AbstractTestCase
     /**
      * @test
      */
+    function importDDL_filter()
+    {
+        $supported = ['php', 'json', 'yaml'];
+        foreach ($supported as $ext) {
+            $this->transporter->exportDDL(self::$tmpdir . "/table.$ext");
+        }
+        foreach ($supported as $ext) {
+            foreach ($this->oldSchema->listTableNames() as $tname) {
+                $this->oldSchema->dropTable($tname);
+            }
+            foreach ($this->oldSchema->listViews() as $vname => $view) {
+                $this->oldSchema->dropView($vname);
+            }
+            $this->transporter->importDDL(self::$tmpdir . "/table.$ext", ['.*g.*'], ['fuga']);
+            $this->assertTrue($this->oldSchema->tablesExist('hoge'));
+            $this->assertFalse($this->oldSchema->tablesExist('fuga'));
+        }
+
+        $this->transporter->exportDDL(self::$tmpdir . "/table.sql");
+        $this->assertException(new \DomainException("sql is not supported"), function () {
+            $this->transporter->importDDL(self::$tmpdir . '/table.sql', ['dummy']);
+        });
+    }
+
+    /**
+     * @test
+     */
     function importDDL_noview()
     {
         $this->transporter->enableView(true);
@@ -576,8 +603,9 @@ class TransporterTest extends AbstractTestCase
         $this->assertEquals(['primary', 'idx_xxx', 'idx_yyy', 'idx_zzz'], array_keys($tablearray['index']));
         $this->assertEquals(['fk_xxx', 'fk_yyy', 'fk_zzz'], array_keys($tablearray['foreign']));
         $this->assertEquals([
-            'collation' => 'utf8_bin',
-            'charset'   => 'utf8',
+            'collation'      => 'utf8_bin',
+            'charset'        => 'utf8',
+            'create_options' => [],
         ], $tablearray['option']);
     }
 

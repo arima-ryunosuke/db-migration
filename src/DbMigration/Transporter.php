@@ -297,7 +297,7 @@ class Transporter
         return $result;
     }
 
-    public function importDDL($filename)
+    public function importDDL($filename, $includes = [], $excludes = [])
     {
         $pathinfo = $this->parseFilename($filename);
 
@@ -305,6 +305,9 @@ class Transporter
             default:
                 throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
             case 'sql':
+                if ($includes || $excludes) {
+                    throw new \DomainException('sql is not supported include, exclude option.');
+                }
                 $contents = file_get_contents($filename);
                 $this->connection->exec($contents);
                 return $this->explodeSql($contents);
@@ -346,6 +349,9 @@ class Transporter
 
         $creates = $alters = $views = [];
         foreach ($schemaArray['table'] as $name => $tarray) {
+            if (Utility::filterTable($name, $includes, $excludes) > 0) {
+                continue;
+            }
             $table = $this->tableFromArray($name, $tarray);
             $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS | AbstractPlatform::CREATE_TRIGGERS);
             $creates[] = array_shift($sqls);
@@ -353,6 +359,9 @@ class Transporter
         }
         if ($this->viewEnabled) {
             foreach ($schemaArray['view'] as $name => $varray) {
+                if (Utility::filterTable($name, $includes, $excludes) > 0) {
+                    continue;
+                }
                 $views[] = $this->platform->getCreateViewSQL($name, $varray['sql']);
             }
         }
