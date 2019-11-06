@@ -91,7 +91,7 @@ Options:
 さらに2重拡張子でエンコーディングが指定できます。
 エンコーディング指定はファイル名とはみなされず、テーブル名に含まれません。
 
-- hoge.sjis.csc SJIS の csv として扱います
+- hoge.sjis.csv SJIS の csv として扱います
 - hoge.utf8.yaml UTF8 の yaml として扱います
 
 #### --migration (-m)
@@ -104,7 +104,7 @@ Options:
 
 #### --include, --exclude
 
-出力対象テーブルを指定します。正規表現です。
+スキーマとして出力する対象テーブルを指定します。正規表現です。
 
 評価順位は `include` -> `exclude` です。`exclude` で指定したテーブルが出力されることはありません。
 なお、`include` 未指定時はすべてのテーブルが対象になります。
@@ -157,6 +157,8 @@ Arguments:
 
 Options:
   -m, --migration[=MIGRATION]              Specify migration directory.
+  -i, --include[=INCLUDE]                  Target tables pattern (enable comma separated value) (multiple values allowed)
+  -e, --exclude[=EXCLUDE]                  Except tables pattern (enable comma separated value) (multiple values allowed)
       --table-directory[=TABLE-DIRECTORY]  Specify separative directory name for tables.
       --view-directory[=VIEW-DIRECTORY]    Specify separative directory name for views.
       --csv-encoding[=CSV-ENCODING]        Specify CSV encoding. [default: "SJIS-win"]
@@ -194,13 +196,17 @@ Options:
 さらに2重拡張子でエンコーディングが指定できます。
 エンコーディング指定はファイル名とはみなされず、テーブル名に含まれません。
 
-- hoge.sjis.csc SJIS の csv として扱います
+- hoge.sjis.csv SJIS の csv として扱います
 - hoge.utf8.yaml UTF8 の yaml として扱います
 
 #### --migration (-m)
 
 マイグレーションテーブル名（ディレクトリ）を指定します。
 指定されるとディレクトリ以下のマイグレーションファイルが全て当たった状態でインポートされます。
+
+#### --include, --exclude
+
+export と同じです。
 
 #### --table-directory, view-directory
 

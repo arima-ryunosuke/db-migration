@@ -20,6 +20,12 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.6
+
+- php:7.2
+- 依存ライブラリの更新
+- import に include, exclude オプションを追加
+
 ## 2.0.5
 
 - [refactor] 内部クラスの構成を変更
