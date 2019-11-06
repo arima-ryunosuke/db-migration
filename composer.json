@@ -37,8 +37,8 @@
     }
   ],
   "require": {
-    "php": ">=7.1",
-    "doctrine/dbal": "2.9.x-dev",
+    "php": ">=7.2",
+    "doctrine/dbal": "2.10.x-dev",
     "symfony/console": "2.*",
     "symfony/yaml": "*",
     "jdorn/sql-formatter": "*"
