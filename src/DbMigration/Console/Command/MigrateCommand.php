@@ -46,6 +46,7 @@ class MigrateCommand extends AbstractCommand
             new InputOption('force', 'f', InputOption::VALUE_NONE, 'Force continue, ignore errors'),
             new InputOption('format', null, InputOption::VALUE_OPTIONAL, 'Format output SQL (none, pretty, format, highlight or compress. default pretty)', 'pretty'),
             new InputOption('omit', 'o', InputOption::VALUE_REQUIRED, 'Omit size for long SQL'),
+            new InputOption('config', 'C', InputOption::VALUE_OPTIONAL, 'Specify Configuration filepath'),
         ]);
         $this->setHelp(<<<EOT
 Migrate srcdsn to dstdsn.

@@ -24,6 +24,35 @@ abstract class AbstractCommand extends Command
         $this->input = $input;
         $this->output = $output;
         $this->logger = new Logger($input, $output);
+
+        $this->config();
+    }
+
+    protected function config()
+    {
+        $configFile = $this->input->getOption('config');
+        if (!strlen($configFile)) {
+            return;
+        }
+        if (!file_exists($configFile)) {
+            throw new \InvalidArgumentException("'$configFile' is not exists.");
+        }
+
+        $allConfig = require $configFile;
+        $config = ($allConfig[$this->getName()] ?? []) + ($allConfig['default'] ?? []);
+        foreach ($config as $name => $value) {
+            $definition = $this->getDefinition();
+            if (ctype_digit("$name")) {
+                if ($definition->hasArgument($name = (int) $name)) {
+                    $definition->getArgument($name)->setDefault($value);
+                }
+            }
+            else {
+                if ($definition->hasOption($name)) {
+                    $definition->getOption($name)->setDefault($value);
+                }
+            }
+        }
     }
 
     protected function choice($message, $choices = [], $default = 0)

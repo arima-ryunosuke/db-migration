@@ -4,6 +4,7 @@ namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -25,6 +26,40 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command = new ConcreteCommand('test');
 
         $this->app->add($this->command);
+    }
+
+    function test_config()
+    {
+        $input = new ArrayInput([], $this->command->getDefinition());
+        $output = new BufferedOutput();
+        $this->command->setInputOutput($input, $output);
+
+        $this->assertEquals('arg1', $input->getArgument('arg1'));
+        $this->assertEquals(['arg2', 'arg3'], $input->getArgument('argN'));
+        $this->assertEquals('format', $input->getOption('format'));
+        $this->assertEquals('omit', $input->getOption('omit'));
+        $this->assertEquals([], $input->getOption('opts'));
+
+        $input->setOption('config', __DIR__ . '/_files/config.php');
+        $this->command->config();
+
+        $this->assertEquals('xarg1', $input->getArgument('arg1'));
+        $this->assertEquals(['xarg2', 'xarg3', 'xarg4'], $input->getArgument('argN'));
+        $this->assertEquals('highlight', $input->getOption('format'));
+        $this->assertEquals('456', $input->getOption('omit'));
+        $this->assertEquals(['opt1', 'opt2'], $input->getOption('opts'));
+
+        $input->setArgument('arg1', 'XXX');
+        $input->setOption('omit', '789');
+        $input->setOption('opts', ['opt3']);
+        $this->assertEquals('XXX', $input->getArgument('arg1'));
+        $this->assertEquals('789', $input->getOption('omit'));
+        $this->assertEquals(['opt3'], $input->getOption('opts'));
+
+        $input->setOption('config', __DIR__ . '/notfound.php');
+        $this->assertException(new \InvalidArgumentException('is not exists'), function () {
+            $this->command->config();
+        });
     }
 
     function test_choice()
@@ -202,14 +237,23 @@ class ConcreteCommand extends AbstractCommand
     {
         $this->setName('concrete');
         $this->setDefinition([
-            new InputOption('format', null, InputOption::VALUE_OPTIONAL),
-            new InputOption('omit', null, InputOption::VALUE_REQUIRED),
+            new InputArgument('arg1', InputArgument::OPTIONAL, '', 'arg1'),
+            new InputArgument('argN', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, '', ['arg2', 'arg3']),
+            new InputOption('format', null, InputOption::VALUE_OPTIONAL, '', 'format'),
+            new InputOption('omit', null, InputOption::VALUE_REQUIRED, '', 'omit'),
+            new InputOption('opts', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, '', []),
+            new InputOption('config', null, InputOption::VALUE_OPTIONAL),
         ]);
     }
 
     public function setInputOutput(InputInterface $input, OutputInterface $output)
     {
         return parent::setInputOutput($input, $output);
+    }
+
+    public function config()
+    {
+        return parent::config();
     }
 
     public function choice($message, $choices = [], $default = 0)

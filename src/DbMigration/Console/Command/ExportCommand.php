@@ -30,6 +30,7 @@ class ExportCommand extends AbstractCommand
             new InputOption('csv-encoding', null, InputOption::VALUE_OPTIONAL, 'Specify CSV encoding.', 'SJIS-win'),
             new InputOption('yml-inline', null, InputOption::VALUE_OPTIONAL, 'Specify YML inline nest level.', 4),
             new InputOption('yml-indent', null, InputOption::VALUE_OPTIONAL, 'Specify YML indent size.', 4),
+            new InputOption('config', 'C', InputOption::VALUE_OPTIONAL, 'Specify Configuration filepath'),
         ]);
         $this->setHelp(<<<EOT
 Export to DDL,DML files based on extension.
