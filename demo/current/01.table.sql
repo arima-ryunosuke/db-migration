@@ -26,16 +26,23 @@ CREATE TABLE RecordTable (
   PRIMARY KEY (id)
 );
 
+CREATE TABLE ExcludeTable (
+  id INT(10) UNSIGNED NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  value INT(11) NOT NULL,
+  PRIMARY KEY (id)
+);
+
 CREATE TABLE TriggerTable (
   id INT(10) UNSIGNED NOT NULL,
   PRIMARY KEY (id)
 );
-CREATE TRIGGER trg1 BEFORE INSERT ON TriggerTable FOR EACH ROW
-  INSERT INTO TriggerTable VALUES() -- dummy statement
-;
-CREATE TRIGGER trg2 BEFORE UPDATE ON TriggerTable FOR EACH ROW
-  INSERT INTO TriggerTable VALUES() -- dummy statement
-;
-CREATE TRIGGER trg3 BEFORE DELETE ON TriggerTable FOR EACH ROW
-  INSERT INTO TriggerTable VALUES() -- dummy statement
-;
+CREATE TRIGGER trg1 BEFORE INSERT ON TriggerTable FOR EACH ROW BEGIN
+  INSERT INTO TriggerTable VALUES(); -- dummy statement
+END;
+CREATE TRIGGER trg2 BEFORE UPDATE ON TriggerTable FOR EACH ROW BEGIN
+  INSERT INTO TriggerTable VALUES(); -- dummy statement
+END;
+CREATE TRIGGER trg3 BEFORE DELETE ON TriggerTable FOR EACH ROW BEGIN
+  INSERT INTO TriggerTable VALUES(); -- dummy statement
+END;
