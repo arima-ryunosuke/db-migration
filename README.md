@@ -59,6 +59,7 @@ Options:
       --csv-encoding[=CSV-ENCODING]        Specify CSV encoding. [default: "SJIS-win"]
       --yml-inline[=YML-INLINE]            Specify YML inline nest level. [default: 4]
       --yml-indent[=YML-INDENT]            Specify YML indent size. [default: 4]
+  -C, --config[=CONFIG]                    Specify Configuration filepath
 ```
 
 #### srcdsn
@@ -138,6 +139,37 @@ DML 差分対象の WHERE 文を指定します。
 - yaml: php-yaml 拡張が必要です。インストールされていない場合このオプションは無視されます
 - csv: そもそも対応していません
 
+#### --config (-C)
+
+上記のオプションを連想配列で記述した php ファイルで指定できます。
+
+下記のような連想配列を `config.php` のようなファイル名で保存して `-C config.php` オプションを付けると適用されます。
+
+```php
+<?php return [
+    // デフォルト値です。下記のコマンド固有のデフォルト値として使用されます
+    'default' => [
+        0           => 'このように数値キーで指定した場合は引数のデフォルト値になります',
+        1           => [
+            '引数が配列を受け入れる場合はこのように配列で指定します',
+        ],
+        'migration' => 'migration オプションのデフォルト値です',
+        'include'   => [
+            'オプションが配列を受け入れる場合はこのように配列で指定します',
+        ],
+    ],
+    // export コマンドのデフォルト値です
+    'export'  => [],
+    // import コマンドのデフォルト値です
+    'import'  => [],
+    // migrate コマンドのデフォルト値です
+    'migrate' => [],
+];
+```
+
+オプションの優先順位は `コマンドのデフォルト値 < config ファイル（default） < config ファイル（command） < コマンドライン引数 ` となります。
+端的に言えば「指定しなかったときのデフォルト値を変更するファイル」となります。
+
 ### import
 
 第1引数の DSN に第2引数以降のファイルを取り込みます。
@@ -165,6 +197,7 @@ Options:
       --bulk-insert                        Enable bulk insert
       --format[=FORMAT]                    Format output SQL (none, pretty, format, highlight or compress. default pretty) [default: "pretty"]
   -o, --omit=OMIT                          Omit size for long SQL
+  -C, --config[=CONFIG]                    Specify Configuration filepath
 ```
 
 #### dstdsn
@@ -214,6 +247,10 @@ export と同じです。テーブルとビューが格納されているディ�
 
 このオプション付きで export したファイルは同様にこのオプションを付けて import する必要があります。
 
+#### --config (-C)
+
+export と同じです。
+
 ### migrate
 
 第1引数の DSN を第2引数の DSN にマイグレーションします。
@@ -249,6 +286,7 @@ Options:
   -f, --force                              Force continue, ignore errors
       --format[=FORMAT]                    Format output SQL (none, pretty, format, highlight or compress. default pretty) [default: "pretty"]
   -o, --omit=OMIT                          Omit size for long SQL
+  -C, --config[=CONFIG]                    Specify Configuration filepath
 ```
 
 #### srcdsn
@@ -360,6 +398,10 @@ mysql で `SET FOREIGN_KEY_CHECKS = 0` `SET FOREIGN_KEY_CHECKS = 1` したい場
 #### --check
 
 いわゆる dryrun です。差分の出力のみを行います。
+
+#### --config (-C)
+
+import と同じです。
 
 ## Install
 
