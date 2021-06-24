@@ -59,7 +59,7 @@ class ExportCommandTest extends AbstractTestCase
             ]
         ]);
 
-        $this->assertContains('CREATE TABLE gentable', $result);
+        $this->assertStringContainsString('CREATE TABLE gentable', $result);
         $this->assertFileExists($createfile);
     }
 
@@ -92,7 +92,7 @@ class ExportCommandTest extends AbstractTestCase
             ]
         ]);
 
-        $this->assertContains("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", $result);
+        $this->assertStringContainsString("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", $result);
         $this->assertFileContains("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", self::$tmpdir . '/gentable.sql');
     }
 

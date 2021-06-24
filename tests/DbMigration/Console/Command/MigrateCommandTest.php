@@ -63,18 +63,18 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
 
         $result = $this->runApp([
             '-vvv' => true,
         ]);
 
-        $this->assertContains('ALTER TABLE igntable', $result);
-        $this->assertContains('DELETE FROM `migtable`', $result);
-        $this->assertContains('INSERT INTO `migtable`', $result);
-        $this->assertContains('UPDATE `migtable` SET', $result);
-        $this->assertNotContains('`sametable`', $result);
+        $this->assertStringContainsString('ALTER TABLE igntable', $result);
+        $this->assertStringContainsString('DELETE FROM `migtable`', $result);
+        $this->assertStringContainsString('INSERT INTO `migtable`', $result);
+        $this->assertStringContainsString('UPDATE `migtable` SET', $result);
+        $this->assertStringNotContainsString('`sametable`', $result);
     }
 
     /**
@@ -82,17 +82,17 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_type_ddl()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
 
         $result = $this->runApp([
             '--type' => 'ddl',
         ]);
 
-        $this->assertContains('ALTER TABLE igntable', $result);
-        $this->assertNotContains('DELETE FROM `migtable`', $result);
-        $this->assertNotContains('INSERT INTO `migtable`', $result);
-        $this->assertNotContains('UPDATE `migtable` SET', $result);
+        $this->assertStringContainsString('ALTER TABLE igntable', $result);
+        $this->assertStringNotContainsString('DELETE FROM `migtable`', $result);
+        $this->assertStringNotContainsString('INSERT INTO `migtable`', $result);
+        $this->assertStringNotContainsString('UPDATE `migtable` SET', $result);
     }
 
     /**
@@ -100,17 +100,17 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_type_dml()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
 
         $result = $this->runApp([
             '--type' => 'dml',
         ]);
 
-        $this->assertNotContains('ALTER TABLE igntable', $result);
-        $this->assertContains('DELETE FROM `migtable`', $result);
-        $this->assertContains('INSERT INTO `migtable`', $result);
-        $this->assertContains('UPDATE `migtable` SET', $result);
+        $this->assertStringNotContainsString('ALTER TABLE igntable', $result);
+        $this->assertStringContainsString('DELETE FROM `migtable`', $result);
+        $this->assertStringContainsString('INSERT INTO `migtable`', $result);
+        $this->assertStringContainsString('UPDATE `migtable` SET', $result);
     }
 
     /**
@@ -118,34 +118,34 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_type_data()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
 
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
         ]);
-        $this->assertContains('insert into notexist VALUES(1)', $result);
-        $this->assertContains('insert into notexist (id) VALUES(7);', $result);
-        $this->assertContains('insert into notexist (id) VALUES(8);', $result);
-        $this->assertContains('insert into notexist (id) VALUES(9);', $result);
-        $this->assertEquals([1, 7, 8, 9, 21, 22], $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
-        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertStringContainsString('insert into notexist VALUES(1)', $result);
+        $this->assertStringContainsString('insert into notexist (id) VALUES(7);', $result);
+        $this->assertStringContainsString('insert into notexist (id) VALUES(8);', $result);
+        $this->assertStringContainsString('insert into notexist (id) VALUES(9);', $result);
+        $this->assertEquals([1, 7, 8, 9, 21, 22], $this->old->executeQuery('select * from notexist')->fetchFirstColumn());
+        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchFirstColumn());
 
-        $this->old->executeUpdate('insert into migs values("hoge", "2011-12-24 12:34:56")');
+        $this->old->executeStatement('insert into migs values("hoge", "2011-12-24 12:34:56")');
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
         ]);
-        $this->assertNotContains('insert into notexist VALUES(1)', $result);
-        $this->assertNotContains('insert into notexist (id) VALUES(7);', $result);
-        $this->assertNotContains('insert into notexist (id) VALUES(8);', $result);
-        $this->assertNotContains('insert into notexist (id) VALUES(9);', $result);
-        $this->assertContains('[2011-12-24 12:34:56] hoge', $result);
-        $this->assertEquals([1, 7, 8, 9, 21, 22], $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
-        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertStringNotContainsString('insert into notexist VALUES(1)', $result);
+        $this->assertStringNotContainsString('insert into notexist (id) VALUES(7);', $result);
+        $this->assertStringNotContainsString('insert into notexist (id) VALUES(8);', $result);
+        $this->assertStringNotContainsString('insert into notexist (id) VALUES(9);', $result);
+        $this->assertStringContainsString('[2011-12-24 12:34:56] hoge', $result);
+        $this->assertEquals([1, 7, 8, 9, 21, 22], $this->old->executeQuery('select * from notexist')->fetchFirstColumn());
+        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchFirstColumn());
 
         $result = $this->runApp([
             '--migration' => $this->getFile('nodir'),
         ]);
-        $this->assertContains('-- no diff data', $result);
+        $this->assertStringContainsString('-- no diff data', $result);
 
         $this->assertExceptionMessage("'invalid query'", $this->runApp, [
             '--migration' => $this->getFile('migs_invalid'),
@@ -157,7 +157,7 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_type_data_choise()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
         $this->runApp([]);
 
         unset($this->defaultArgs['-n']);
@@ -169,9 +169,9 @@ class MigrateCommandTest extends AbstractTestCase
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
         ]);
-        $this->assertContains('migs is created', $result);
-        $this->assertEquals([], $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
-        $this->assertEquals([], $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertStringContainsString('migs is created', $result);
+        $this->assertEquals([], $this->old->executeQuery('select * from notexist')->fetchFirstColumn());
+        $this->assertEquals([], $this->old->executeQuery('select * from migs')->fetchFirstColumn());
 
         /** @var MigrateCommand $command */
         $command = $this->app->get('migrate');
@@ -180,9 +180,9 @@ class MigrateCommandTest extends AbstractTestCase
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
         ]);
-        $this->assertNotContains('migs is created', $result);
-        $this->assertEquals([], $this->old->executeQuery('select * from notexist')->fetchAll(\PDO::FETCH_COLUMN));
-        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchAll(\PDO::FETCH_COLUMN));
+        $this->assertStringNotContainsString('migs is created', $result);
+        $this->assertEquals([], $this->old->executeQuery('select * from notexist')->fetchFirstColumn());
+        $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchFirstColumn());
     }
 
     /**
@@ -190,8 +190,8 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_xcludes()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
 
         $result = $this->runApp([
             '-v'        => true,
@@ -205,11 +205,11 @@ class MigrateCommandTest extends AbstractTestCase
             ],
         ]);
 
-        $this->assertNotContains('DELETE FROM `migtable`', $result);
-        $this->assertNotContains('INSERT INTO `migtable`', $result);
-        $this->assertNotContains('UPDATE `migtable` SET', $result);
-        $this->assertNotContains('`sametable`', $result);
-        $this->assertNotContains('`drptable`', $result);
+        $this->assertStringNotContainsString('DELETE FROM `migtable`', $result);
+        $this->assertStringNotContainsString('INSERT INTO `migtable`', $result);
+        $this->assertStringNotContainsString('UPDATE `migtable` SET', $result);
+        $this->assertStringNotContainsString('`sametable`', $result);
+        $this->assertStringNotContainsString('`drptable`', $result);
     }
 
     /**
@@ -217,8 +217,8 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_dmltypes()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
 
         $result = $this->runApp([
             '-v'          => true,
@@ -227,9 +227,9 @@ class MigrateCommandTest extends AbstractTestCase
             '--no-delete' => true,
         ]);
 
-        $this->assertContains('UPDATE ', $result);
-        $this->assertNotContains('INSERT ', $result);
-        $this->assertNotContains('DELETE ', $result);
+        $this->assertStringContainsString('UPDATE ', $result);
+        $this->assertStringNotContainsString('INSERT ', $result);
+        $this->assertStringNotContainsString('DELETE ', $result);
     }
 
     /**
@@ -237,11 +237,11 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_trigger()
     {
-        $this->old->exec('CREATE TRIGGER trg_remove BEFORE INSERT ON migtable FOR EACH ROW DELETE FROM migtable');
-        $this->old->exec('CREATE TRIGGER trg_change BEFORE UPDATE ON migtable FOR EACH ROW DELETE FROM migtable');
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec('CREATE TRIGGER trg_create AFTER UPDATE ON migtable FOR EACH ROW DELETE FROM migtable');
-        $this->new->exec('CREATE TRIGGER trg_change AFTER UPDATE ON migtable FOR EACH ROW
+        $this->old->executeStatement('CREATE TRIGGER trg_remove BEFORE INSERT ON migtable FOR EACH ROW DELETE FROM migtable');
+        $this->old->executeStatement('CREATE TRIGGER trg_change BEFORE UPDATE ON migtable FOR EACH ROW DELETE FROM migtable');
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement('CREATE TRIGGER trg_create AFTER UPDATE ON migtable FOR EACH ROW DELETE FROM migtable');
+        $this->new->executeStatement('CREATE TRIGGER trg_change AFTER UPDATE ON migtable FOR EACH ROW
 BEGIN
   INSERT INTO migtable VALUES();
   DELETE FROM migtable;
@@ -251,11 +251,11 @@ END');
             '-v' => true,
         ]);
 
-        $this->assertContains('CREATE TRIGGER trg_create AFTER UPDATE', $result);
-        $this->assertContains('DROP TRIGGER trg_change', $result);
-        $this->assertContains('CREATE TRIGGER trg_change AFTER UPDATE', $result);
-        $this->assertContains('DROP TRIGGER trg_remove', $result);
-        $this->assertNotContains('CREATE TRIGGER trg_remove', $result);
+        $this->assertStringContainsString('CREATE TRIGGER trg_create AFTER UPDATE', $result);
+        $this->assertStringContainsString('DROP TRIGGER trg_change', $result);
+        $this->assertStringContainsString('CREATE TRIGGER trg_change AFTER UPDATE', $result);
+        $this->assertStringContainsString('DROP TRIGGER trg_remove', $result);
+        $this->assertStringNotContainsString('CREATE TRIGGER trg_remove', $result);
     }
 
     /**
@@ -267,13 +267,13 @@ END');
             '-v'       => true,
             '--noview' => false,
         ]);
-        $this->assertContains('simpleview', $result);
+        $this->assertStringContainsString('simpleview', $result);
 
         $result = $this->runApp([
             '-v'       => true,
             '--noview' => true,
         ]);
-        $this->assertNotContains('simpleview', $result);
+        $this->assertStringNotContainsString('simpleview', $result);
     }
 
     /**
@@ -281,7 +281,7 @@ END');
      */
     function run_throwable_ddl()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
         $this->insertMultiple($this->old, 'unqtable', [
             [
                 'id'   => 2,
@@ -297,7 +297,7 @@ END');
             '--force' => true,
         ]);
 
-        $this->assertContains("key 'unq_index'", $result);
+        $this->assertStringContainsString("key 'unq_index'", $result);
 
         $this->assertExceptionMessage("key 'unq_index'", $this->runApp, [
             '--force' => false,
@@ -309,8 +309,8 @@ END');
      */
     function run_throwable_dml()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
         $this->insertMultiple($this->old, 'migtable', [
             [
                 'id'   => 19,
@@ -326,10 +326,10 @@ END');
             '--force' => true,
         ]);
 
-        $this->assertContains("key 'unq_index'", $result);
+        $this->assertStringContainsString("key 'unq_index'", $result);
 
-        $count = $this->old->fetchColumn("select COUNT(*) from migtable");
-        $this->assertEquals($count, $this->old->fetchColumn("select COUNT(*) from migtable"));
+        $count = $this->old->fetchOne("select COUNT(*) from migtable");
+        $this->assertEquals($count, $this->old->fetchOne("select COUNT(*) from migtable"));
 
         $this->assertExceptionMessage("key 'unq_index'", $this->runApp, [
             '--force' => false,
@@ -341,16 +341,16 @@ END');
      */
     function run_throwable_migration()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
 
         $result = $this->runApp([
             '-v'     => true,
             '--type' => 'dml',
         ]);
 
-        $this->assertContains('difftable    is skipped by has different definition between schema', $result);
-        $this->assertContains('nopkeytable  is skipped by has no primary key', $result);
+        $this->assertStringContainsString('difftable    is skipped by has different definition between schema', $result);
+        $this->assertStringContainsString('nopkeytable  is skipped by has no primary key', $result);
     }
 
     /**
@@ -377,7 +377,7 @@ return [
      */
     function run_omission_sql()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
 
         $this->insertMultiple($this->old, 'migtable', array_map(function ($i) {
             return [
@@ -396,8 +396,8 @@ return [
      */
     function run_verbosity()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
 
         $result = $this->runApp([
             '-c' => true,
@@ -410,7 +410,7 @@ return [
             '-c' => true,
         ]);
 
-        $this->assertNotContains('is skipped by no diff', $result);
+        $this->assertStringNotContainsString('is skipped by no diff', $result);
 
         $result = $this->runApp([
             '-c' => true,
@@ -419,12 +419,12 @@ return [
             '-e' => 'difftable',
         ]);
 
-        $this->assertContains('is skipped by include option', $result);
-        $this->assertContains('is skipped by exclude option', $result);
-        $this->assertContains('is skipped by not exists', $result);
-        $this->assertContains('is skipped by no record', $result);
-        $this->assertContains('is skipped by has no primary key', $result);
-        $this->assertContains('is skipped by no diff', $result);
+        $this->assertStringContainsString('is skipped by include option', $result);
+        $this->assertStringContainsString('is skipped by exclude option', $result);
+        $this->assertStringContainsString('is skipped by not exists', $result);
+        $this->assertStringContainsString('is skipped by no record', $result);
+        $this->assertStringContainsString('is skipped by has no primary key', $result);
+        $this->assertStringContainsString('is skipped by no diff', $result);
     }
 
     /**
@@ -432,8 +432,8 @@ return [
      */
     function run_no_interaction()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('heavy.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('heavy.sql')));
         unset($this->defaultArgs['-n']);
 
         /** @var MigrateCommand $command */
@@ -442,8 +442,8 @@ return [
 
         $result = $this->runApp([]);
 
-        $this->assertContains('total query count is 1023', $result);
-        $this->assertContains("INSERT INTO `sametable` SET `id` = '1024';", $result);
+        $this->assertStringContainsString('total query count is 1023', $result);
+        $this->assertStringContainsString("INSERT INTO `sametable` SET `id` = '1024';", $result);
     }
 
     /**
@@ -451,8 +451,8 @@ return [
      */
     function run_dryrun()
     {
-        $this->new->exec(file_get_contents($this->getFile('table.sql')));
-        $this->new->exec(file_get_contents($this->getFile('data.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('table.sql')));
+        $this->new->executeStatement(file_get_contents($this->getFile('data.sql')));
 
         $logger = new DebugStack();
         $this->old->getConfiguration()->setSQLLogger($logger);

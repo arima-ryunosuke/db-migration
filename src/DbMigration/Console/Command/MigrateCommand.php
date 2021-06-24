@@ -128,7 +128,7 @@ EOT
             // exec if noconfirm or confirm answer is "y"
             if ($this->confirm('exec this query?', true)) {
                 try {
-                    $srcConn->exec($sql);
+                    $srcConn->executeStatement($sql);
                     $execed = true;
                 }
                 catch (\Exception $e) {
@@ -196,7 +196,7 @@ EOT
             }
 
             // skip no has record
-            if (!$dstConn->fetchColumn("select COUNT(*) from $tablename")) {
+            if (!$dstConn->fetchOne("select COUNT(*) from $tablename")) {
                 $this->logger->info("-- $title is skipped by no record.");
                 continue;
             }
@@ -237,7 +237,7 @@ EOT
 
                 try {
                     foreach ($sqls as $sql) {
-                        $srcConn->exec($sql);
+                        $srcConn->executeStatement($sql);
                     }
                     $srcConn->commit();
                 }

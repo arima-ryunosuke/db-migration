@@ -17,7 +17,7 @@ class Utility
             $cache[$cacheid] = null;
         }
         elseif (!isset($cache[$cacheid])) {
-            $cache[$cacheid] = $connection->getSchemaManager()->createSchema();
+            $cache[$cacheid] = $connection->createSchemaManager()->createSchema();
         }
         return $cache[$cacheid];
     }

@@ -171,7 +171,9 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         }
         catch (\Exception $ex) {
             self::assertInstanceOf(get_class($e), $ex);
-            self::assertEquals($e->getCode(), $ex->getCode());
+            if ($e->getCode() > 0) {
+                self::assertEquals($e->getCode(), $ex->getCode());
+            }
             if (strlen($e->getMessage()) > 0) {
                 self::assertContains($e->getMessage(), $ex->getMessage());
             }

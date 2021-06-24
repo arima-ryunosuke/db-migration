@@ -53,7 +53,7 @@ class MigrationTableTest extends AbstractTestCase
             ['name' => 'from php(mixed code)'],
             ['name' => 'from php(return)'],
             ['name' => 'from sql'],
-        ], $this->old->fetchAll('select * from ttt'));
+        ], $this->old->fetchAllAssociative('select * from ttt'));
 
         $this->assertEquals(5, $migrationTable->apply('11.sql', 'update ttt set name = concat(name, " suffix")'));
         $this->assertEquals(4, $migrationTable->apply('12.sql', 'delete from ttt where name <> "from sql suffix"'));

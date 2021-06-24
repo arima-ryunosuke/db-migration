@@ -165,15 +165,15 @@ class Transporter
                 case 'php':
                     if ($this->directories['table']) {
                         $schemaArray['table'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return "<?php return " . Utility::var_export($data) . ";\n"; });
+                            return $exportion->setProvider(function ($data) { return /** @lang text */ "<?php return " . Utility::var_export($data) . ";\n"; });
                         }, $schemaArray['table']);
                     }
                     if ($this->directories['view']) {
                         $schemaArray['view'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return "<?php return " . Utility::var_export($data) . ";\n"; });
+                            return $exportion->setProvider(function ($data) { return /** @lang text */ "<?php return " . Utility::var_export($data) . ";\n"; });
                         }, $schemaArray['view']);
                     }
-                    $content = "<?php return " . Utility::var_export($schemaArray) . ";\n";
+                    $content = /** @lang text */ "<?php return " . Utility::var_export($schemaArray) . ";\n";
                     break;
                 case 'json':
                     if ($this->directories['table']) {
@@ -253,7 +253,7 @@ class Transporter
                 foreach ($scanner->getAllRows() as $row) {
                     $result[] = Utility::var_export($scanner->fillDefaultValue($row), 1);
                 }
-                $result = "<?php return [\n    " . implode(",\n    ", $result) . "\n];\n";
+                $result = /** @lang text */ "<?php return [\n    " . implode(",\n    ", $result) . "\n];\n";
                 break;
             case 'json':
                 $result = [];
@@ -309,7 +309,7 @@ class Transporter
                     throw new \DomainException('sql is not supported include, exclude option.');
                 }
                 $contents = file_get_contents($filename);
-                $this->connection->exec($contents);
+                $this->connection->executeStatement($contents);
                 return $this->explodeSql($contents);
             case 'php':
                 $schemaArray = require $filename;
@@ -368,7 +368,7 @@ class Transporter
 
         $sqls = array_merge($creates, $alters, $views);
         foreach ($sqls as $sql) {
-            $this->connection->exec($sql);
+            $this->connection->executeStatement($sql);
         }
 
         return $sqls;
@@ -385,7 +385,7 @@ class Transporter
             case 'sql':
                 $contents = file_get_contents($filename);
                 Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
-                $this->connection->exec($contents);
+                $this->connection->executeStatement($contents);
                 return $this->explodeSql($contents);
             case 'php':
                 $rows = require $filename;
@@ -530,7 +530,7 @@ class Transporter
                 $values[] = '(' . implode(',', $value) . ')';
             }
             $sql = "INSERT INTO $qtable " . " (" . implode(',', $columns) . ") VALUES " . implode(',', $values);
-            return $this->connection->executeUpdate($sql);
+            return $this->connection->executeStatement($sql);
         }
         else {
             $count = 0;
@@ -583,7 +583,6 @@ class Transporter
         }
 
         // add indexes
-        /** @var Index[] $indexes */
         $indexes = array_diff_key($table->getIndexes(), $this->getImplicitIndexes($table));
         uasort($indexes, function (Index $a, Index $b) {
             if ($a->isPrimary() || $b->isPrimary()) {
@@ -634,7 +633,7 @@ class Transporter
     private function tableFromArray($name, array $array)
     {
         // base table
-        $table = new Table($name, [], [], [], [], 0, $array['option']);
+        $table = new Table($name, [], [], [], [], [], $array['option']);
 
         // add columns
         foreach ($array['column'] ?? [] as $name => $column) {

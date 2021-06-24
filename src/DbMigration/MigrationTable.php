@@ -29,13 +29,13 @@ class MigrationTable
 
     public function exists()
     {
-        return $this->connection->getSchemaManager()->tablesExist($this->table->getName());
+        return $this->connection->createSchemaManager()->tablesExist($this->table->getName());
     }
 
     public function create()
     {
         if (!$this->exists()) {
-            $this->connection->getSchemaManager()->createTable($this->table);
+            $this->connection->createSchemaManager()->createTable($this->table);
             return true;
         }
         return false;
@@ -44,7 +44,7 @@ class MigrationTable
     public function drop()
     {
         if ($this->exists()) {
-            $this->connection->getSchemaManager()->dropTable($this->table);
+            $this->connection->createSchemaManager()->dropTable($this->table);
             return true;
         }
         return false;
@@ -61,7 +61,7 @@ class MigrationTable
         if (!$this->exists()) {
             return [];
         }
-        return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAll(\PDO::FETCH_COLUMN | \PDO::FETCH_UNIQUE);
+        return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAllKeyValue();
     }
 
     public function apply($version, $content)
@@ -73,7 +73,7 @@ class MigrationTable
                 throw new \InvalidArgumentException("'$ext' is not supported.");
 
             case 'sql':
-                $affected += $this->connection->exec($content);
+                $affected += $this->connection->executeStatement($content);
                 break;
             case 'php':
                 $connection = $this->connection;
@@ -83,7 +83,7 @@ class MigrationTable
                 }
                 foreach ((array) $return as $sql) {
                     if ($sql) {
-                        $affected += $this->connection->exec($sql);
+                        $affected += $this->connection->executeStatement($sql);
                     }
                 }
                 break;
@@ -97,7 +97,7 @@ class MigrationTable
         $versions = array_map(function ($version) {
             return '(' . Utility::quote($this->connection, $version) . ',NOW())';
         }, (array) $version);
-        return $this->connection->executeUpdate("INSERT INTO " . $this->table->getName() . " VALUES " . implode(',', $versions));
+        return $this->connection->executeStatement("INSERT INTO " . $this->table->getName() . " VALUES " . implode(',', $versions));
     }
 
     public function detach($version)
@@ -105,6 +105,6 @@ class MigrationTable
         $versions = array_map(function ($version) {
             return Utility::quote($this->connection, $version);
         }, (array) $version);
-        return $this->connection->executeUpdate("DELETE FROM " . $this->table->getName() . " WHERE version IN (" . implode(',', $versions) . ")");
+        return $this->connection->executeStatement("DELETE FROM " . $this->table->getName() . " WHERE version IN (" . implode(',', $versions) . ")");
     }
 }

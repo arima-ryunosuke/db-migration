@@ -104,7 +104,7 @@ class TableScannerTest extends AbstractTestCase
     {
         $rows = $this->invoke('getRecordFromPrimaryKeys', [], true);
 
-        $this->assertCount(0, $rows->fetchAll());
+        $this->assertCount(0, iterator_to_array($rows));
     }
 
     /**
@@ -126,7 +126,7 @@ class TableScannerTest extends AbstractTestCase
         $refmethod = new \ReflectionMethod($this->scanner_fuga, 'getRecordFromPrimaryKeys');
         $refmethod->setAccessible(true);
 
-        $this->assertEquals($rows, $refmethod->invoke($this->scanner_fuga, $tuples, false)->fetchAll());
+        $this->assertEquals($rows, iterator_to_array($refmethod->invoke($this->scanner_fuga, $tuples, false)));
     }
 
     /**
@@ -145,10 +145,10 @@ class TableScannerTest extends AbstractTestCase
         $method = 'getRecordFromPrimaryKeys';
         $tuples = $this->scanner->getPrimaryRows();
 
-        $this->assertCount(4, $this->invoke($method, $tuples, true, 0)->fetchAll());
-        $this->assertCount(4, $this->invoke($method, $tuples, true, 1)->fetchAll());
-        $this->assertCount(2, $this->invoke($method, $tuples, true, 2)->fetchAll());
-        $this->assertCount(0, $this->invoke($method, $tuples, true, 3)->fetchAll());
+        $this->assertCount(4, $this->invoke($method, $tuples, true, 0));
+        $this->assertCount(4, $this->invoke($method, $tuples, true, 1));
+        $this->assertCount(2, $this->invoke($method, $tuples, true, 2));
+        $this->assertCount(0, $this->invoke($method, $tuples, true, 3));
     }
 
     /**
@@ -176,7 +176,7 @@ class TableScannerTest extends AbstractTestCase
      */
     function fillDefaultValue()
     {
-        $con = DriverManager::getConnection(['pdo' => new \PDO('sqlite::memory:')]);
+        $con = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:')]);
 
         $table = new Table('deftable',
             [
@@ -203,8 +203,8 @@ class TableScannerTest extends AbstractTestCase
      */
     function getInsertSql_no_mysql()
     {
-        $old = DriverManager::getConnection(['pdo' => new \PDO('sqlite::memory:')]);
-        $new = DriverManager::getConnection(['pdo' => new \PDO('sqlite::memory:')]);
+        $old = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:')]);
+        $new = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:')]);
 
         $table = new Table('hogetable',
             [new Column('id', Type::getType('integer'))],

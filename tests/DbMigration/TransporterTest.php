@@ -414,7 +414,7 @@ class TransporterTest extends AbstractTestCase
         foreach ($supported as $ext) {
             $this->old->delete('fuga', [0]);
             $this->transporter->importDML(self::$tmpdir . "/fuga.$ext");
-            $this->assertEquals(10, $this->old->fetchColumn('SELECT COUNT(*) FROM fuga'));
+            $this->assertEquals(10, $this->old->fetchOne('SELECT COUNT(*) FROM fuga'));
         }
 
         $this->assertException(new \DomainException("is not supported"), function () {
@@ -447,7 +447,7 @@ class TransporterTest extends AbstractTestCase
         file_put_contents(self::$tmpdir . "/hoge.php", "<?php return function(){return $array;};");
         $this->old->delete('hoge', [0]);
         $this->transporter->importDML(self::$tmpdir . "/hoge.php");
-        $this->assertEquals(3, $this->old->fetchColumn('SELECT COUNT(*) FROM hoge'));
+        $this->assertEquals(3, $this->old->fetchOne('SELECT COUNT(*) FROM hoge'));
     }
 
 
@@ -635,7 +635,7 @@ class TransporterTest extends AbstractTestCase
             ],
         ]);
         $this->assertEquals(2, $affected);
-        $this->assertEquals(2, $this->old->fetchColumn('SELECT COUNT(*) FROM hoge'));
+        $this->assertEquals(2, $this->old->fetchOne('SELECT COUNT(*) FROM hoge'));
 
         $this->old->delete('hoge', [0]);
         $this->transporter->setBulkMode(true);
@@ -652,7 +652,7 @@ class TransporterTest extends AbstractTestCase
             ],
         ]);
         $this->assertEquals(2, $affected);
-        $this->assertEquals(2, $this->old->fetchColumn('SELECT COUNT(*) FROM hoge'));
+        $this->assertEquals(2, $this->old->fetchOne('SELECT COUNT(*) FROM hoge'));
     }
 
     /**
@@ -779,7 +779,7 @@ CSV
             'id'   => 1,
             'name' => 'あいうえお',
             'data' => 3.14,
-        ], $this->old->fetchAssoc('SELECT * FROM hoge'));
+        ], $this->old->fetchAssociative('SELECT * FROM hoge'));
     }
 
     /**
@@ -811,7 +811,7 @@ CSV
             'id'   => 1,
             'name' => 'あいうえお',
             'data' => 3.14,
-        ], $this->old->fetchAssoc('SELECT * FROM hoge'));
+        ], $this->old->fetchAssociative('SELECT * FROM hoge'));
     }
 
     static function expandDataProvider()

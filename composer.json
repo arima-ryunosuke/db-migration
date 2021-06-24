@@ -1,4 +1,9 @@
 {
+  "config": {
+    "platform": {
+      "php": "7.4"
+    }
+  },
   "name": "ryunosuke/db-migration",
   "type": "library",
   "description": "Database Migration Commands",
@@ -37,8 +42,8 @@
     }
   ],
   "require": {
-    "php": ">=7.2",
-    "doctrine/dbal": "2.10.x-dev",
+    "php": ">=7.4",
+    "doctrine/dbal": "3.1.x-dev",
     "symfony/console": "2.*",
     "symfony/yaml": "*",
     "jdorn/sql-formatter": "*"
@@ -55,9 +60,7 @@
       "vendor/bin/phpunit --configuration=tests/phpunit.xml"
     ],
     "pharize": [
-      "@composer dump-autoload --no-dev",
-      "bin/box.phar build -c box.json",
-      "@composer dump-autoload"
+      "bin/box.phar compile -c box.json"
     ]
   }
 }

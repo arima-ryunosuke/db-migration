@@ -34,11 +34,11 @@ class ImportCommandTest extends AbstractTestCase
                 $this->getFile('data.sql'),
             ]
         ]);
-        $this->assertContains("importDDL", $result);
-        $this->assertContains("importDML", $result);
-        $this->assertContains("attachMigration", $result);
-        $this->assertNotContains("diff DDL", $result);
-        $this->assertNotContains("diff DML", $result);
+        $this->assertStringContainsString("importDDL", $result);
+        $this->assertStringContainsString("importDML", $result);
+        $this->assertStringContainsString("attachMigration", $result);
+        $this->assertStringNotContainsString("diff DDL", $result);
+        $this->assertStringNotContainsString("diff DML", $result);
         $this->assertTrue($this->oldSchema->tablesExist(['migs']));
     }
 

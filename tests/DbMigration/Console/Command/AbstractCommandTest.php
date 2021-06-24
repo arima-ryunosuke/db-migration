@@ -213,17 +213,17 @@ password = fuga
         $this->assertEquals('SELECT hoge FROM tablename;', $this->command->formatSql('SELECT hoge FROM tablename'));
 
         $input->setOption('format', 'compress');
-        $this->assertContains('SELECT hoge FROM tablename;', $this->command->formatSql('SELECT   hoge FROM    tablename'));
+        $this->assertStringContainsString('SELECT hoge FROM tablename;', $this->command->formatSql('SELECT   hoge FROM    tablename'));
 
         $input->setOption('format', 'pretty');
-        $this->assertContains("[0m", $this->command->formatSql('SELECT hoge FROM tablename'));
-        $this->assertContains("\n", $this->command->formatSql('SELECT hoge FROM tablename'));
+        $this->assertStringContainsString("[0m", $this->command->formatSql('SELECT hoge FROM tablename'));
+        $this->assertStringContainsString("\n", $this->command->formatSql('SELECT hoge FROM tablename'));
 
         $input->setOption('format', 'format');
-        $this->assertContains("\n", $this->command->formatSql('SELECT hoge FROM tablename'));
+        $this->assertStringContainsString("\n", $this->command->formatSql('SELECT hoge FROM tablename'));
 
         $input->setOption('format', 'highlight');
-        $this->assertContains("[0m", $this->command->formatSql('SELECT hoge FROM tablename'));
+        $this->assertStringContainsString("[0m", $this->command->formatSql('SELECT hoge FROM tablename'));
 
         $input->setOption('omit', '24');
         $input->setOption('format', '');

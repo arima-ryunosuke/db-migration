@@ -61,7 +61,7 @@ class TableScanner
 
         // set property from property
         $this->quotedName = $conn->quoteIdentifier($this->table->getName());
-        $this->primaryKeys = $this->table->getPrimaryKeyColumns();
+        $this->primaryKeys = array_keys($this->table->getPrimaryKeyColumns());
         $this->flippedPrimaryKeys = array_flip($this->primaryKeys);
         $this->primaryKeyString = implode(', ', Utility::quoteIdentifier($this->conn, $this->primaryKeys));
 
@@ -76,7 +76,7 @@ class TableScanner
         foreach ($ignoreColumn as $icol) {
             $modifier = $table->getName();
             if (strpos($icol, '.') !== false) {
-                list($modifier, $icol) = explode('.', $icol);
+                [$modifier, $icol] = explode('.', $icol);
             }
             if (str_replace(['`', '"', '[', ']'], '', $modifier) === $table->getName()) {
                 $this->ignoreColumns[str_replace(['`', '"', '[', ']'], '', $icol)] = true;
@@ -120,7 +120,7 @@ class TableScanner
         foreach ($this->columns as $name => $thisColumn) {
             $thatColumn = $that->columns[$name];
 
-            if (strval($thisColumn->getType()) !== strval($thatColumn->getType())) {
+            if ($thisColumn->getType()->getName() !== $thatColumn->getType()->getName()) {
                 return false;
             }
         }
@@ -143,7 +143,7 @@ class TableScanner
 
             // loop for limited rows
             $count = count($sqls);
-            while (($oldrow = $oldrows->fetch()) !== false) {
+            foreach ($oldrows as $oldrow) {
                 // to comment
                 $comment = $this->commentize($oldrow);
 
@@ -181,7 +181,7 @@ class TableScanner
 
             // loop for limited rows
             $count = count($sqls);
-            while (($newrow = $newrows->fetch()) !== false) {
+            foreach ($newrows as $newrow) {
                 if ($isMysql) {
                     // to VALUES string
                     $valueString = implode(', ', $this->joinKeyValue($newrow));
@@ -218,12 +218,15 @@ class TableScanner
     {
         $sqls = [];
         for ($page = 0; true; $page++) {
-            $oldrows = $this->getRecordFromPrimaryKeys($tuples, true, $page);
-            $newrows = $that->getRecordFromPrimaryKeys($tuples, true, $page);
+            $multipleIterator = new \MultipleIterator(\MultipleIterator::MIT_NEED_ALL | \MultipleIterator::MIT_KEYS_ASSOC);
+            $multipleIterator->attachIterator($this->getRecordFromPrimaryKeys($tuples, true, $page), 'old');
+            $multipleIterator->attachIterator($that->getRecordFromPrimaryKeys($tuples, true, $page), 'new');
 
             // loop for limited rows
             $count = count($sqls);
-            while (($oldrow = $oldrows->fetch()) !== false && ($newrow = $newrows->fetch()) !== false) {
+            foreach ($multipleIterator as $rows) {
+                $newrow = $rows['new'];
+                $oldrow = $rows['old'];
                 // no diff row
                 if (!($deltas = array_diff_assoc($newrow, $oldrow))) {
                     continue;
@@ -269,7 +272,7 @@ class TableScanner
         ";
 
         $result = [];
-        foreach ($this->conn->query($sql) as $row) {
+        foreach ($this->conn->fetchAllAssociative($sql) as $row) {
             $id = implode("\t", $row);
             $result[$id] = $row;
         }
@@ -280,7 +283,7 @@ class TableScanner
     /**
      * get all rows
      *
-     * @return \Doctrine\DBAL\Driver\Statement
+     * @return \Generator
      */
     public function getAllRows()
     {
@@ -293,7 +296,7 @@ class TableScanner
             ORDER BY {$this->primaryKeyString}
         ";
 
-        return $this->conn->query($sql);
+        return $this->conn->executeQuery($sql)->iterateAssociative();
     }
 
     public function fillDefaultValue($row)
@@ -321,7 +324,7 @@ class TableScanner
      * @param array $tuples
      * @param bool $ignore
      * @param int $page
-     * @return \Doctrine\DBAL\Driver\Statement
+     * @return \Generator
      */
     private function getRecordFromPrimaryKeys(array $tuples, $ignore, $page = null)
     {
@@ -341,7 +344,7 @@ class TableScanner
             ORDER BY {$this->primaryKeyString}
         ";
 
-        return $this->conn->query($sql);
+        return $this->conn->executeQuery($sql)->iterateAssociative();
     }
 
     private function parseCondition($conds, $icharactor)
