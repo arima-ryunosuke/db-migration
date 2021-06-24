@@ -20,6 +20,13 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.8
+
+- bump version
+  - php: 7.4
+  - doctrine: 3.*
+  - box: 3.*
+
 ## 2.0.7
 
 - [feature] 全コマンドに config(C) オプションを追加
