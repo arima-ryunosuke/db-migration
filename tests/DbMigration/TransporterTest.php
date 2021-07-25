@@ -586,7 +586,7 @@ class TransporterTest extends AbstractTestCase
         $method->setAccessible(true);
 
         $table = new Table('ordered');
-        $table->addColumn('id1', 'integer');
+        $table->addColumn('id1', 'integer')->setAutoincrement(true);
         $table->addColumn('id2', 'integer');
         $table->addColumn('id3', 'integer');
         $table->addIndex(['id1'], 'idx_zzz');

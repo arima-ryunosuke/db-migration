@@ -59,9 +59,17 @@ class Transporter
     ];
 
     /** @var array */
+    private $ignoreTableOptionAttributes = [
+        'autoincrement'  => true,
+        'create_options' => [
+            // something
+        ],
+    ];
+
+    /** @var array */
     private $ignoreColumnOptionAttributes = [
         // for ryunosuke/dbal
-        'beforeColumn',
+        'beforeColumn' => null,
     ];
 
     public function __construct(Connection $connection)
@@ -554,11 +562,12 @@ class Transporter
             'index'   => [],
             'foreign' => [],
             'trigger' => [],
-            'option'  => $options,
+            'option'  => array_replace(array_diff_key($options, $this->ignoreTableOptionAttributes), [
+                'create_options' => array_diff_key($options['create_options'], $this->ignoreTableOptionAttributes['create_options']),
+            ]),
         ];
 
         // add columns
-        $ignoreColumnAttributes = array_flip($this->ignoreColumnOptionAttributes);
         foreach ($table->getColumns() as $column) {
             $array = [
                 'type'                => $column->getType()->getName(),
@@ -572,8 +581,8 @@ class Transporter
                 'autoincrement'       => $column->getAutoincrement(),
                 'columnDefinition'    => $column->getColumnDefinition(),
                 'comment'             => $column->getComment(),
-                'platformOptions'     => array_diff_key($column->getPlatformOptions(), $ignoreColumnAttributes),
-                'customSchemaOptions' => array_diff_key($column->getCustomSchemaOptions(), $ignoreColumnAttributes),
+                'platformOptions'     => array_diff_key($column->getPlatformOptions(), $this->ignoreColumnOptionAttributes),
+                'customSchemaOptions' => array_diff_key($column->getCustomSchemaOptions(), $this->ignoreColumnOptionAttributes),
             ];
             $array = Utility::array_diff_exists($array, $this->defaultColumnAttributes);
             if (!in_array($array['type'], ['smallint', 'integer', 'bigint', 'decimal', 'float'], true)) {
