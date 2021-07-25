@@ -20,6 +20,11 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.9
+
+- [fixbug] autoincrement がスキーマ定義に出る不具合を修正
+- [fixbug] レコードファイルが空の時に Warning が出る不具合を修正
+
 ## 2.0.8
 
 - bump version
