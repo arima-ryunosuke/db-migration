@@ -397,13 +397,13 @@ class Transporter
             case 'json':
                 $contents = file_get_contents($filename);
                 Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
-                $rows = json_decode($contents, true);
+                $rows = json_decode($contents, true) ?? [];
                 break;
             case 'yml':
             case 'yaml':
                 $contents = file_get_contents($filename);
                 Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
-                $rows = Yaml::parse($contents);
+                $rows = Yaml::parse($contents) ?? [];
                 break;
             case 'csv':
                 $rows = [];
