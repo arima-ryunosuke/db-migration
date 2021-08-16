@@ -197,6 +197,7 @@ Options:
       --bulk-insert                        Enable bulk insert
       --format[=FORMAT]                    Format output SQL (none, pretty, format, highlight or compress. default pretty) [default: "pretty"]
   -o, --omit=OMIT                          Omit size for long SQL
+  -E, --event[=EVENT]                      Specify Event filepath
   -C, --config[=CONFIG]                    Specify Configuration filepath
 ```
 
@@ -247,6 +248,66 @@ export と同じです。テーブルとビューが格納されているディ�
 
 このオプション付きで export したファイルは同様にこのオプションを付けて import する必要があります。
 
+#### --event (-E)
+
+Doctrine イベントが記述された php ファイルを指定します。
+`[EventName => Event]` 形式の配列か、それを返すようなクロージャを記述します。
+クロージャの場合は実行コマンドとコネクションが引数で渡ってきます。
+`Event` は配列でも構いません。
+
+```
+<?php
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Event\ConnectionEventArgs;
+use Doctrine\DBAL\Event\Listeners\SQLSessionInit;
+use Doctrine\DBAL\Event\SchemaCreateTableEventArgs;
+use Doctrine\DBAL\Events;
+use Symfony\Component\Console\Command\Command;
+
+return function (Command $command, Connection $connection) {
+    return [
+        'pre-migration'             => function (ConnectionEventArgs $args) {
+            $connection->executeStatement("SET FOREIGN_KEY_CHECKS = 0");
+        },
+        'post-migration'            => function (ConnectionEventArgs $args) {
+            $connection->executeStatement("SET FOREIGN_KEY_CHECKS = 1");
+        },
+        Events::postConnect         => [
+            new SQLSessionInit("SET FOREIGN_KEY_CHECKS = 0"),
+        ],
+        Events::onSchemaCreateTable => new class() {
+            public function onSchemaCreateTable(SchemaCreateTableEventArgs $args) { /* ... */ }
+        },
+    ];
+};
+
+// OR
+
+return [
+    'pre-migration'             => function (ConnectionEventArgs $args) {
+        $connection->executeStatement("SET FOREIGN_KEY_CHECKS = 0");
+    },
+    'post-migration'            => function (ConnectionEventArgs $args) {
+        $connection->executeStatement("SET FOREIGN_KEY_CHECKS = 1");
+    },
+    Events::postConnect         => [
+        function (ConnectionEventArgs $args) {
+            $args->getConnection()->executeStatement("SET FOREIGN_KEY_CHECKS = 0");
+        },
+    ],
+    Events::onSchemaCreateTable => function (SchemaCreateTableEventArgs $args) { /* ... */ },
+];
+```
+
+詳細は Doctrine のドキュメントに譲りますが、本ツールはマイグレーションツールなので `on～` を指定する機会はほぼありません。
+`postConnect` で接続時のイベントを指定するのが最も多いユースケースでしょう。
+
+また、上記のように独自イベントとして `pre-migration` `post-migration` イベントが存在します。
+これは migrate コマンドの際にマイグレーションの前後で実行されるイベントです。
+
+なお、イベントは単純にクロージャでも構いません。
+内部で自動的に Doctrine イベントリスナに変換します。
+
 #### --config (-C)
 
 export と同じです。
@@ -286,6 +347,7 @@ Options:
   -f, --force                              Force continue, ignore errors
       --format[=FORMAT]                    Format output SQL (none, pretty, format, highlight or compress. default pretty) [default: "pretty"]
   -o, --omit=OMIT                          Omit size for long SQL
+  -E, --event[=EVENT]                      Specify Event filepath
   -C, --config[=CONFIG]                    Specify Configuration filepath
 ```
 
@@ -375,29 +437,16 @@ import と同じです。テーブルとビューが格納されているディ�
 
 #### --callback
 
-マイグレーション前後のイベントコールバックファイルを指定します。
-
-```php
-<?php
-
-return [
-    'pre-migration'  => function (\Doctrine\DBAL\Connection conn) {
-        echo 'pre-migration';
-    },
-    'post-migration' => function (\Doctrine\DBAL\Connection $conn) {
-        echo 'post-migration';
-    },
-];
-```
-
-このようなファイルを用意してこのオプションでファイル名を渡すと指定したクロージャが呼び出されるようになります。
-いまのところ上記の2イベントしか存在しません。
-
-mysql で `SET FOREIGN_KEY_CHECKS = 0` `SET FOREIGN_KEY_CHECKS = 1` したい場合などに使用します。
+マイグレーション前後のイベントコールバックファイルを指定しますが、非推奨です。
+`--event` を使用してください。
 
 #### --check
 
 いわゆる dryrun です。差分の出力のみを行います。
+
+#### --event (-E)
+
+import と同じです。
 
 #### --config (-C)
 

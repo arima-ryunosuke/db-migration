@@ -20,6 +20,11 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.10
+
+- [feature] event オプションで doctrine イベントを登録可能にした
+- [change] event オプションで事足りるため callback オプションの非推奨化
+
 ## 2.0.9
 
 - [fixbug] autoincrement がスキーマ定義に出る不具合を修正
