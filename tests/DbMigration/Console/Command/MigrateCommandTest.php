@@ -16,7 +16,7 @@ class MigrateCommandTest extends AbstractTestCase
 
         $migtable = $this->createSimpleTable('migtable', 'integer', 'id', 'code');
         $migtable->addUniqueIndex([
-            'code'
+            'code',
         ], 'unq_index');
 
         $longtable = $this->createSimpleTable('longtable', 'integer', 'id');
@@ -32,20 +32,21 @@ class MigrateCommandTest extends AbstractTestCase
         $this->oldSchema->dropAndCreateTable($this->createSimpleTable('unqtable', 'integer', 'id', 'code'));
         $this->oldSchema->dropAndCreateTable($this->createSimpleTable('sametable', 'integer', 'id'));
         $this->oldSchema->dropAndCreateTable($this->createSimpleTable('drptable', 'integer', 'id'));
+        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('eventtable', 'integer', 'id'));
 
         $view = new View('simpleview', 'select 1');
         $this->oldSchema->createView($view);
 
         $this->old->insert('migtable', [
             'id'   => 5,
-            'code' => 2
+            'code' => 2,
         ]);
         $this->old->insert('migtable', [
             'id'   => 9,
-            'code' => 999
+            'code' => 999,
         ]);
         $this->old->insert('sametable', [
-            'id' => 9
+            'id' => 9,
         ]);
 
         $this->app->add(new MigrateCommand());
@@ -196,7 +197,7 @@ class MigrateCommandTest extends AbstractTestCase
         $result = $this->runApp([
             '-v'        => true,
             '--include' => [
-                'migtable'
+                'migtable',
             ],
             '--exclude' => [
                 'igntable',
@@ -285,12 +286,12 @@ END');
         $this->insertMultiple($this->old, 'unqtable', [
             [
                 'id'   => 2,
-                'code' => 7
+                'code' => 7,
             ],
             [
                 'id'   => 3,
-                'code' => 7
-            ]
+                'code' => 7,
+            ],
         ]);
 
         $result = $this->runApp([
@@ -314,12 +315,12 @@ END');
         $this->insertMultiple($this->old, 'migtable', [
             [
                 'id'   => 19,
-                'code' => 20
+                'code' => 20,
             ],
             [
                 'id'   => 20,
-                'code' => 19
-            ]
+                'code' => 19,
+            ],
         ]);
 
         $result = $this->runApp([
@@ -356,6 +357,19 @@ END');
     /**
      * @test
      */
+    function run_event()
+    {
+        $this->runApp([
+            '--event' => __DIR__ . '/_files/event.php',
+            '--check' => true,
+        ]);
+
+        $this->assertEquals(2, $this->old->fetchOne("select COUNT(*) from eventtable"));
+    }
+
+    /**
+     * @test
+     */
     function run_callback()
     {
         $cfile = self::$tmpdir . '/callback.php';
@@ -382,7 +396,7 @@ return [
         $this->insertMultiple($this->old, 'migtable', array_map(function ($i) {
             return [
                 'id'   => $i + 100,
-                'code' => $i * 10
+                'code' => $i * 10,
             ];
         }, range(1, 1001)));
 

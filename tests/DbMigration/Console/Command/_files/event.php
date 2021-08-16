@@ -9,6 +9,16 @@ use Symfony\Component\Console\Command\Command;
 
 return function (Command $command, Connection $connection) {
     return [
+        'pre-migration'             => function (ConnectionEventArgs $args) {
+            $args->getConnection()->insert('eventtable', [
+                'id' => 1,
+            ]);
+        },
+        'post-migration'            => function (ConnectionEventArgs $args) {
+            $args->getConnection()->insert('eventtable', [
+                'id' => 2,
+            ]);
+        },
         Events::postConnect         => [
             new SQLSessionInit("SET @postConnect = '" . $command->getName() . "'"),
         ],

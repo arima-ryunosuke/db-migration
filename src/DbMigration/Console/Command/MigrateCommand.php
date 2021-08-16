@@ -4,6 +4,7 @@ namespace ryunosuke\DbMigration\Console\Command;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Event\ConnectionEventArgs;
 use Doctrine\DBAL\Schema\Table;
 use ryunosuke\DbMigration\Exception\MigrationException;
 use ryunosuke\DbMigration\MigrationTable;
@@ -335,13 +336,17 @@ EOT
         }
     }
 
-    private function doCallback($timing, Connection $dstConn)
+    private function doCallback($timing, Connection $conn)
     {
+        $conn->getEventManager()->dispatchEvent($timing, new ConnectionEventArgs($conn));
+
+        // for compatible
         if (!file_exists($this->input->getOption('callback'))) {
             return;
         }
+        @trigger_error('--callback is deprecated. please use --event', E_USER_DEPRECATED);
         $callbacks = include $this->input->getOption('callback');
-        call_user_func($callbacks[$timing], $dstConn);
+        $callbacks[$timing]($conn);
     }
 
     protected function confirm($message, $default = true)
