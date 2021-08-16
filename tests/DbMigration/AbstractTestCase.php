@@ -74,10 +74,10 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 
         // drop schema
         $c = DriverManager::getConnection($unset($oldParams, 'dbname'));
-        $c->getSchemaManager()->dropAndCreateDatabase($oldDbname);
+        $c->createSchemaManager()->dropAndCreateDatabase($oldDbname);
         $c->close();
         $c = DriverManager::getConnection($unset($newParams, 'dbname'));
-        $c->getSchemaManager()->dropAndCreateDatabase($newDbname);
+        $c->createSchemaManager()->dropAndCreateDatabase($newDbname);
         $c->close();
 
         // get connection
@@ -86,8 +86,8 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         $this->new = DriverManager::getConnection($newParams);
 
         // get schema
-        $this->oldSchema = $this->old->getSchemaManager();
-        $this->newSchema = $this->new->getSchemaManager();
+        $this->oldSchema = $this->old->createSchemaManager();
+        $this->newSchema = $this->new->createSchemaManager();
     }
 
     protected function rmdir_r($dir_path = null)

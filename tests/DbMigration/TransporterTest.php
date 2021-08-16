@@ -471,7 +471,7 @@ class TransporterTest extends AbstractTestCase
         $this->assertCount(11, $dmls);
 
         foreach ($dmls as $sql) {
-            $this->old->exec($sql);
+            $this->old->executeStatement($sql);
         }
 
         $dmls = $this->transporter->migrateDML($this->new, 'foo', ['1']);

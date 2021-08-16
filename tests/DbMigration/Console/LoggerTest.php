@@ -64,7 +64,7 @@ class LoggerTest extends AbstractTestCase
         $output = new BufferedOutput();
         $logger = new Logger(new ArrayInput([]), $output);
 
-        $this->assertNull($logger->trace('hogera'));
-        $this->assertEquals('hogera', $logger->log('hogera'));
+        $this->assertNull($logger->trace('hogera2'));
+        $this->assertEquals('hogera2', $logger->log('hogera2'));
     }
 }

@@ -187,7 +187,7 @@ b: !hoge data
             'UTF-8',
             $string
         );
-        $this->assertEquals($actual, 'UTF-8');
+        $this->assertEquals('UTF-8', $actual);
         $this->assertEquals('あ', $string);
 
         $actual = Utility::mb_convert_variables(
@@ -195,7 +195,7 @@ b: !hoge data
             'UTF-8',
             $string
         );
-        $this->assertEquals($actual, 'UTF-8');
+        $this->assertEquals('UTF-8', $actual);
         $this->assertEquals('あ', mb_convert_encoding($string, 'UTF-8', 'SJIS'));
     }
 }

@@ -187,7 +187,7 @@ class TableScannerTest extends AbstractTestCase
             [new Index('PRIMARY', ['id'], true, true)]
         );
 
-        $con->getSchemaManager()->dropAndCreateTable($table);
+        $con->createSchemaManager()->dropAndCreateTable($table);
 
         $scanner = new TableScanner($con, $table, ['1']);
 
@@ -211,8 +211,8 @@ class TableScannerTest extends AbstractTestCase
             [new Index('PRIMARY', ['id'], true, true)]
         );
 
-        $old->getSchemaManager()->dropAndCreateTable($table);
-        $new->getSchemaManager()->dropAndCreateTable($table);
+        $old->createSchemaManager()->dropAndCreateTable($table);
+        $new->createSchemaManager()->dropAndCreateTable($table);
 
         $this->insertMultiple($new, 'hogetable', [['id' => 1]]);
 
