@@ -31,6 +31,7 @@ class ImportCommand extends AbstractCommand
             new InputOption('bulk-insert', null, InputOption::VALUE_NONE, 'Enable bulk insert'),
             new InputOption('format', null, InputOption::VALUE_OPTIONAL, 'Format output SQL (none, pretty, format, highlight or compress. default pretty)', 'pretty'),
             new InputOption('omit', 'o', InputOption::VALUE_REQUIRED, 'Omit size for long SQL'),
+            new InputOption('event', 'E', InputOption::VALUE_OPTIONAL, 'Specify Event filepath'),
             new InputOption('config', 'C', InputOption::VALUE_OPTIONAL, 'Specify Configuration filepath'),
         ]);
         $this->setHelp(<<<EOT
@@ -64,6 +65,8 @@ EOT
         DriverManager::getConnection($params)->createSchemaManager()->dropAndCreateDatabase($dbname);
         $params['dbname'] = $dbname;
         $conn = DriverManager::getConnection($params);
+
+        $this->event($conn);
 
         if (!$this->confirm("recreate <error>$dstdsn</error> really?", true)) {
             throw new CancelException('canceled.');

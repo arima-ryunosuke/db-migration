@@ -2,6 +2,7 @@
 
 namespace ryunosuke\DbMigration\Console\Command;
 
+use Doctrine\DBAL\Connection;
 use ryunosuke\DbMigration\Console\Logger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -26,6 +27,44 @@ abstract class AbstractCommand extends Command
         $this->logger = new Logger($input, $output);
 
         $this->config();
+    }
+
+    protected function event(Connection $conn)
+    {
+        $eventFile = $this->input->getOption('event');
+        if (!strlen($eventFile)) {
+            return;
+        }
+        if (!file_exists($eventFile)) {
+            throw new \InvalidArgumentException("'$eventFile' is not exists.");
+        }
+
+        $allEvent = require $eventFile;
+        if ($allEvent instanceof \Closure) {
+            $allEvent = $allEvent($this, $conn);
+        }
+
+        $emanager = $conn->getEventManager();
+        foreach ($allEvent as $name => $events) {
+            foreach (is_array($events) ? $events : [$events] as $event) {
+                if ($event instanceof \Closure) {
+                    $event = new class($event) {
+                        private $event;
+
+                        public function __construct($event)
+                        {
+                            $this->event = $event;
+                        }
+
+                        public function __call($name, $arguments)
+                        {
+                            return ($this->event)(...$arguments);
+                        }
+                    };
+                }
+                $emanager->addEventListener($name, $event);
+            }
+        }
     }
 
     protected function config()

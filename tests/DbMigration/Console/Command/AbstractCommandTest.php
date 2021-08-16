@@ -2,6 +2,7 @@
 
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
+use Doctrine\DBAL\Connection;
 use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -26,6 +27,27 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command = new ConcreteCommand('test');
 
         $this->app->add($this->command);
+    }
+
+    function test_event()
+    {
+        $input = new ArrayInput([], $this->command->getDefinition());
+        $input->setOption('event', __DIR__ . '/_files/event.php');
+        $output = new BufferedOutput();
+        $this->command->setInputOutput($input, $output);
+
+        $this->command->event($this->connection);
+
+        $tableName = $this->old->getDatabase() . '.events';
+        $this->connection->createSchemaManager()->dropAndCreateTable($this->createSimpleTable($tableName, 'integer', 'id'));
+
+        $this->assertEquals('concrete', $this->connection->fetchOne('SELECT @postConnect'));
+        $this->assertEquals($tableName, $this->connection->fetchOne('SELECT @onSchemaCreateTable'));
+
+        $input->setOption('event', __DIR__ . '/notfound.php');
+        $this->assertException(new \InvalidArgumentException('is not exists'), function () {
+            $this->command->event($this->connection);
+        });
     }
 
     function test_config()
@@ -242,6 +264,7 @@ class ConcreteCommand extends AbstractCommand
             new InputOption('format', null, InputOption::VALUE_OPTIONAL, '', 'format'),
             new InputOption('omit', null, InputOption::VALUE_REQUIRED, '', 'omit'),
             new InputOption('opts', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, '', []),
+            new InputOption('event', null, InputOption::VALUE_OPTIONAL),
             new InputOption('config', null, InputOption::VALUE_OPTIONAL),
         ]);
     }
@@ -249,6 +272,11 @@ class ConcreteCommand extends AbstractCommand
     public function setInputOutput(InputInterface $input, OutputInterface $output)
     {
         return parent::setInputOutput($input, $output);
+    }
+
+    public function event(Connection $conn)
+    {
+        return parent::event($conn);
     }
 
     public function config()
