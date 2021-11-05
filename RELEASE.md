@@ -20,6 +20,10 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.11
+
+- [fixbug] mysql で AUTO_INCREMENT の差分が出てしまう不具合を修正
+
 ## 2.0.10
 
 - [feature] event オプションで doctrine イベントを登録可能にした
