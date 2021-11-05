@@ -298,9 +298,9 @@ END');
             '--force' => true,
         ]);
 
-        $this->assertStringContainsString("key 'unq_index'", $result);
+        $this->assertStringContainsString("Duplicate entry '7'", $result);
 
-        $this->assertExceptionMessage("key 'unq_index'", $this->runApp, [
+        $this->assertExceptionMessage("Duplicate entry '7'", $this->runApp, [
             '--force' => false,
         ]);
     }
@@ -327,12 +327,12 @@ END');
             '--force' => true,
         ]);
 
-        $this->assertStringContainsString("key 'unq_index'", $result);
+        $this->assertStringContainsString("Duplicate entry '19'", $result);
 
         $count = $this->old->fetchOne("select COUNT(*) from migtable");
         $this->assertEquals($count, $this->old->fetchOne("select COUNT(*) from migtable"));
 
-        $this->assertExceptionMessage("key 'unq_index'", $this->runApp, [
+        $this->assertExceptionMessage("Duplicate entry '19'", $this->runApp, [
             '--force' => false,
         ]);
     }
