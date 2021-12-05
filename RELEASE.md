@@ -20,6 +20,13 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.12
+
+- [refactor] クエリを実行しないように変更
+- [fixbug] テーブル追加時にトリガーが2回吐かれる不具合を修正
+- [fixbug] 確認前に DB が吹き飛んでいた不具合を修正
+- [refactor] composer update
+
 ## 2.0.11
 
 - [fixbug] mysql で AUTO_INCREMENT の差分が出てしまう不具合を修正
