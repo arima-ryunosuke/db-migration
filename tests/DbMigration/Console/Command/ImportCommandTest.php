@@ -81,7 +81,20 @@ class ImportCommandTest extends AbstractTestCase
     /**
      * @test
      */
-    function run_rollback()
+    function run_failddl()
+    {
+        $this->assertExceptionMessage("very invalid sql", $this->runApp, [
+            '-v'    => true,
+            'files' => [
+                $this->getFile('invalid.sql'),
+            ],
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    function run_faildml()
     {
         $this->assertExceptionMessage("very invalid sql", $this->runApp, [
             '-v'    => true,

@@ -317,8 +317,7 @@ class Transporter
                     throw new \DomainException('sql is not supported include, exclude option.');
                 }
                 $contents = file_get_contents($filename);
-                $this->connection->executeStatement($contents);
-                return $this->explodeSql($contents);
+                return [$contents];
             case 'php':
                 $schemaArray = require $filename;
                 break;
@@ -371,12 +370,7 @@ class Transporter
             }
         }
 
-        $sqls = $this->objectToSql($tables, $views);
-        foreach ($sqls as $sql) {
-            $this->connection->executeStatement($sql);
-        }
-
-        return $sqls;
+        return $this->objectToSql($tables, $views);
     }
 
     public function importDML($filename)
@@ -390,8 +384,7 @@ class Transporter
             case 'sql':
                 $contents = file_get_contents($filename);
                 Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
-                $this->connection->executeStatement($contents);
-                return $this->explodeSql($contents);
+                return [$contents];
             case 'php':
                 $rows = require $filename;
                 if ($rows instanceof \Closure) {
@@ -430,9 +423,30 @@ class Transporter
                 break;
         }
 
-        $this->insert($pathinfo['filename'], $rows);
+        $qtable = Utility::quoteIdentifier($this->connection, $pathinfo['filename']);
 
-        return $rows;
+        $sqls = [];
+        if ($this->bulkmode) {
+            $columns = array_keys(reset($rows));
+            $values = [];
+            foreach ($rows as $row) {
+                $value = [];
+                foreach ($columns as $column) {
+                    $value[] = Utility::quote($this->connection, $row[$column]);
+                }
+                $values[] = '(' . implode(',', $value) . ')';
+            }
+            $sqls[] = "INSERT INTO $qtable (" . implode(',', $columns) . ") VALUES " . implode(',', $values);
+        }
+        else {
+            foreach ($rows as $row) {
+                $columns = array_keys($row);
+                $values = Utility::quote($this->connection, $row);
+                $sqls[] = "INSERT INTO $qtable (" . implode(',', $columns) . ") VALUES " . implode(',', $values);
+            }
+        }
+
+        return $sqls;
     }
 
     public function migrateDDL(Connection $target, $includes = [], $excludes = [])
@@ -514,36 +528,6 @@ class Transporter
         }
 
         return $dmls;
-    }
-
-    private function insert($tablename, $rows)
-    {
-        if (!$rows) {
-            return 0;
-        }
-
-        $qtable = Utility::quoteIdentifier($this->connection, $tablename);
-
-        if ($this->bulkmode) {
-            $columns = array_keys(reset($rows));
-            $values = [];
-            foreach ($rows as $row) {
-                $value = [];
-                foreach ($columns as $column) {
-                    $value[] = Utility::quote($this->connection, $row[$column]);
-                }
-                $values[] = '(' . implode(',', $value) . ')';
-            }
-            $sql = "INSERT INTO $qtable " . " (" . implode(',', $columns) . ") VALUES " . implode(',', $values);
-            return $this->connection->executeStatement($sql);
-        }
-        else {
-            $count = 0;
-            foreach ($rows as $row) {
-                $count += $this->connection->insert($qtable, $row);
-            }
-            return $count;
-        }
     }
 
     private function tableToArray(Table $table)
@@ -690,55 +674,6 @@ class Transporter
         $schemaDst = new Schema($tables, $views, [], $schemaConfig);
 
         return $comparator->compareSchemas($schemaSrc, $schemaDst)->toSql($this->platform);
-    }
-
-    private function explodeSql($sqls)
-    {
-        /// this is used by display only, so very loose.
-
-        $qv = Utility::quote($this->connection, 'v');
-        $quoted_chars = [
-            '"',
-            "'",
-            $qv[0],
-            $this->platform->getIdentifierQuoteCharacter(),
-        ];
-
-        $delimiter = ';';
-        $escaped_char = '\\';
-        $quoted_list = array_flip($quoted_chars);
-
-        preg_match_all('@.?@us', $sqls, $m);
-        $chars = $m[0];
-
-        $last_index = 0;
-        $escaping = false;
-        $quotings = array_fill_keys($quoted_chars, false);
-
-        $result = [];
-        foreach ($chars as $i => $c) {
-            if ($c === $escaped_char) {
-                $escaping = true;
-                continue;
-            }
-            if (isset($quoted_list[$c])) {
-                if (!$escaping) {
-                    $quotings[$c] = !$quotings[$c];
-                    $escaping = false;
-                    continue;
-                }
-            }
-
-            if (count(array_filter($quotings)) === 0 && $c === $delimiter) {
-                $result[] = implode('', array_slice($chars, $last_index, $i - $last_index));
-                $last_index = $i + 1;
-            }
-
-            $escaping = false;
-        }
-        $result[] = implode('', array_slice($chars, $last_index));
-
-        return $result;
     }
 
     /**

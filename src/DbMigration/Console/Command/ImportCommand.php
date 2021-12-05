@@ -94,22 +94,37 @@ EOT
         $sqls = $transporter->importDDL($ddlfile, $includes, $excludes);
         foreach ($sqls as $sql) {
             $this->logger->debug([$this, 'formatSql'], $sql);
+
+            try {
+                $conn->executeStatement($sql);
+            }
+            catch (\Exception $ex) {
+                $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
+                if ($this->confirm('exit?', true)) {
+                    throw $ex;
+                }
+            }
         }
 
         // importDML
         foreach ($files as $filename) {
             $this->logger->info("-- <info>importDML</info> $filename");
+            $sqls = $transporter->importDML($filename);
             $conn->beginTransaction();
             try {
-                $rows = $transporter->importDML($filename);
-                foreach ($rows as $row) {
-                    $this->logger->debug('var_export', $row, true);
+                foreach ($sqls as $sql) {
+                    $this->logger->debug([$this, 'formatSql'], $sql);
+
+                    $conn->executeStatement($sql);
                 }
                 $conn->commit();
             }
             catch (\Exception $ex) {
                 $conn->rollBack();
-                throw $ex;
+                $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
+                if ($this->confirm('exit?', true)) {
+                    throw $ex;
+                }
             }
         }
 

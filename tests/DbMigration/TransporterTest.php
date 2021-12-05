@@ -156,25 +156,6 @@ class TransporterTest extends AbstractTestCase
     /**
      * @test
      */
-    function explodeSql()
-    {
-        $method = $this->refClass->getMethod('explodeSql');
-        $method->setAccessible(true);
-
-        $this->assertEquals([''], $method->invoke($this->transporter, ''));
-        $this->assertEquals(['hoge', 'fuga'], $method->invoke($this->transporter, 'hoge;fuga'));
-        $this->assertEquals(['hoge', 'fuga', ''], $method->invoke($this->transporter, 'hoge;fuga;'));
-        $this->assertEquals(['"ho;ge"'], $method->invoke($this->transporter, '"ho;ge"'));
-        $this->assertEquals(['aa"ho;ge"bb'], $method->invoke($this->transporter, 'aa"ho;ge"bb'));
-        $this->assertEquals(['h\"o', 'ge'], $method->invoke($this->transporter, 'h\\"o;ge'));
-        $this->assertEquals(['"ho;\";ge"'], $method->invoke($this->transporter, '"ho;\";ge"'));
-        $this->assertEquals(['"ho\';ge"'], $method->invoke($this->transporter, '"ho\';ge"'));
-        $this->assertEquals(['あ', 'い'], $method->invoke($this->transporter, 'あ;い'));
-    }
-
-    /**
-     * @test
-     */
     function exportDDL()
     {
         $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
@@ -323,17 +304,12 @@ class TransporterTest extends AbstractTestCase
             $this->transporter->exportDDL(self::$tmpdir . "/table.$ext");
         }
         foreach ($supported as $ext) {
-            foreach ($this->oldSchema->listTableNames() as $tname) {
-                $this->oldSchema->dropTable($tname);
-            }
-            foreach ($this->oldSchema->listViews() as $vname => $view) {
-                $this->oldSchema->dropView($vname);
-            }
-            $this->transporter->importDDL(self::$tmpdir . "/table.$ext");
-            $this->assertTrue($this->oldSchema->tablesExist('hoge'));
-            $this->assertTrue($this->oldSchema->tablesExist('fuga'));
-            $this->assertEquals(['trg1', 'trg2'], array_keys($this->oldSchema->listTableDetails('zzz')->getTriggers()));
-            $this->assertEquals(['vvview'], array_keys($this->oldSchema->listViews()));
+            $ddls = $this->transporter->importDDL(self::$tmpdir . "/table.$ext");
+            $this->assertContainsString('CREATE TABLE hoge', $ddls);
+            $this->assertContainsString('CREATE TABLE fuga', $ddls);
+            $this->assertContainsString('CREATE TRIGGER trg1', $ddls);
+            $this->assertContainsString('CREATE TRIGGER trg2', $ddls);
+            $this->assertContainsString('CREATE VIEW vvview', $ddls);
         }
 
         $this->assertException(new \DomainException("is not supported"), function () {
@@ -359,15 +335,9 @@ class TransporterTest extends AbstractTestCase
             $this->transporter->exportDDL(self::$tmpdir . "/table.$ext");
         }
         foreach ($supported as $ext) {
-            foreach ($this->oldSchema->listTableNames() as $tname) {
-                $this->oldSchema->dropTable($tname);
-            }
-            foreach ($this->oldSchema->listViews() as $vname => $view) {
-                $this->oldSchema->dropView($vname);
-            }
-            $this->transporter->importDDL(self::$tmpdir . "/table.$ext", ['.*g.*'], ['fuga']);
-            $this->assertTrue($this->oldSchema->tablesExist('hoge'));
-            $this->assertFalse($this->oldSchema->tablesExist('fuga'));
+            $ddls = $this->transporter->importDDL(self::$tmpdir . "/table.$ext", ['.*g.*'], ['fuga']);
+            $this->assertContainsString('CREATE TABLE hoge', $ddls);
+            $this->assertNotContainsString('CREATE TABLE fuga', $ddls);
         }
 
         $this->transporter->exportDDL(self::$tmpdir . "/table.sql");
@@ -383,16 +353,10 @@ class TransporterTest extends AbstractTestCase
     {
         $this->transporter->enableView(true);
         $this->transporter->exportDDL(self::$tmpdir . "/table.yaml");
-        foreach ($this->oldSchema->listTableNames() as $tname) {
-            $this->oldSchema->dropTable($tname);
-        }
-        foreach ($this->oldSchema->listViews() as $vname => $view) {
-            $this->oldSchema->dropView($vname);
-        }
-
         $this->transporter->enableView(false);
-        $this->transporter->importDDL(self::$tmpdir . "/table.yaml");
-        $this->assertEmpty($this->oldSchema->listViews());
+
+        $ddls = $this->transporter->importDDL(self::$tmpdir . "/table.yaml");
+        $this->assertNotContainsString('CREATE VIEW', $ddls);
     }
 
     /**
@@ -400,7 +364,6 @@ class TransporterTest extends AbstractTestCase
      */
     function importDML()
     {
-        $this->old->delete('fuga', [0]);
         $this->insertMultiple($this->old, 'fuga', array_map(function ($i) {
             return [
                 'id' => $i,
@@ -412,9 +375,8 @@ class TransporterTest extends AbstractTestCase
             $this->transporter->exportDML(self::$tmpdir . "/fuga.$ext");
         }
         foreach ($supported as $ext) {
-            $this->old->delete('fuga', [0]);
-            $this->transporter->importDML(self::$tmpdir . "/fuga.$ext");
-            $this->assertEquals(10, $this->old->fetchOne('SELECT COUNT(*) FROM fuga'));
+            $dmls = $this->transporter->importDML(self::$tmpdir . "/fuga.$ext");
+            $this->assertEquals(10, substr_count(implode(";", $dmls), 'INSERT INTO'));
         }
 
         $this->assertException(new \DomainException("is not supported"), function () {
@@ -445,9 +407,42 @@ class TransporterTest extends AbstractTestCase
             ],
         ], true);
         file_put_contents(self::$tmpdir . "/hoge.php", "<?php return function(){return $array;};");
-        $this->old->delete('hoge', [0]);
-        $this->transporter->importDML(self::$tmpdir . "/hoge.php");
-        $this->assertEquals(3, $this->old->fetchOne('SELECT COUNT(*) FROM hoge'));
+
+        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.php");
+        $this->assertEquals(3, substr_count(implode(";", $dmls), 'INSERT INTO'));
+    }
+
+    /**
+     * @test
+     */
+    function importDML_bulkmode()
+    {
+        $array = json_encode([
+            [
+                'id'   => '1',
+                'name' => 'name1',
+                'data' => '1.1',
+            ],
+            [
+                'id'   => '2',
+                'name' => 'name2',
+                'data' => '1.2',
+            ],
+            [
+                'id'   => '3',
+                'name' => 'name3',
+                'data' => '1.3',
+            ],
+        ], true);
+        file_put_contents(self::$tmpdir . "/hoge.json", $array);
+
+        $this->transporter->setBulkMode(false);
+        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.json");
+        $this->assertCount(3, $dmls);
+
+        $this->transporter->setBulkMode(true);
+        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.json");
+        $this->assertCount(1, $dmls);
     }
 
     /**
@@ -566,14 +561,8 @@ class TransporterTest extends AbstractTestCase
         $this->transporter->exportDDL(self::$tmpdir . '/table.yml');
         $this->assertFileNotContains('IDX_', self::$tmpdir . '/table.yml');
 
-        foreach ($this->oldSchema->listTableNames() as $tname) {
-            $this->oldSchema->dropTable($tname);
-        }
-        foreach ($this->oldSchema->listViews() as $vname => $view) {
-            $this->oldSchema->dropView($vname);
-        }
-        $this->transporter->importDDL(self::$tmpdir . '/table.yml');
-        $this->assertCount(1, $this->oldSchema->listTableIndexes('child'));
+        $ddls = $this->transporter->importDDL(self::$tmpdir . '/table.yml');
+        $this->assertNotContainsString('IDX_', $ddls);
     }
 
     /**
@@ -606,52 +595,6 @@ class TransporterTest extends AbstractTestCase
             'charset'        => 'utf8',
             'create_options' => [],
         ], $tablearray['option']);
-    }
-
-    /**
-     * @test
-     */
-    function bulkmode()
-    {
-        $insert = $this->refClass->getMethod('insert');
-        $insert->setAccessible(true);
-
-        $affected = $insert->invoke($this->transporter, 'hoge', []);
-        $this->assertEquals(0, $affected);
-
-        $this->old->delete('hoge', [0]);
-        $this->transporter->setBulkMode(false);
-        $affected = $insert->invoke($this->transporter, 'hoge', [
-            [
-                'id'   => 1,
-                'name' => 'r1',
-                'data' => 1,
-            ],
-            [
-                'id'   => 2,
-                'name' => 'r2',
-                'data' => 2,
-            ],
-        ]);
-        $this->assertEquals(2, $affected);
-        $this->assertEquals(2, $this->old->fetchOne('SELECT COUNT(*) FROM hoge'));
-
-        $this->old->delete('hoge', [0]);
-        $this->transporter->setBulkMode(true);
-        $affected = $insert->invoke($this->transporter, 'hoge', [
-            [
-                'id'   => 1,
-                'name' => 'r1',
-                'data' => 1,
-            ],
-            [
-                'data' => 2,
-                'id'   => 2,
-                'name' => 'r2',
-            ],
-        ]);
-        $this->assertEquals(2, $affected);
-        $this->assertEquals(2, $this->old->fetchOne('SELECT COUNT(*) FROM hoge'));
     }
 
     /**
@@ -777,13 +720,9 @@ CSV
         $this->transporter->exportDML(self::$tmpdir . "/hoge.$ext");
         $this->assertStringEqualsFile(self::$tmpdir . "/hoge.$ext", "$content\n");
 
-        $this->old->delete('hoge', [0]);
-        $this->transporter->importDML(self::$tmpdir . "/hoge.$ext");
-        $this->assertEquals([
-            'id'   => 1,
-            'name' => 'あいうえお',
-            'data' => 3.14,
-        ], $this->old->fetchAssociative('SELECT * FROM hoge'));
+        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.$ext");
+        $this->assertContainsString('あいうえお', $dmls);
+        $this->assertContainsString('かきくけこ', $dmls);
     }
 
     /**
@@ -809,13 +748,9 @@ CSV
         $this->transporter->exportDML(self::$tmpdir . "/hoge.sjis-win.$ext");
         $this->assertStringEqualsFile(self::$tmpdir . "/hoge.sjis-win.$ext", "$content\n");
 
-        $this->old->delete('hoge', [0]);
-        $this->transporter->importDML(self::$tmpdir . "/hoge.sjis-win.$ext");
-        $this->assertEquals([
-            'id'   => 1,
-            'name' => 'あいうえお',
-            'data' => 3.14,
-        ], $this->old->fetchAssociative('SELECT * FROM hoge'));
+        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.sjis-win.$ext");
+        $this->assertContainsString('あいうえお', $dmls);
+        $this->assertContainsString('かきくけこ', $dmls);
     }
 
     static function expandDataProvider()
@@ -911,18 +846,12 @@ view:
         $this->assertFileExists(self::$tmpdir . "/view/vvview.$ext");
         $this->assertStringEqualsFile(self::$tmpdir . "/table.$ext", $content);
 
-        foreach ($this->oldSchema->listTableNames() as $tname) {
-            $this->oldSchema->dropTable($tname);
-        }
-        foreach ($this->oldSchema->listViews() as $vname => $view) {
-            $this->oldSchema->dropView($vname);
-        }
-        $this->transporter->importDDL(self::$tmpdir . "/table.$ext");
-        $this->assertTrue($this->oldSchema->tablesExist('child'));
-        $this->assertTrue($this->oldSchema->tablesExist('fuga'));
-        $this->assertTrue($this->oldSchema->tablesExist('hoge'));
-        $this->assertTrue($this->oldSchema->tablesExist('parent'));
-        $this->assertArrayHasKey('vvview', $this->oldSchema->listViews());
+        $ddls = $this->transporter->importDDL(self::$tmpdir . "/table.$ext");
+        $this->assertContainsString('CREATE TABLE child', $ddls);
+        $this->assertContainsString('CREATE TABLE fuga', $ddls);
+        $this->assertContainsString('CREATE TABLE hoge', $ddls);
+        $this->assertContainsString('CREATE TABLE parent', $ddls);
+        $this->assertContainsString('CREATE VIEW vvview', $ddls);
     }
 
     /**

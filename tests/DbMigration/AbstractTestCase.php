@@ -251,6 +251,22 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         }
     }
 
+    public static function assertNotContainsString($needle, $haystack, $message = '')
+    {
+        if (is_array($haystack) || is_object($haystack) && $haystack instanceof \Traversable) {
+            foreach ($haystack as $val) {
+                if (strpos($val, $needle) !== false) {
+                    self::assertContains($needle, [], $message);
+                }
+            }
+            //for assertion count
+            self::assertTrue(true);
+        }
+        elseif (is_string($haystack)) {
+            self::assertStringNotContainsString($needle, $haystack, $message);
+        }
+    }
+
     public static function assertFileContains($needle, $haystack, $message = '')
     {
         self::assertStringContainsString($needle, file_get_contents($haystack), $message);
