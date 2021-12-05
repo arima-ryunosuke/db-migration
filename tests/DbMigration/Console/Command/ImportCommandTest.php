@@ -45,6 +45,25 @@ class ImportCommandTest extends AbstractTestCase
     /**
      * @test
      */
+    function run_nonedb()
+    {
+        $file = sys_get_temp_dir() . '/dummy.sql';
+        file_put_contents($file, "CREATE TABLE dummy (id INT) -- " . uniqid('dummy', true));
+
+        $result = $this->runApp([
+            '-v'    => true,
+            'files' => [
+                $file,
+            ],
+            'dstdsn' => $GLOBALS['none_db'],
+        ]);
+        $this->assertStringContainsString("no drop database tmp_", $result);
+        $this->assertStringContainsString("create database tmp_", $result);
+    }
+
+    /**
+     * @test
+     */
     function run_cancel()
     {
         unset($this->defaultArgs['-n']);

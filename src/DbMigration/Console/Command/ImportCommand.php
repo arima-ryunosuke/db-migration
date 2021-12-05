@@ -60,25 +60,27 @@ EOT
         // get target Connection
         $dstdsn = $this->input->getArgument('dstdsn');
         $params = $this->parseDsn($dstdsn);
-        $dbname = $params['dbname'] ?? md5(implode('', array_map('filemtime', $files)));
+        $dbname = $params['dbname'] ?: 'tmp_' . md5(implode('', array_map('filemtime', $files)));
+        if (!$this->confirm("recreate <error>$dstdsn</error> really?", true)) {
+            throw new CancelException('canceled.');
+        }
+
         unset($params['dbname']);
         $smanager = DriverManager::getConnection($params)->createSchemaManager();
         try {
             $smanager->dropDatabase($dbname);
+            $this->logger->info("-- <info>drop database</info> $dbname");
         }
         catch (\Throwable $t) {
+            $this->logger->info("-- <info>no drop database</info> $dbname");
         }
-        finally {
-            $smanager->createDatabase($dbname);
-        }
+        $smanager->createDatabase($dbname);
+        $this->logger->info("-- <info>create database</info> $dbname");
+
         $params['dbname'] = $dbname;
         $conn = DriverManager::getConnection($params);
 
         $this->event($conn);
-
-        if (!$this->confirm("recreate <error>$dstdsn</error> really?", true)) {
-            throw new CancelException('canceled.');
-        }
 
         $transporter = new Transporter($conn);
         $transporter->setEncoding('csv', $this->input->getOption('csv-encoding'));
