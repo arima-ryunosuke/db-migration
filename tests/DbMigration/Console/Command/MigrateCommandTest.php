@@ -10,7 +10,7 @@ class MigrateCommandTest extends AbstractTestCase
 {
     protected $commandName = 'migrate';
 
-    protected function setup()
+    protected function setup(): void
     {
         parent::setUp();
 
@@ -24,15 +24,15 @@ class MigrateCommandTest extends AbstractTestCase
         $longtable->addColumn('blob_data', 'blob');
         $nopkeytable = $this->createSimpleTable('nopkeytable', 'integer', 'id');
         $nopkeytable->dropPrimaryKey();
-        $this->oldSchema->dropAndCreateTable($migtable);
-        $this->oldSchema->dropAndCreateTable($longtable);
-        $this->oldSchema->dropAndCreateTable($nopkeytable);
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('difftable', 'integer', 'code'));
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('igntable', 'integer', 'id', 'code'));
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('unqtable', 'integer', 'id', 'code'));
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('sametable', 'integer', 'id'));
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('drptable', 'integer', 'id'));
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('eventtable', 'integer', 'id'));
+        $this->readyTable($this->oldSchema, $migtable);
+        $this->readyTable($this->oldSchema, $longtable);
+        $this->readyTable($this->oldSchema, $nopkeytable);
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('difftable', 'integer', 'code'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('igntable', 'integer', 'id', 'code'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('unqtable', 'integer', 'id', 'code'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('sametable', 'integer', 'id'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('drptable', 'integer', 'id'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('eventtable', 'integer', 'id'));
 
         $view = new View('simpleview', 'select 1');
         $this->oldSchema->createView($view);
@@ -163,9 +163,7 @@ class MigrateCommandTest extends AbstractTestCase
 
         unset($this->defaultArgs['-n']);
 
-        /** @var MigrateCommand $command */
-        $command = $this->app->get('migrate');
-        $command->getHelper('question')->setInputStream($this->getEchoStream('y', ['n' => 3], 'y'));
+        $this->questionSetInputStream('y', ['n' => 3], 'y');
 
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
@@ -174,9 +172,7 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertEquals([], $this->old->executeQuery('select * from notexist')->fetchFirstColumn());
         $this->assertEquals([], $this->old->executeQuery('select * from migs')->fetchFirstColumn());
 
-        /** @var MigrateCommand $command */
-        $command = $this->app->get('migrate');
-        $command->getHelper('question')->setInputStream($this->getEchoStream(['p' => 3], 'y'));
+        $this->questionSetInputStream(['p' => 3], 'y');
 
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
@@ -450,9 +446,7 @@ return [
         $this->new->executeStatement(file_get_contents($this->getFile('heavy.sql')));
         unset($this->defaultArgs['-n']);
 
-        /** @var MigrateCommand $command */
-        $command = $this->app->get('migrate');
-        $command->getHelper('question')->setInputStream($this->getEchoStream(['y' => 100]));
+        $this->questionSetInputStream(['y' => 100]);
 
         $result = $this->runApp([]);
 

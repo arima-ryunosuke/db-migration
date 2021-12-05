@@ -22,7 +22,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
      */
     protected $oldSchema, $newSchema;
 
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
 
@@ -55,7 +55,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         }
     }
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -74,10 +74,10 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 
         // drop schema
         $c = DriverManager::getConnection($unset($oldParams, 'dbname'));
-        $c->createSchemaManager()->dropAndCreateDatabase($oldDbname);
+        $this->readyDatabase($c->createSchemaManager(), $oldDbname);
         $c->close();
         $c = DriverManager::getConnection($unset($newParams, 'dbname'));
-        $c->createSchemaManager()->dropAndCreateDatabase($newDbname);
+        $this->readyDatabase($c->createSchemaManager(), $newDbname);
         $c->close();
 
         // get connection
@@ -117,7 +117,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         return @rmdir($dir_path);
     }
 
-    public function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
         $this->connection->close();
@@ -132,6 +132,51 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         $params = $parseDatabaseUrl->invoke(null, ['url' => $dsn]);
         unset($params['url']);
         return $params;
+    }
+
+    public function readyDatabase(AbstractSchemaManager $schema_manager, $database)
+    {
+        try {
+            $schema_manager->dropDatabase($database);
+        }
+        catch (\Throwable $t) {
+        }
+
+        try {
+            $schema_manager->createDatabase($database);
+        }
+        catch (\Throwable $t) {
+        }
+    }
+
+    public function readyTable(AbstractSchemaManager $schema_manager, $table)
+    {
+        try {
+            $schema_manager->dropTable($table);
+        }
+        catch (\Throwable $t) {
+        }
+
+        try {
+            $schema_manager->createTable($table);
+        }
+        catch (\Throwable $t) {
+        }
+    }
+
+    public function readyView(AbstractSchemaManager $schema_manager, $view)
+    {
+        try {
+            $schema_manager->dropView($view);
+        }
+        catch (\Throwable $t) {
+        }
+
+        try {
+            $schema_manager->createView($view);
+        }
+        catch (\Throwable $t) {
+        }
     }
 
     public function createSimpleTable($name, $type)
@@ -175,7 +220,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
                 self::assertEquals($e->getCode(), $ex->getCode());
             }
             if (strlen($e->getMessage()) > 0) {
-                self::assertContains($e->getMessage(), $ex->getMessage());
+                self::assertStringContainsString($e->getMessage(), $ex->getMessage());
             }
             return;
         }
@@ -202,17 +247,17 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
             self::assertContains($needle, [], $message);
         }
         elseif (is_string($haystack)) {
-            self::assertContains($needle, $haystack, $message);
+            self::assertStringContainsString($needle, $haystack, $message);
         }
     }
 
     public static function assertFileContains($needle, $haystack, $message = '')
     {
-        self::assertContains($needle, file_get_contents($haystack), $message);
+        self::assertStringContainsString($needle, file_get_contents($haystack), $message);
     }
 
     public static function assertFileNotContains($needle, $haystack, $message = '')
     {
-        self::assertNotContains($needle, file_get_contents($haystack), $message);
+        self::assertStringNotContainsString($needle, file_get_contents($haystack), $message);
     }
 }

@@ -8,11 +8,11 @@ class ExportCommandTest extends AbstractTestCase
 {
     protected $commandName = 'export';
 
-    protected function setup()
+    protected function setup(): void
     {
         parent::setUp();
 
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('gentable', 'integer', 'id', 'code'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('gentable', 'integer', 'id', 'code'));
 
         $this->old->insert('gentable', [
             'id'   => 1,
@@ -68,31 +68,13 @@ class ExportCommandTest extends AbstractTestCase
      */
     function run_dml()
     {
-        $result = $this->runApp([
+        $this->runApp([
             'files' => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
                 str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
             ]
         ]);
 
-        $this->assertEquals('', $result);
-        $this->assertFileContains("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", self::$tmpdir . '/gentable.sql');
-    }
-
-    /**
-     * @test
-     */
-    function run_dml_vvv()
-    {
-        $result = $this->runApp([
-            '-vvv'  => true,
-            'files' => [
-                str_replace('\\', '/', self::$tmpdir . '/table.sql'),
-                str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
-            ]
-        ]);
-
-        $this->assertStringContainsString("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", $result);
         $this->assertFileContains("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", self::$tmpdir . '/gentable.sql');
     }
 
@@ -133,14 +115,13 @@ class ExportCommandTest extends AbstractTestCase
      */
     function run_data()
     {
-        $result = $this->runApp([
+        $this->runApp([
             '--migration' => 'gentable',
             'files'       => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
             ]
         ]);
 
-        $this->assertEquals('', $result);
         $this->assertFileNotContains('gentable', self::$tmpdir . '/table.sql');
     }
 

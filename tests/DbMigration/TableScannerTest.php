@@ -21,19 +21,19 @@ class TableScannerTest extends AbstractTestCase
      */
     private $refClass;
 
-    protected function setup()
+    protected function setup(): void
     {
         parent::setUp();
 
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
-        $this->oldSchema->dropAndCreateTable($table_hoge);
+        $this->readyTable($this->oldSchema, $table_hoge);
 
         $table_fuga = new Table('fuga');
         $table_fuga->addColumn('id1', 'integer');
         $table_fuga->addColumn('id2', 'integer');
         $table_fuga->addColumn('data', 'string');
         $table_fuga->setPrimaryKey(['id1', 'id2']);
-        $this->oldSchema->dropAndCreateTable($table_fuga);
+        $this->readyTable($this->oldSchema, $table_fuga);
 
         $this->scanner = new TableScanner($this->old, $table_hoge, ['TRUE']);
         $this->refClass = new \ReflectionClass($this->scanner);
@@ -92,9 +92,9 @@ class TableScannerTest extends AbstractTestCase
             'col3' => null
         ], 10);
 
-        $this->assertContains('XXXXXXX...', $comment);
-        $this->assertContains('あああ...', $comment);
-        $this->assertContains('NULL', $comment);
+        $this->assertStringContainsString('XXXXXXX...', $comment);
+        $this->assertStringContainsString('あああ...', $comment);
+        $this->assertStringContainsString('NULL', $comment);
     }
 
     /**
@@ -187,7 +187,7 @@ class TableScannerTest extends AbstractTestCase
             [new Index('PRIMARY', ['id'], true, true)]
         );
 
-        $con->createSchemaManager()->dropAndCreateTable($table);
+        $this->readyTable($con->createSchemaManager(), $table);
 
         $scanner = new TableScanner($con, $table, ['1']);
 
@@ -211,8 +211,8 @@ class TableScannerTest extends AbstractTestCase
             [new Index('PRIMARY', ['id'], true, true)]
         );
 
-        $old->createSchemaManager()->dropAndCreateTable($table);
-        $new->createSchemaManager()->dropAndCreateTable($table);
+        $this->readyTable($old->createSchemaManager(), $table);
+        $this->readyTable($new->createSchemaManager(), $table);
 
         $this->insertMultiple($new, 'hogetable', [['id' => 1]]);
 
@@ -220,6 +220,6 @@ class TableScannerTest extends AbstractTestCase
         $inserts = $scanner->getInsertSql([['id' => 1]], new TableScanner($new, $table, ['1']));
 
         // sqlite no support INSERT SET syntax. Therefore VALUES (value)
-        $this->assertContains('INSERT INTO "hogetable" ("id") VALUES', $inserts[0]);
+        $this->assertStringContainsString('INSERT INTO "hogetable" ("id") VALUES', $inserts[0]);
     }
 }

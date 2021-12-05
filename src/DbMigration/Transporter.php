@@ -4,9 +4,9 @@ namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Schema\Comparator;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Index;
+use Doctrine\DBAL\Schema\SchemaConfig;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\Trigger;
 use ryunosuke\DbMigration\Exception\MigrationException;
@@ -361,6 +361,9 @@ class Transporter
                 continue;
             }
             $table = $this->tableFromArray($name, $tarray);
+            $schemaConfig = new SchemaConfig();
+            $schemaConfig->setOrderedColumn($this->platform->supportsOrderedColumn());
+            $table->setSchemaConfig($schemaConfig);
             $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS | AbstractPlatform::CREATE_TRIGGERS);
             $creates[] = array_shift($sqls);
             $alters = array_merge($alters, $sqls);
@@ -442,7 +445,7 @@ class Transporter
     {
         $oldSchema = Utility::getSchema($this->connection);
         $newSchema = Utility::getSchema($target);
-        $diff = Comparator::compareSchemas($oldSchema, $newSchema);
+        $diff = $target->createSchemaManager()->createComparator()->compareSchemas($oldSchema, $newSchema);
 
         foreach ($diff->newTables as $name => $table) {
             $filterdResult = Utility::filterTable($name, $includes, $excludes);
@@ -471,7 +474,7 @@ class Transporter
             $diff->removedViews = [];
         }
 
-        return $diff->toSql($this->connection->getDatabasePlatform());
+        return $diff->toSql($target->getDatabasePlatform());
     }
 
     public function migrateDML(Connection $target, $table, array $wheres = [], array $ignores = [], $dmltypes = [])
@@ -693,7 +696,7 @@ class Transporter
             '"',
             "'",
             $qv[0],
-            $this->connection->getDatabasePlatform()->getIdentifierQuoteCharacter(),
+            $this->platform->getIdentifierQuoteCharacter(),
         ];
 
         $delimiter = ';';

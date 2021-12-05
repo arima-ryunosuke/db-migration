@@ -99,6 +99,8 @@ EOT
 
             throw $e;
         }
+
+        return 0;
     }
 
     private function migrateDDL(Connection $srcConn, Connection $dstConn)

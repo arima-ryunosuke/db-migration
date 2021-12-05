@@ -17,7 +17,7 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
 
     protected $defaultArgs = [];
 
-    protected function setup()
+    protected function setup(): void
     {
         parent::setUp();
 
@@ -34,7 +34,7 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
         return str_replace('\\', '/', __DIR__ . $filename);
     }
 
-    protected function getEchoStream()
+    protected function questionSetInputStream()
     {
         $stream = fopen('php://memory', 'w+');
         foreach (func_get_args() as $arg) {
@@ -48,7 +48,8 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
             }
         }
         rewind($stream);
-        return $stream;
+
+        (fn($stream) => $this->inputStream = $stream)->call($this->app->getHelperSet()->get('question'), $stream);
     }
 
     /**

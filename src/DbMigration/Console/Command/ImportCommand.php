@@ -62,7 +62,15 @@ EOT
         $params = $this->parseDsn($dstdsn);
         $dbname = $params['dbname'] ?? md5(implode('', array_map('filemtime', $files)));
         unset($params['dbname']);
-        DriverManager::getConnection($params)->createSchemaManager()->dropAndCreateDatabase($dbname);
+        $smanager = DriverManager::getConnection($params)->createSchemaManager();
+        try {
+            $smanager->dropDatabase($dbname);
+        }
+        catch (\Throwable $t) {
+        }
+        finally {
+            $smanager->createDatabase($dbname);
+        }
         $params['dbname'] = $dbname;
         $conn = DriverManager::getConnection($params);
 
@@ -118,5 +126,7 @@ EOT
                 $migrationTable->attach($version);
             }
         }
+
+        return 0;
     }
 }

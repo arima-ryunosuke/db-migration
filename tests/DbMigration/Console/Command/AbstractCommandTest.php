@@ -20,7 +20,7 @@ class AbstractCommandTest extends AbstractTestCase
         '-n' => true,
     ];
 
-    protected function setup()
+    protected function setup(): void
     {
         parent::setUp();
 
@@ -39,7 +39,7 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->event($this->connection);
 
         $tableName = $this->old->getDatabase() . '.events';
-        $this->connection->createSchemaManager()->dropAndCreateTable($this->createSimpleTable($tableName, 'integer', 'id'));
+        $this->readyTable($this->connection->createSchemaManager(), $this->createSimpleTable($tableName, 'integer', 'id'));
 
         $this->assertEquals('concrete', $this->connection->fetchOne('SELECT @postConnect'));
         $this->assertEquals($tableName, $this->connection->fetchOne('SELECT @onSchemaCreateTable'));
@@ -91,22 +91,22 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->setInputOutput($input, $output);
 
         // default integer
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream(' '));
+        $this->questionSetInputStream(' ');
         $this->assertEquals(1, $this->command->choice('hoge', ['a', 'b', 'c'], 1));
         $this->assertEquals("hoge [a/B/c]:", $output->fetch());
 
         // default string
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream(' '));
+        $this->questionSetInputStream(' ');
         $this->assertEquals(2, $this->command->choice('hoge', ['a', 'b', 'c'], 'c'));
         $this->assertEquals("hoge [a/b/C]:", $output->fetch());
 
         // select
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream('b'));
+        $this->questionSetInputStream('b');
         $this->assertEquals(1, $this->command->choice('hoge', ['a', 'b', 'c'], 0));
         $this->assertEquals("hoge [A/b/c]:", $output->fetch());
 
         // foward match
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream('cc'));
+        $this->questionSetInputStream('cc');
         $this->assertEquals(2, $this->command->choice('hoge', ['aaa', 'bbb', 'cccc'], 0));
         $this->assertEquals("hoge [Aaa/bbb/cccc]:", $output->fetch());
     }
@@ -133,13 +133,13 @@ class AbstractCommandTest extends AbstractTestCase
         });
 
         // ambiguous forward match
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream('aa'));
+        $this->questionSetInputStream('aa');
         $this->assertException(new \UnexpectedValueException('ambiguous'), function () {
             $this->command->choice('hoge', ['aaA', 'aaB']);
         });
 
         // invalid answer
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream('c'));
+        $this->questionSetInputStream('c');
         $this->assertException(new \UnexpectedValueException('invalid answer'), function () {
             $this->command->choice('hoge', ['a', 'b']);
         });
@@ -152,17 +152,17 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->setInputOutput($input, $output);
 
         // default true
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream(' '));
+        $this->questionSetInputStream(' ');
         $this->assertTrue($this->command->confirm('hoge', true));
         $this->assertEquals("hoge [Y/n]:", $output->fetch());
 
         // default false
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream(' '));
+        $this->questionSetInputStream(' ');
         $this->assertFalse($this->command->confirm('hoge', false));
         $this->assertEquals("hoge [y/N]:", $output->fetch());
 
         // select
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream('y'));
+        $this->questionSetInputStream('y');
         $this->assertTrue($this->command->confirm('hoge', false));
         $this->assertEquals("hoge [y/N]:", $output->fetch());
     }
@@ -190,7 +190,7 @@ class AbstractCommandTest extends AbstractTestCase
             'path'   => 'dbname',
         ], $this->command->parseDsn('sqlite://hostname/dbname'));
 
-        $this->command->getHelper('question')->setInputStream($this->getEchoStream('this_is_password'));
+        $this->questionSetInputStream('this_is_password');
         $this->assertEquals([
             'driver'   => 'pdo_sqlite',
             'host'     => 'hostname',

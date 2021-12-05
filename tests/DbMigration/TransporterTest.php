@@ -23,7 +23,7 @@ class TransporterTest extends AbstractTestCase
      */
     private $refClass;
 
-    protected function setup()
+    protected function setup(): void
     {
         parent::setUp();
 
@@ -34,18 +34,18 @@ class TransporterTest extends AbstractTestCase
         $table->setPrimaryKey(['id']);
         $table->addIndex(['name'], 'SECONDARY');
         $table->addUniqueIndex(['data']);
-        $this->oldSchema->dropAndCreateTable($table);
+        $this->readyTable($this->oldSchema, $table);
 
         $table = new Table('fuga');
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
         $table->addForeignKeyConstraint('hoge', ['id'], ['id']);
-        $this->oldSchema->dropAndCreateTable($table);
+        $this->readyTable($this->oldSchema, $table);
 
         $table = new Table('parent');
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
-        $this->oldSchema->dropAndCreateTable($table);
+        $this->readyTable($this->oldSchema, $table);
 
         $table = new Table('child');
         $table->addColumn('id', 'integer');
@@ -58,7 +58,7 @@ class TransporterTest extends AbstractTestCase
             /** @var Index $index */
             $table->dropIndex($index->getName());
         }
-        $this->oldSchema->dropAndCreateTable($table);
+        $this->readyTable($this->oldSchema, $table);
 
         $table = new Table('zzz');
         $table->addColumn('id', 'integer');
@@ -71,10 +71,10 @@ class TransporterTest extends AbstractTestCase
             'Timing' => 'AFTER',
             'Event'  => 'DELETE',
         ]);
-        $this->oldSchema->dropAndCreateTable($table);
+        $this->readyTable($this->oldSchema, $table);
 
         $view = new View('vvview', 'select * from hoge');
-        $this->oldSchema->dropAndCreateView($view);
+        $this->readyView($this->oldSchema, $view);
 
         $this->insertMultiple($this->old, 'hoge', array_map(function ($i) {
             return [
@@ -86,26 +86,26 @@ class TransporterTest extends AbstractTestCase
 
 
         // create migration table different name
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('hogera', 'integer', 'id'));
-        $this->newSchema->dropAndCreateTable($this->createSimpleTable('fugata', 'integer', 'id'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('hogera', 'integer', 'id'));
+        $this->readyTable($this->newSchema, $this->createSimpleTable('fugata', 'integer', 'id'));
 
         // create migration table no pkey
         $table = $this->createSimpleTable('nopkey', 'integer', 'id');
         $table->dropPrimaryKey();
-        $this->oldSchema->dropAndCreateTable($table);
-        $this->newSchema->dropAndCreateTable($table);
+        $this->readyTable($this->oldSchema, $table);
+        $this->readyTable($this->newSchema, $table);
 
         // create migration table different pkey
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('diffpkey', 'integer', 'id'));
-        $this->newSchema->dropAndCreateTable($this->createSimpleTable('diffpkey', 'integer', 'seq'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('diffpkey', 'integer', 'id'));
+        $this->readyTable($this->newSchema, $this->createSimpleTable('diffpkey', 'integer', 'seq'));
 
         // create migration table different column
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('diffcolumn', 'integer', 'id'));
-        $this->newSchema->dropAndCreateTable($this->createSimpleTable('diffcolumn', 'integer', 'id', 'seq'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('diffcolumn', 'integer', 'id'));
+        $this->readyTable($this->newSchema, $this->createSimpleTable('diffcolumn', 'integer', 'id', 'seq'));
 
         // create migration table different type
-        $this->oldSchema->dropAndCreateTable($this->createSimpleTable('difftype', 'string', 'id'));
-        $this->newSchema->dropAndCreateTable($this->createSimpleTable('difftype', 'integer', 'id'));
+        $this->readyTable($this->oldSchema, $this->createSimpleTable('difftype', 'string', 'id'));
+        $this->readyTable($this->newSchema, $this->createSimpleTable('difftype', 'integer', 'id'));
 
         // create migration table different record
         $table = $this->createSimpleTable('foo', 'integer', 'id');
@@ -115,8 +115,8 @@ class TransporterTest extends AbstractTestCase
         $table->addColumn('c_text', 'text');
         $table->addColumn('c_datetime', 'datetime');
 
-        $this->oldSchema->dropAndCreateTable($table);
-        $this->newSchema->dropAndCreateTable($table);
+        $this->readyTable($this->oldSchema, $table);
+        $this->readyTable($this->newSchema, $table);
 
         $this->insertMultiple($this->old, 'foo', [
             '{"id":0,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
@@ -209,8 +209,8 @@ class TransporterTest extends AbstractTestCase
     {
         $this->transporter->exportDDL(self::$tmpdir . '/table.sql', ['.*g.*'], ['fuga']);
         $sql = file_get_contents(self::$tmpdir . '/table.sql');
-        $this->assertContains('CREATE TABLE hoge', $sql);
-        $this->assertNotContains('CREATE TABLE fuga', $sql);
+        $this->assertStringContainsString('CREATE TABLE hoge', $sql);
+        $this->assertStringNotContainsString('CREATE TABLE fuga', $sql);
 
         $this->transporter->exportDDL(self::$tmpdir . '/table.yaml', ['.*g.*'], []);
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/table.yaml'));
@@ -233,7 +233,7 @@ class TransporterTest extends AbstractTestCase
         $this->transporter->enableView(false);
         $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
         $sql = file_get_contents(self::$tmpdir . '/table.sql');
-        $this->assertNotContains('CREATE VIEW vvview', $sql);
+        $this->assertStringNotContainsString('CREATE VIEW vvview', $sql);
 
         $this->transporter->exportDDL(self::$tmpdir . '/table.yaml');
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/table.yaml'));
@@ -290,7 +290,7 @@ class TransporterTest extends AbstractTestCase
         $contents = "<?php return function(){return $array;};";
         file_put_contents(self::$tmpdir . "/hoge.php", $contents);
         $result = $this->transporter->exportDML(self::$tmpdir . "/hoge.php");
-        $this->assertContains('skipped', $result);
+        $this->assertStringContainsString('skipped', $result);
         $this->assertStringEqualsFile(self::$tmpdir . "/hoge.php", $contents);
     }
 
@@ -673,7 +673,7 @@ class TransporterTest extends AbstractTestCase
         $this->assertCount(1, $method->invoke($this->transporter, $table));
 
         $this->assertEmpty(@$method->invoke($this->transporter, new \stdClass()));
-        $this->assertContains('is undefined', error_get_last()['message']);
+        $this->assertStringContainsString('is undefined', error_get_last()['message']);
     }
 
     static function encodeDataProvider()

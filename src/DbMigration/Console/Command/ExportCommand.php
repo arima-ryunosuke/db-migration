@@ -77,5 +77,7 @@ EOT
             $dml = $transporter->exportDML($filename, $wheres, $ignores);
             $this->logger->info($dml);
         }
+
+        return 0;
     }
 }

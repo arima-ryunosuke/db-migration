@@ -8,7 +8,7 @@ class ImportCommandTest extends AbstractTestCase
 {
     protected $commandName = 'import';
 
-    protected function setup()
+    protected function setup(): void
     {
         parent::setUp();
 
@@ -49,9 +49,7 @@ class ImportCommandTest extends AbstractTestCase
     {
         unset($this->defaultArgs['-n']);
 
-        /** @var ImportCommand $command */
-        $command = $this->app->get('import');
-        $command->getHelper('question')->setInputStream($this->getEchoStream(['n' => 100]));
+        $this->questionSetInputStream(['n' => 100]);
         $this->assertExceptionMessage("canceled", $this->runApp, [
             '-v'    => true,
             'files' => [
