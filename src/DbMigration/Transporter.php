@@ -6,9 +6,10 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Index;
-use Doctrine\DBAL\Schema\SchemaConfig;
+use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\Trigger;
+use Doctrine\DBAL\Schema\View;
 use ryunosuke\DbMigration\Exception\MigrationException;
 use Symfony\Component\Yaml\Yaml;
 
@@ -110,25 +111,24 @@ class Transporter
 
         // SQL is special
         if ($pathinfo['extension'] === 'sql') {
-            $creates = $alters = $views = [];
+            $tables = $views = [];
             foreach ($schema->getTables() as $table) {
                 if (Utility::filterTable($table->getName(), $includes, $excludes) > 0) {
                     continue;
                 }
-                $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS | AbstractPlatform::CREATE_TRIGGERS);
-                $creates[] = \SqlFormatter::format(array_shift($sqls), false);
-                $alters = array_merge($alters, $sqls);
+                $tables[] = $table;
             }
             if ($this->viewEnabled) {
                 foreach ($schema->getViews() as $view) {
                     if (Utility::filterTable($view->getName(), $includes, $excludes) > 0) {
                         continue;
                     }
-                    $sql = $this->platform->getCreateViewSQL($view->getName(), $view->getSql());
-                    $views[] = \SqlFormatter::format($sql, false);
+                    $views[] = $view;
                 }
             }
-            $content = implode(";\n", array_merge($creates, $alters, $views)) . ";\n";
+
+            $sqls = $this->objectToSql($tables, $views);
+            $content = implode(";\n", array_map(function ($sql) { return \SqlFormatter::format($sql, false); }, $sqls)) . ";\n";
         }
         else {
             // generate schema array
@@ -355,29 +355,23 @@ class Transporter
             }
         }
 
-        $creates = $alters = $views = [];
+        $tables = $views = [];
         foreach ($schemaArray['table'] as $name => $tarray) {
             if (Utility::filterTable($name, $includes, $excludes) > 0) {
                 continue;
             }
-            $table = $this->tableFromArray($name, $tarray);
-            $schemaConfig = new SchemaConfig();
-            $schemaConfig->setOrderedColumn($this->platform->supportsOrderedColumn());
-            $table->setSchemaConfig($schemaConfig);
-            $sqls = $this->platform->getCreateTableSQL($table, AbstractPlatform::CREATE_INDEXES | AbstractPlatform::CREATE_FOREIGNKEYS | AbstractPlatform::CREATE_TRIGGERS);
-            $creates[] = array_shift($sqls);
-            $alters = array_merge($alters, $sqls);
+            $tables[] = $this->tableFromArray($name, $tarray);
         }
         if ($this->viewEnabled) {
             foreach ($schemaArray['view'] as $name => $varray) {
                 if (Utility::filterTable($name, $includes, $excludes) > 0) {
                     continue;
                 }
-                $views[] = $this->platform->getCreateViewSQL($name, $varray['sql']);
+                $views[] = new View($name, $varray['sql']);
             }
         }
 
-        $sqls = array_merge($creates, $alters, $views);
+        $sqls = $this->objectToSql($tables, $views);
         foreach ($sqls as $sql) {
             $this->connection->executeStatement($sql);
         }
@@ -685,6 +679,17 @@ class Transporter
         }
 
         return $table;
+    }
+
+    private function objectToSql($tables, $views)
+    {
+        $schemaManager = $this->connection->createSchemaManager();
+        $comparator = $schemaManager->createComparator();
+        $schemaConfig = $schemaManager->createSchemaConfig();
+        $schemaSrc = new Schema([], [], [], $schemaConfig);
+        $schemaDst = new Schema($tables, $views, [], $schemaConfig);
+
+        return $comparator->compareSchemas($schemaSrc, $schemaDst)->toSql($this->platform);
     }
 
     private function explodeSql($sqls)
