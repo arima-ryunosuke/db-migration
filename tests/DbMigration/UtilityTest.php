@@ -51,7 +51,7 @@ class UtilityTest extends AbstractTestCase
                     ],
                 ],
                 'array' => [
-                    [1, 2, 3, ['X']]
+                    [1, 2, 3, ['X']],
                 ],
             ],
             'null'        => null,
@@ -82,14 +82,14 @@ class UtilityTest extends AbstractTestCase
     {
         $actual = Utility::yaml_emit(['a' => ['a' => 'A']], [
             'indent' => 4,
-            'inline' => 1
+            'inline' => 1,
         ]);
         $this->assertEquals("a: { a: A }
 ", $actual);
 
         $actual = Utility::yaml_emit([
             'a' => 'a',
-            'b' => new \stdClass()
+            'b' => new \stdClass(),
         ], [
             'callback' => [
                 'stdClass' => function () {
@@ -145,8 +145,8 @@ b: !hoge data
             'callback' => [
                 '!hoge' => function ($value) {
                     return strtoupper($value);
-                }
-            ]
+                },
+            ],
         ]);
         $this->assertEquals([
             'a' => [

@@ -32,7 +32,7 @@ class ImportCommandTest extends AbstractTestCase
             'files' => [
                 $this->getFile('table.sql'),
                 $this->getFile('data.sql'),
-            ]
+            ],
         ]);
         $this->assertStringContainsString("importDDL", $result);
         $this->assertStringContainsString("importDML", $result);
@@ -55,7 +55,7 @@ class ImportCommandTest extends AbstractTestCase
             'files' => [
                 $this->getFile('table.sql'),
                 $this->getFile('data.sql'),
-            ]
+            ],
         ]);
     }
 
@@ -69,7 +69,7 @@ class ImportCommandTest extends AbstractTestCase
             'files' => [
                 $this->getFile('table.sql'),
                 $this->getFile('invalid.sql'),
-            ]
+            ],
         ]);
     }
 }

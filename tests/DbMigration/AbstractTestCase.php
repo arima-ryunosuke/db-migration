@@ -187,7 +187,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
             $table->addColumn($column, $type);
         }
         $table->setPrimaryKey([
-            reset($columns)
+            reset($columns),
         ]);
         return $table;
     }

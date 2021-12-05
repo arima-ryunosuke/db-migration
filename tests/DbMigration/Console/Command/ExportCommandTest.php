@@ -16,7 +16,7 @@ class ExportCommandTest extends AbstractTestCase
 
         $this->old->insert('gentable', [
             'id'   => 1,
-            'code' => 10
+            'code' => 10,
         ]);
 
         $this->app->add(new ExportCommand());
@@ -37,7 +37,7 @@ class ExportCommandTest extends AbstractTestCase
         $result = $this->runApp([
             'files' => [
                 str_replace('\\', '/', $createfile),
-            ]
+            ],
         ]);
 
         $this->assertEquals('', $result);
@@ -56,7 +56,7 @@ class ExportCommandTest extends AbstractTestCase
             '-vvv'  => true,
             'files' => [
                 str_replace('\\', '/', $createfile),
-            ]
+            ],
         ]);
 
         $this->assertStringContainsString('CREATE TABLE gentable', $result);
@@ -72,7 +72,7 @@ class ExportCommandTest extends AbstractTestCase
             'files' => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
                 str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
-            ]
+            ],
         ]);
 
         $this->assertFileContains("INSERT INTO `gentable` (`id`, `code`) VALUES ('1', '10')", self::$tmpdir . '/gentable.sql');
@@ -88,7 +88,7 @@ class ExportCommandTest extends AbstractTestCase
             'files'   => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
                 str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
-            ]
+            ],
         ]);
 
         $this->assertStringEqualsFile(self::$tmpdir . '/gentable.sql', "\n");
@@ -104,7 +104,7 @@ class ExportCommandTest extends AbstractTestCase
             'files'    => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
                 str_replace('\\', '/', self::$tmpdir . '/gentable.sql'),
-            ]
+            ],
         ]);
 
         $this->assertFileContains("INSERT INTO `gentable` (`code`, `id`) VALUES ('10', '0')", self::$tmpdir . '/gentable.sql', "\n");
@@ -119,7 +119,7 @@ class ExportCommandTest extends AbstractTestCase
             '--migration' => 'gentable',
             'files'       => [
                 str_replace('\\', '/', self::$tmpdir . '/table.sql'),
-            ]
+            ],
         ]);
 
         $this->assertFileNotContains('gentable', self::$tmpdir . '/table.sql');
@@ -132,8 +132,8 @@ class ExportCommandTest extends AbstractTestCase
     {
         $this->assertExceptionMessage('is directory', $this->runApp, [
             'files' => [
-                $this->getFile(null)
-            ]
+                $this->getFile(null),
+            ],
         ]);
     }
 }

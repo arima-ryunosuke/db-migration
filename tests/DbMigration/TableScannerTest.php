@@ -89,7 +89,7 @@ class TableScannerTest extends AbstractTestCase
         $comment = $this->invoke('commentize', [
             'col1' => str_repeat('X', 100),
             'col2' => str_repeat('あ', 100),
-            'col3' => null
+            'col3' => null,
         ], 10);
 
         $this->assertStringContainsString('XXXXXXX...', $comment);
@@ -136,7 +136,7 @@ class TableScannerTest extends AbstractTestCase
     {
         $this->insertMultiple($this->old, 'hoge', array_map(function ($i) {
             return [
-                'id' => $i
+                'id' => $i,
             ];
         }, range(1, 10)));
 

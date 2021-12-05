@@ -450,7 +450,6 @@ class TransporterTest extends AbstractTestCase
         $this->assertEquals(3, $this->old->fetchOne('SELECT COUNT(*) FROM hoge'));
     }
 
-
     /**
      * @test
      */
@@ -685,6 +684,7 @@ class TransporterTest extends AbstractTestCase
 INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'あいうえお', '3.14');
 INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('2', 'かきくけこ', '6.28');
 SQL
+    ,
             ],
             [
                 'php',
@@ -702,6 +702,7 @@ SQL
     ]
 ];
 PHP
+    ,
             ],
             [
                 'json',
@@ -719,6 +720,7 @@ PHP
     }
 ]
 JSON
+    ,
             ],
             [
                 'yaml',
@@ -732,6 +734,7 @@ JSON
     name: かきくけこ
     data: '6.28'
 YAML
+    ,
             ],
             [
                 'csv',
@@ -740,6 +743,7 @@ id,name,data
 1,あいうえお,3.14
 2,かきくけこ,6.28
 CSV
+    ,
             ],
         ];
         array_walk_recursive($supported, function (&$v) {
