@@ -20,6 +20,10 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.13
+
+- [fixbug] no bulk モードで sql が実行できない不具合を修正
+
 ## 2.0.12
 
 - [refactor] クエリを実行しないように変更
