@@ -442,7 +442,7 @@ class Transporter
             foreach ($rows as $row) {
                 $columns = array_keys($row);
                 $values = Utility::quote($this->connection, $row);
-                $sqls[] = "INSERT INTO $qtable (" . implode(',', $columns) . ") VALUES " . implode(',', $values);
+                $sqls[] = "INSERT INTO $qtable (" . implode(',', $columns) . ") VALUES (" . implode(',', $values) . ")";
             }
         }
 
