@@ -86,9 +86,9 @@ class TableScanner
 
     public function switchBufferedQuery($flag)
     {
-        $conn = $this->conn->getWrappedConnection();
-        if ($conn instanceof \Doctrine\DBAL\Driver\PDO\Connection) {
-            $pdo = $conn->getWrappedConnection();
+        $pdo = $this->conn;
+        while(!$pdo instanceof \PDO) {
+            $pdo = $pdo->getNativeConnection();
         }
         $bufferedSupport = isset($pdo) && $this->conn->getDatabasePlatform() instanceof MySqlPlatform;
         $return = null;

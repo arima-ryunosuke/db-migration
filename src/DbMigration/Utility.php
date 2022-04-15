@@ -12,7 +12,7 @@ class Utility
     {
         /** @var Schema[] $cache */
         static $cache = [];
-        $cacheid = spl_object_hash($connection->getWrappedConnection());
+        $cacheid = spl_object_hash($connection->getNativeConnection());
         if ($delete) {
             $cache[$cacheid] = null;
         }
