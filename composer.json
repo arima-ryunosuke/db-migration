@@ -43,7 +43,7 @@
   ],
   "require": {
     "php": ">=7.4",
-    "doctrine/dbal": "3.2.x-dev",
+    "doctrine/dbal": "3.3.x-dev",
     "symfony/console": "5.*",
     "symfony/yaml": "*",
     "jdorn/sql-formatter": "*"
