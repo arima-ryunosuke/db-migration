@@ -20,6 +20,11 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.14
+
+- [feature] 内部を doctrine 3.3 に変更
+  - FULLTEXT や 生成列に対応したはず
+
 ## 2.0.13
 
 - [fixbug] no bulk モードで sql が実行できない不具合を修正
