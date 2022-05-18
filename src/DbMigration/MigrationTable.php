@@ -5,6 +5,7 @@ namespace ryunosuke\DbMigration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Index;
+use Doctrine\DBAL\Schema\SchemaDiff;
 use Doctrine\DBAL\Schema\Table;
 
 class MigrationTable
@@ -36,6 +37,33 @@ class MigrationTable
     {
         if (!$this->exists()) {
             $this->connection->createSchemaManager()->createTable($this->table);
+            return true;
+        }
+        return false;
+    }
+
+    public function diff()
+    {
+        if ($this->exists()) {
+            $sm = $this->connection->createSchemaManager();
+            $table = $sm->listTableDetails($this->table->getName());
+            $tableDiff = $sm->createComparator()->diffTable($table, $this->table);
+            if ($tableDiff === false) {
+                return [];
+            }
+            $diff = new SchemaDiff([], [$tableDiff]);
+            return $diff->toSql($this->connection->getDatabasePlatform());
+        }
+        return [];
+    }
+
+    public function alter()
+    {
+        $diff = $this->diff();
+        if ($diff) {
+            foreach ($diff as $sql) {
+                $this->connection->executeStatement($sql);
+            }
             return true;
         }
         return false;

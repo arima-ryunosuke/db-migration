@@ -7,14 +7,21 @@ use ryunosuke\DbMigration\MigrationTable;
 
 class MigrationTableTest extends AbstractTestCase
 {
-    public function test_exists_create_drop()
+    public function test_exists_create_alter_drop()
     {
         $migrationTable = new MigrationTable($this->old, 'migtable');
 
+        $this->assertEquals([], $migrationTable->diff());
         $this->assertFalse($migrationTable->exists());
         $this->assertTrue($migrationTable->create());
         $this->assertTrue($migrationTable->exists());
         $this->assertFalse($migrationTable->create());
+
+        $this->assertFalse($migrationTable->alter());
+        $this->old->executeStatement('ALTER TABLE migtable ADD COLUMN dummy INT');
+        $this->assertEquals(['ALTER TABLE migtable DROP dummy'], $migrationTable->diff());
+        $this->assertTrue($migrationTable->alter());
+
         $this->assertTrue($migrationTable->drop());
         $this->assertFalse($migrationTable->exists());
         $this->assertFalse($migrationTable->drop());

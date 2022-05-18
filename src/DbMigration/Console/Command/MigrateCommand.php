@@ -283,6 +283,13 @@ EOT
                 }
             }
         }
+        if ($migrationTable->diff()) {
+            if ($this->confirm('alter migration table? (' . $migtable . ')', true)) {
+                if ($migrationTable->alter()) {
+                    $this->logger->log("-- <info>" . $migtable . "</info> <comment>is altered.</comment>");
+                }
+            }
+        }
 
         $new = $migrationTable->glob($migration);
         $old = $migrationTable->fetch();

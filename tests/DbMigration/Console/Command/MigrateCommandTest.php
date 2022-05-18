@@ -3,7 +3,10 @@
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use Doctrine\DBAL\Logging\DebugStack;
+use Doctrine\DBAL\Schema\Column;
+use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\View;
+use Doctrine\DBAL\Types\Type;
 use ryunosuke\DbMigration\Console\Command\MigrateCommand;
 
 class MigrateCommandTest extends AbstractTestCase
@@ -180,6 +183,18 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertStringNotContainsString('migs is created', $result);
         $this->assertEquals([], $this->old->executeQuery('select * from notexist')->fetchFirstColumn());
         $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchFirstColumn());
+    }
+
+    /**
+     * @test
+     */
+    function run_type_data_alter()
+    {
+        $this->oldSchema->createTable(new Table('dummy', [new Column('id', Type::getType('integer'))]));
+        $result = $this->runApp([
+            '--migration' => $this->getFile('dummy'),
+        ]);
+        $this->assertStringContainsString('dummy is altered', $result);
     }
 
     /**
