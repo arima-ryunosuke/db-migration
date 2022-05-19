@@ -20,6 +20,11 @@
 
 - choice, confirm を Symfony 標準のものに差し替える？
 
+## 2.0.15
+
+- [feature] [MigrationTable] 実行した SQL のログ機能を実装
+- [feature] [MigrationTable] ALTER 対応
+
 ## 2.0.14
 
 - [feature] 内部を doctrine 3.3 に変更
