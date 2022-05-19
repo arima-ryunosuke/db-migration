@@ -336,8 +336,8 @@ EOT
 
         $degrades = array_diff_key($old, $new);
         if ($degrades) {
-            foreach ($degrades as $applied => $datetime) {
-                $this->logger->log("-- <info>[$datetime] $applied</info>");
+            foreach ($degrades as $applied => $version) {
+                $this->logger->log("-- <info>[{$version['apply_at']}] $applied</info>");
             }
             if ($this->confirm('probably down migration. delete applying these?', true)) {
                 $migrationTable->detach(array_keys($degrades));

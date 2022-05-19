@@ -134,7 +134,7 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertEquals([1, 7, 8, 9, 21, 22], $this->old->executeQuery('select * from notexist')->fetchFirstColumn());
         $this->assertEquals(['aaa.sql', 'bbb.sql', 'ccc.php'], $this->old->executeQuery('select * from migs')->fetchFirstColumn());
 
-        $this->old->executeStatement('insert into migs values("hoge", "2011-12-24 12:34:56")');
+        $this->old->executeStatement('insert into migs values("hoge", "2011-12-24 12:34:56", NULL)');
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
         ]);

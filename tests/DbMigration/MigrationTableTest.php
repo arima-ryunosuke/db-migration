@@ -51,7 +51,13 @@ class MigrationTableTest extends AbstractTestCase
         $this->assertEquals(1, $migrationTable->apply('4.php', '<?php return function($connection){$connection->insert("ttt", array("name" => "from php(mixed code)"));return "insert into ttt values(\"from php(mixed closure)\")";};'));
 
         // attached
-        $this->assertEquals(['1.sql', '2.php', '3.php', '4.php'], array_keys($migrationTable->fetch()));
+        $versions = $migrationTable->fetch();
+        $this->assertEquals([
+            '1.sql' => 'insert into ttt values("from sql")',
+            '2.php' => 'insert into ttt values("from php(return)")',
+            '3.php' => '',
+            '4.php' => 'insert into ttt values("from php(mixed closure)")',
+        ], array_combine(array_keys($versions), array_column($versions, 'sqls')));
 
         // migrated
         $this->assertEquals([

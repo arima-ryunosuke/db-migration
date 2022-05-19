@@ -23,6 +23,10 @@ class MigrationTable
         $this->table = new Table($tableName, [
             new Column('version', \Doctrine\DBAL\Types\Type::getType('string')),
             new Column('apply_at', \Doctrine\DBAL\Types\Type::getType('datetime')),
+            new Column('sqls', \Doctrine\DBAL\Types\Type::getType('text'), [
+                'default' => null,
+                'notnull' => false,
+            ]),
         ], [
             new Index('PRIMARY', ['version'], true, true),
         ]);
@@ -89,7 +93,7 @@ class MigrationTable
         if (!$this->exists()) {
             return [];
         }
-        return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAllKeyValue();
+        return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAllAssociativeIndexed();
     }
 
     public function apply($version, $content)
@@ -101,6 +105,7 @@ class MigrationTable
                 throw new \InvalidArgumentException("'$ext' is not supported.");
 
             case 'sql':
+                $sqls = (array) $content;
                 $affected += $this->connection->executeStatement($content);
                 break;
             case 'php':
@@ -109,30 +114,43 @@ class MigrationTable
                 if ($return instanceof \Closure) {
                     $return = call_user_func($return, $connection);
                 }
-                foreach ((array) $return as $sql) {
-                    if ($sql) {
-                        $affected += $this->connection->executeStatement($sql);
-                    }
+                $sqls = array_filter((array) $return);
+                foreach ($sqls as $sql) {
+                    $affected += $this->connection->executeStatement($sql);
                 }
                 break;
         }
         $this->attach($version);
+        $this->connection->update($this->table->getName(), [
+            'sqls' => implode(';', $sqls),
+        ], [
+            'version' => $version,
+        ]);
         return $affected;
     }
 
     public function attach($version)
     {
-        $versions = array_map(function ($version) {
-            return '(' . Utility::quote($this->connection, $version) . ',NOW())';
-        }, (array) $version);
-        return $this->connection->executeStatement("INSERT INTO " . $this->table->getName() . " VALUES " . implode(',', $versions));
+        $now = date('Y-m-d H:i:s');
+        $affected = 0;
+        foreach ((array) $version as $v) {
+            $affected += $this->connection->insert($this->table->getName(), [
+                'version'  => $v,
+                'apply_at' => $now,
+                'sqls'     => null,
+            ]);
+        }
+        return $affected;
     }
 
     public function detach($version)
     {
-        $versions = array_map(function ($version) {
-            return Utility::quote($this->connection, $version);
-        }, (array) $version);
-        return $this->connection->executeStatement("DELETE FROM " . $this->table->getName() . " WHERE version IN (" . implode(',', $versions) . ")");
+        $affected = 0;
+        foreach ((array) $version as $v) {
+            $affected += $this->connection->delete($this->table->getName(), [
+                'version' => $v,
+            ]);
+        }
+        return $affected;
     }
 }
