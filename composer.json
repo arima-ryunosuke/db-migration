@@ -25,12 +25,18 @@
   "autoload": {
     "psr-4": {
       "ryunosuke\\DbMigration\\": "src/DbMigration/"
-    }
+    },
+    "files": [
+      "src/functions.stub"
+    ]
   },
   "autoload-dev": {
     "psr-4": {
       "ryunosuke\\Test\\DbMigration\\": "tests/DbMigration"
-    }
+    },
+    "files": [
+      "tests/functions.php"
+    ]
   },
   "bin": [
     "bin/dbmigration"
@@ -43,24 +49,35 @@
   ],
   "require": {
     "php": ">=7.4",
-    "doctrine/dbal": "3.3.x-dev",
+    "doctrine/dbal": "3.6.x-dev",
     "symfony/console": "5.*",
-    "symfony/yaml": "*",
-    "jdorn/sql-formatter": "*"
+    "symfony/yaml": "*"
   },
   "require-dev": {
+    "ryunosuke/functions": "^1.5",
     "phpunit/phpunit": "8.*"
   },
   "scripts": {
     "build": [
-      "@composer test",
-      "@composer pharize"
+      "@export",
+      "@test",
+      "@pharize"
+    ],
+    "export": [
+      "export-function",
+      "exclude-internal"
     ],
     "test": [
       "vendor/bin/phpunit --configuration=tests/phpunit.xml"
     ],
     "pharize": [
       "bin/box.phar compile -c box.json"
+    ],
+    "post-install-cmd": [
+      "@export"
+    ],
+    "post-update-cmd": [
+      "@export"
     ]
   }
 }
