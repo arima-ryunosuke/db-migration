@@ -12,7 +12,6 @@ use ryunosuke\DbMigration\Transporter;
 use ryunosuke\DbMigration\Utility;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class MigrateCommand extends AbstractCommand
@@ -27,28 +26,25 @@ class MigrateCommand extends AbstractCommand
     {
         $this->setName('migrate')->setDescription('Migrate srcdsn to dstdsn.');
         $this->setDefinition([
-            new InputArgument('srcdsn', InputArgument::REQUIRED, 'Specify source DSN.'),
-            new InputArgument('dstdsn', InputArgument::REQUIRED, 'Specify destination DSN.'),
-            new InputOption('migration', 'm', InputOption::VALUE_OPTIONAL, 'Specify migration directory.'),
-            new InputOption('type', 't', InputOption::VALUE_OPTIONAL, 'Migration SQL type (ddl, dml. default both)'),
-            new InputOption('noview', null, InputOption::VALUE_NONE, 'No migration View.'),
-            new InputOption('include', 'i', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Target tables pattern (enable comma separated value)'),
-            new InputOption('exclude', 'e', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Except tables pattern (enable comma separated value)'),
-            new InputOption('where', 'w', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Where condition.'),
-            new InputOption('ignore', 'g', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Ignore column for DML.'),
-            new InputOption('no-insert', null, InputOption::VALUE_NONE, 'Not contains INSERT DML'),
-            new InputOption('no-delete', null, InputOption::VALUE_NONE, 'Not contains DELETE DML'),
-            new InputOption('no-update', null, InputOption::VALUE_NONE, 'Not contains UPDATE DML'),
-            new InputOption('callback', null, InputOption::VALUE_OPTIONAL, 'Specify callback php files.'),
-            new InputOption('csv-encoding', null, InputOption::VALUE_OPTIONAL, 'Specify CSV encoding.', 'SJIS-win'),
-            new InputOption('table-directory', null, InputOption::VALUE_OPTIONAL, 'Specify separative directory name for tables.', null),
-            new InputOption('view-directory', null, InputOption::VALUE_OPTIONAL, 'Specify separative directory name for views.', null),
-            new InputOption('check', 'c', InputOption::VALUE_NONE, 'Check only (Dry run. force no-interaction)'),
-            new InputOption('force', 'f', InputOption::VALUE_NONE, 'Force continue, ignore errors'),
-            new InputOption('format', null, InputOption::VALUE_OPTIONAL, 'Format output SQL (none, pretty, format, highlight or compress. default pretty)', 'pretty'),
-            new InputOption('omit', 'o', InputOption::VALUE_REQUIRED, 'Omit size for long SQL'),
-            new InputOption('event', 'E', InputOption::VALUE_OPTIONAL, 'Specify Event filepath'),
-            new InputOption('config', 'C', InputOption::VALUE_OPTIONAL, 'Specify Configuration filepath'),
+            new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN.'),
+            new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
+            ...$this->getCommonOptions([
+                'directory',
+                'migration',
+                'type',
+                'dml-type',
+                'ignore',
+                'bulk-insert',
+                'inline',
+                'indent',
+                'delimiter',
+                'check',
+                'force',
+                'format',
+                'omit',
+                'event',
+                'config',
+            ]),
         ]);
         $this->setHelp(<<<EOT
 Migrate srcdsn to dstdsn.
@@ -74,7 +70,13 @@ EOT
         $this->event($srcConn);
 
         $this->transporter = new Transporter($srcConn);
-        $this->transporter->enableView(!$this->input->getOption('noview'));
+        $transporter->setDirectory($this->input->getOption('directory'));
+        $transporter->setBulkMode($this->input->getOption('bulk-insert'));
+        $transporter->setDataDescriptionOptions([
+            'inline'    => $this->input->getOption('inline'),
+            'indent'    => $this->input->getOption('indent'),
+            'delimiter' => $this->input->getOption('delimiter'),
+        ]);
 
         // migrate
         try {

@@ -31,15 +31,24 @@ class Transporter
     private $encodings = [];
 
     /** @var array */
-    private $directories = [
-        'table' => null,
-        'view'  => null,
+    private array $disableds = [
+        'table'   => false,
+        'view'    => false,
+        'trigger' => false,
+        'routine' => false,
+        'event'   => false,
     ];
 
-    /** @var array */
-    private $ymlOptions = [
-        'inline' => 4,
-        'indent' => 4,
+    private bool $bulkmode = false;
+
+    private ?string $directory = null;
+
+    private array $dataDescriptionOptions = [
+        'inline'    => 4,
+        'indent'    => 4,
+        'multiline' => false,
+        'align'     => null,
+        'delimiter' => null,
     ];
 
     /** @var array */
@@ -79,24 +88,26 @@ class Transporter
         $this->platform = $connection->getDatabasePlatform();
     }
 
-    public function enableView($enabled)
+    public function setDisabled(array $disableds)
     {
-        $this->viewEnabled = $enabled;
+        $this->disableds = $disableds + $this->disableds;
     }
 
-    public function setBulkMode($bulkmode)
+    public function setBulkMode(bool $bulkmode)
     {
         $this->bulkmode = $bulkmode;
     }
 
-    public function setEncoding($ext, $encoding)
+    public function setDirectory(?string $directory)
     {
-        $this->encodings[$ext] = $encoding;
+        $this->directory = $directory;
     }
 
-    public function setDirectory($objectname, $directory)
+    public function setDataDescriptionOptions(array $options)
     {
-        $this->directories[$objectname] = $directory;
+        foreach ($options as $name => $value) {
+            $this->dataDescriptionOptions[$name] = $value;
+        }
     }
 
     public function setYmlOption($option, $value)

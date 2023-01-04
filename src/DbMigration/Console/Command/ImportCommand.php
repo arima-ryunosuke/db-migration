@@ -8,7 +8,6 @@ use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Transporter;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class ImportCommand extends AbstractCommand
@@ -22,17 +21,18 @@ class ImportCommand extends AbstractCommand
         $this->setDefinition([
             new InputArgument('dstdsn', InputArgument::REQUIRED, 'Specify destination DSN (if not exists create database).'),
             new InputArgument('files', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
-            new InputOption('migration', 'm', InputOption::VALUE_OPTIONAL, 'Specify migration directory.'),
-            new InputOption('include', 'i', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Target tables pattern (enable comma separated value)'),
-            new InputOption('exclude', 'e', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Except tables pattern (enable comma separated value)'),
-            new InputOption('table-directory', null, InputOption::VALUE_OPTIONAL, 'Specify separative directory name for tables.', null),
-            new InputOption('view-directory', null, InputOption::VALUE_OPTIONAL, 'Specify separative directory name for views.', null),
-            new InputOption('csv-encoding', null, InputOption::VALUE_OPTIONAL, 'Specify CSV encoding.', 'SJIS-win'),
-            new InputOption('bulk-insert', null, InputOption::VALUE_NONE, 'Enable bulk insert'),
-            new InputOption('format', null, InputOption::VALUE_OPTIONAL, 'Format output SQL (none, pretty, format, highlight or compress. default pretty)', 'pretty'),
-            new InputOption('omit', 'o', InputOption::VALUE_REQUIRED, 'Omit size for long SQL'),
-            new InputOption('event', 'E', InputOption::VALUE_OPTIONAL, 'Specify Event filepath'),
-            new InputOption('config', 'C', InputOption::VALUE_OPTIONAL, 'Specify Configuration filepath'),
+            ...$this->getCommonOptions([
+                'directory',
+                'migration',
+                'bulk-insert',
+                'inline',
+                'indent',
+                'delimiter',
+                'format',
+                'omit',
+                'event',
+                'config',
+            ]),
         ]);
         $this->setHelp(<<<EOT
 Import from DDL,DML files based on extension.
@@ -83,10 +83,13 @@ EOT
         $this->event($conn);
 
         $transporter = new Transporter($conn);
-        $transporter->setEncoding('csv', $this->input->getOption('csv-encoding'));
-        $transporter->setDirectory('table', $this->input->getOption('table-directory'));
-        $transporter->setDirectory('view', $this->input->getOption('view-directory'));
+        $transporter->setDirectory($this->input->getOption('directory'));
         $transporter->setBulkMode($this->input->getOption('bulk-insert'));
+        $transporter->setDataDescriptionOptions([
+            'inline'    => $this->input->getOption('inline'),
+            'indent'    => $this->input->getOption('indent'),
+            'delimiter' => $this->input->getOption('delimiter'),
+        ]);
 
         // importDDL
         $ddlfile = array_shift($files);
