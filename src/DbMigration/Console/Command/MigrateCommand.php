@@ -5,11 +5,9 @@ namespace ryunosuke\DbMigration\Console\Command;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Event\ConnectionEventArgs;
-use Doctrine\DBAL\Schema\Table;
-use ryunosuke\DbMigration\Exception\MigrationException;
+use ryunosuke\DbMigration\FileType\AbstractFile;
 use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Transporter;
-use ryunosuke\DbMigration\Utility;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -24,7 +22,7 @@ class MigrateCommand extends AbstractCommand
      */
     protected function configure()
     {
-        $this->setName('migrate')->setDescription('Migrate srcdsn to dstdsn.');
+        $this->setName('migrate')->setDescription('Migrate DDL,DML from files.');
         $this->setDefinition([
             new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN.'),
             new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
@@ -47,9 +45,9 @@ class MigrateCommand extends AbstractCommand
             ]),
         ]);
         $this->setHelp(<<<EOT
-Migrate srcdsn to dstdsn.
- e.g. `dbmigration migrate mysql://srchost/dbname mysql://dsthost/dbname`
-EOT
+            Migrate dsn from files.
+             e.g. `dbmigration migrate mysql://srchost/dbname table1.yml data.yml`
+            EOT
         );
     }
 
@@ -60,16 +58,15 @@ EOT
     {
         $this->setInputOutput($input, $output);
 
-        $this->logger->trace('var_export', $this->input->getArguments(), true);
-        $this->logger->trace('var_export', $this->input->getOptions(), true);
+        $this->logger->trace(fn($v) => $this->dump($v), $this->input->getArguments(), true);
+        $this->logger->trace(fn($v) => $this->dump($v), $this->input->getOptions(), true);
 
         // get target Connection
-        $srcConn = DriverManager::getConnection($this->parseDsn($this->input->getArgument('srcdsn')));
-        $dstConn = DriverManager::getConnection($this->parseDsn($this->input->getArgument('dstdsn')));
+        $conn = DriverManager::getConnection($this->parseDsn($this->input->getArgument('dsn')));
 
-        $this->event($srcConn);
+        $this->event($conn);
 
-        $this->transporter = new Transporter($srcConn);
+        $transporter = new Transporter($conn);
         $transporter->setDirectory($this->input->getOption('directory'));
         $transporter->setBulkMode($this->input->getOption('bulk-insert'));
         $transporter->setDataDescriptionOptions([
@@ -77,52 +74,46 @@ EOT
             'indent'    => $this->input->getOption('indent'),
             'delimiter' => $this->input->getOption('delimiter'),
         ]);
+        $this->transporter = $transporter;
+
+        $files = $this->normalizeFile($this->input->getArgument('files'));
 
         // migrate
         try {
             // pre migration
-            $this->doCallback('pre-migration', $srcConn);
+            $conn->getEventManager()->dispatchEvent('pre-migration', new ConnectionEventArgs($conn));
 
             // DDL
-            $this->migrateDDL($srcConn, $dstConn);
+            $this->migrateDDL($conn, $files);
 
             // DML
-            $this->migrateDML($srcConn, $dstConn);
+            $this->migrateDML($conn, $files);
 
             // Data
-            $this->migrateData($srcConn);
-
-            // post migration
-            $this->doCallback('post-migration', $srcConn);
+            $this->migrateData($conn);
         }
-        catch (\Exception $e) {
+        finally {
             // post migration
-            $this->doCallback('post-migration', $srcConn);
-
-            throw $e;
+            $conn->getEventManager()->dispatchEvent('post-migration', new ConnectionEventArgs($conn));
         }
 
         return 0;
     }
 
-    private function migrateDDL(Connection $srcConn, Connection $dstConn)
+    private function migrateDDL(Connection $conn, &$files)
     {
-        if (!in_array($this->input->getOption('type'), explode(',', ',ddl'))) {
+        if (!$files || !in_array($this->input->getOption('type'), explode(',', ',ddl'))) {
             return;
-        }
-
-        $force = $this->input->getOption('force');
-
-        $includes = (array) $this->input->getOption('include');
-        $excludes = (array) $this->input->getOption('exclude');
-        if ($this->input->getOption('migration')) {
-            $excludes[] = '^' . basename($this->input->getOption('migration')) . '$';
         }
 
         $this->logger->log("-- <comment>diff DDL</comment>");
 
+        $force = $this->input->getOption('force');
+
+        $excludes = $this->input->getOption('migration') ? ['^' . basename($this->input->getOption('migration')) . '$'] : [];
+
         // get ddl
-        $sqls = $this->transporter->migrateDDL($dstConn, $includes, $excludes);
+        $sqls = $this->transporter->migrateDDL(array_shift($files), $excludes);
         if (!$sqls) {
             $this->logger->log("-- no diff schema.");
             return;
@@ -136,7 +127,7 @@ EOT
             // exec if noconfirm or confirm answer is "y"
             if ($this->confirm('exec this query?', true)) {
                 try {
-                    $srcConn->executeStatement($sql);
+                    $conn->executeStatement($sql);
                     $execed = true;
                 }
                 catch (\Exception $e) {
@@ -150,81 +141,33 @@ EOT
 
         // reconnect if exec ddl. for recreate schema (Migrator::getSchema)
         if ($execed) {
-            Utility::getSchema($srcConn, true);
+            $this->transporter->refresh();
         }
     }
 
-    private function migrateDML(Connection $srcConn, Connection $dstConn)
+    private function migrateDML(Connection $conn, &$files)
     {
-        if (!in_array($this->input->getOption('type'), explode(',', ',dml'))) {
+        if (!$files || !in_array($this->input->getOption('type'), explode(',', ',dml'))) {
             return;
         }
 
-        $force = $this->input->getOption('force');
-
-        $includes = (array) $this->input->getOption('include');
-        $excludes = (array) $this->input->getOption('exclude');
-        if ($this->input->getOption('migration')) {
-            $excludes[] = '^' . basename($this->input->getOption('migration')) . '$';
-        }
-        $wheres = (array) $this->input->getOption('where') ?: [];
-        $ignores = (array) $this->input->getOption('ignore') ?: [];
-
-        $dmltypes = [
-            'insert' => !$this->input->getOption('no-insert'),
-            'delete' => !$this->input->getOption('no-delete'),
-            'update' => !$this->input->getOption('no-update'),
-        ];
-
         $this->logger->log("-- <comment>diff DML</comment>");
 
-        $mapname = function (Table $table) { return $table->getName(); };
-        $srctables = array_flip(array_map($mapname, Utility::getSchema($srcConn)->getTables()));
-        $dsttables = Utility::getSchema($dstConn)->getTables();
-        $maxlength = $dsttables ? max(array_map('strlen', array_map($mapname, $dsttables))) + 1 : 0;
+        $force = $this->input->getOption('force');
+
+        $dmltypes = array_fill_keys($this->splitByComma($this->input->getOption('dml-type')), true);
+
+        $ignores = $this->splitByComma($this->input->getOption('ignore'));
+
         $dmlflag = false;
-        foreach ($dsttables as $table) {
-            $tablename = $table->getName();
-            $title = sprintf("<info>%-{$maxlength}s</info>", $tablename);
-
-            $filtered = Utility::filterTable($tablename, $includes, $excludes);
-            if ($filtered === 1) {
-                $this->logger->info("-- $title is skipped by include option.");
-                continue;
-            }
-            elseif ($filtered === 2) {
-                $this->logger->info("-- $title is skipped by exclude option.");
-                continue;
-            }
-
-            // skip to not exists tables
-            if (!isset($srctables[$tablename])) {
-                $this->logger->info("-- $title is skipped by not exists.");
-                continue;
-            }
-
-            // skip no has record
-            if (!$dstConn->fetchOne("select COUNT(*) from $tablename")) {
-                $this->logger->info("-- $title is skipped by no record.");
-                continue;
-            }
-
-            // get dml
-            $sqls = null;
-            try {
-                $sqls = $this->transporter->migrateDML($dstConn, $tablename, $wheres, $ignores, $dmltypes);
-            }
-            catch (MigrationException $ex) {
-                $this->logger->info("-- $title is skipped by " . $ex->getMessage());
-                continue;
-            }
-
+        foreach ($files as $filename) {
+            $sqls = $this->transporter->migrateDML($filename, $dmltypes, $ignores);
             if (!$sqls) {
-                $this->logger->info("-- $title is skipped by no diff.");
+                $this->logger->info("-- $filename is skipped by no diff.");
                 continue;
             }
 
-            $this->logger->log("-- $title has diff:");
+            $this->logger->log("-- $filename has diff:");
 
             // display sql(max 1000)
             $show_sqls = array_slice($sqls, 0, 1000);
@@ -241,16 +184,16 @@ EOT
             // exec if noconfirm or confirm answer is "y"
             $dmlflag = true;
             if ($this->confirm('exec this query?', true)) {
-                $srcConn->beginTransaction();
+                $conn->beginTransaction();
 
                 try {
                     foreach ($sqls as $sql) {
-                        $srcConn->executeStatement($sql);
+                        $conn->executeStatement($sql);
                     }
-                    $srcConn->commit();
+                    $conn->commit();
                 }
                 catch (\Exception $e) {
-                    $srcConn->rollBack();
+                    $conn->rollBack();
 
                     $this->logger->log('/* <error>' . $e->getMessage() . '</error> */');
                     if (!$force && $this->confirm('exit?', true)) {
@@ -264,19 +207,19 @@ EOT
         }
     }
 
-    private function migrateData(Connection $dstConn)
+    private function migrateData(Connection $conn)
     {
         $migration = $this->input->getOption('migration');
         if (!$migration) {
             return;
         }
 
-        $migtable = basename($migration);
-        $migrationTable = new MigrationTable($dstConn, $migtable);
+        $this->logger->log("-- <comment>diff Data</comment>");
+
+        $migtable       = basename($migration);
+        $migrationTable = new MigrationTable($conn, $migtable);
 
         $force = $this->input->getOption('force');
-
-        $this->logger->log("-- <comment>diff Data</comment>");
 
         if (!$migrationTable->exists()) {
             if ($this->confirm('create migration table? (' . $migtable . ')', true)) {
@@ -297,14 +240,15 @@ EOT
         $old = $migrationTable->fetch();
 
         $upgrades = array_diff_key($new, $old);
-        foreach ($upgrades as $version => $sql) {
-            $this->logger->log($sql);
+        foreach ($upgrades as $version => $file) {
+            /** @var AbstractFile $file */
+            $this->logger->log((string) $file);
 
             if ($this->input->getOption('check')) {
                 continue;
             }
 
-            $answer = $this->choice('exec this query?', ['y', 'n', 'p'], 0);
+            $answer = $this->choice('exec this file?', ['y', 'n', 'p'], 0);
             if ($answer === 2) {
                 $migrationTable->attach($version);
                 continue;
@@ -313,16 +257,16 @@ EOT
                 continue;
             }
             if ($answer === 0) {
-                $dstConn->beginTransaction();
+                $conn->beginTransaction();
 
                 try {
-                    $affected = $migrationTable->apply($version, $sql);
+                    $affected = $migrationTable->apply($version, $file->readMigration());
                     $this->logger->log("-- <comment>Affected rows: $affected</comment>");
 
-                    $dstConn->commit();
+                    $conn->commit();
                 }
                 catch (\Exception $e) {
-                    $dstConn->rollBack();
+                    $conn->rollBack();
 
                     $this->logger->log('/* <error>' . $e->getMessage() . '</error> */');
                     if (!$force && $this->confirm('exit?', true)) {
@@ -345,19 +289,6 @@ EOT
                 $migrationTable->detach(array_keys($degrades));
             }
         }
-    }
-
-    private function doCallback($timing, Connection $conn)
-    {
-        $conn->getEventManager()->dispatchEvent($timing, new ConnectionEventArgs($conn));
-
-        // for compatible
-        if (!file_exists($this->input->getOption('callback'))) {
-            return;
-        }
-        @trigger_error('--callback is deprecated. please use --event', E_USER_DEPRECATED);
-        $callbacks = include $this->input->getOption('callback');
-        $callbacks[$timing]($conn);
     }
 
     protected function confirm($message, $default = true)

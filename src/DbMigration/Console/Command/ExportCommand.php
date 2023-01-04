@@ -17,7 +17,7 @@ class ExportCommand extends AbstractCommand
     {
         $this->setName('export')->setDescription('Export to DDL,DML files.');
         $this->setDefinition([
-            new InputArgument('srcdsn', InputArgument::REQUIRED, 'Specify source DSN.'),
+            new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN.'),
             new InputArgument('files', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema'),
             ...$this->getCommonOptions([
                 'directory',
@@ -37,9 +37,9 @@ class ExportCommand extends AbstractCommand
             ]),
         ]);
         $this->setHelp(<<<EOT
-Export to DDL,DML files based on extension.
- e.g. `dbmigration export mysql://user:pass@localhost/dbname schema.yml table1.yml table2.yml`
-EOT
+            Export to DDL,DML files based on extension.
+             e.g. `dbmigration export mysql://user:pass@localhost/dbname schema.yml table1.yml table2.yml`
+            EOT
         );
     }
 
@@ -50,23 +50,25 @@ EOT
     {
         $this->setInputOutput($input, $output);
 
-        $this->logger->trace('var_export', $this->input->getArguments(), true);
-        $this->logger->trace('var_export', $this->input->getOptions(), true);
+        $this->logger->trace(fn($v) => $this->dump($v), $this->input->getArguments(), true);
+        $this->logger->trace(fn($v) => $this->dump($v), $this->input->getOptions(), true);
 
         $files = $this->normalizeFile($this->input->getArgument('files'));
 
         // option
-        $includes = (array) $this->input->getOption('include');
-        $excludes = (array) $this->input->getOption('exclude');
+        $includes = $this->splitByComma($this->input->getOption('include'));
+        $excludes = $this->splitByComma($this->input->getOption('exclude'));
         if ($this->input->getOption('migration')) {
             $excludes[] = '^' . basename($this->input->getOption('migration')) . '$';
         }
-        $wheres = (array) $this->input->getOption('where') ?: [];
+        $wheres  = (array) $this->input->getOption('where') ?: [];
         $ignores = (array) $this->input->getOption('ignore') ?: [];
 
         // get target Connection
-        $params = $this->parseDsn($this->input->getArgument('srcdsn'));
-        $conn = DriverManager::getConnection($params);
+        $params = $this->parseDsn($this->input->getArgument('dsn'));
+        $conn   = DriverManager::getConnection($params);
+
+        $this->event($conn);
 
         // export sql files from argument
         $transporter = new Transporter($conn);
@@ -82,8 +84,10 @@ EOT
         $ddl = $transporter->exportDDL(array_shift($files), $includes, $excludes);
         $this->logger->info($ddl);
         foreach ($files as $filename) {
-            $dml = $transporter->exportDML($filename, $wheres, $ignores);
-            $this->logger->info($dml);
+            $dmls = $transporter->exportDML($filename, $wheres, $ignores);
+            foreach ($dmls as $dml) {
+                $this->logger->info(fn($v) => $this->dump($v), $dml, true);
+            }
         }
 
         return 0;

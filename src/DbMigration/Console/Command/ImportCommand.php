@@ -19,7 +19,7 @@ class ImportCommand extends AbstractCommand
     {
         $this->setName('import')->setDescription('Import from DDL,DML files.');
         $this->setDefinition([
-            new InputArgument('dstdsn', InputArgument::REQUIRED, 'Specify destination DSN (if not exists create database).'),
+            new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN (if not exists create database).'),
             new InputArgument('files', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
             ...$this->getCommonOptions([
                 'directory',
@@ -35,9 +35,9 @@ class ImportCommand extends AbstractCommand
             ]),
         ]);
         $this->setHelp(<<<EOT
-Import from DDL,DML files based on extension.
- e.g. `dbmigration import mysql://user:pass@localhost/dbname schema.yml table1.yml table2.yml`
-EOT
+            Import from DDL,DML files based on extension.
+             e.g. `dbmigration import mysql://user:pass@localhost/dbname schema.yml table1.yml table2.yml`
+            EOT
         );
     }
 
@@ -48,20 +48,16 @@ EOT
     {
         $this->setInputOutput($input, $output);
 
-        $this->logger->trace('var_export', $this->input->getArguments(), true);
-        $this->logger->trace('var_export', $this->input->getOptions(), true);
+        $this->logger->trace(fn($v) => $this->dump($v), $this->input->getArguments(), true);
+        $this->logger->trace(fn($v) => $this->dump($v), $this->input->getOptions(), true);
 
         $files = $this->normalizeFile($this->input->getArgument('files'));
 
-        // option
-        $includes = (array) $this->input->getOption('include');
-        $excludes = (array) $this->input->getOption('exclude');
-
         // get target Connection
-        $dstdsn = $this->input->getArgument('dstdsn');
-        $params = $this->parseDsn($dstdsn);
-        $dbname = $params['dbname'] ?: 'tmp_' . md5(implode('', array_map('filemtime', $files)));
-        if (!$this->confirm("recreate <error>$dstdsn</error> really?", true)) {
+        $dsn    = $this->input->getArgument('dsn');
+        $params = $this->parseDsn($dsn);
+        $dbname = $params['dbname'];
+        if (!$this->confirm("recreate <error>$dsn</error> really?", true)) {
             throw new CancelException('canceled.');
         }
 
@@ -78,7 +74,7 @@ EOT
         $this->logger->info("-- <info>create database</info> $dbname");
 
         $params['dbname'] = $dbname;
-        $conn = DriverManager::getConnection($params);
+        $conn             = DriverManager::getConnection($params);
 
         $this->event($conn);
 
@@ -94,7 +90,7 @@ EOT
         // importDDL
         $ddlfile = array_shift($files);
         $this->logger->info("-- <info>importDDL</info> $ddlfile");
-        $sqls = $transporter->importDDL($ddlfile, $includes, $excludes);
+        $sqls = $transporter->importDDL($ddlfile);
         foreach ($sqls as $sql) {
             $this->logger->debug([$this, 'formatSql'], $sql);
 
@@ -108,6 +104,8 @@ EOT
                 }
             }
         }
+
+        $transporter->refresh();
 
         // importDML
         foreach ($files as $filename) {
@@ -142,7 +140,7 @@ EOT
 
             $migfiles = $migrationTable->glob($migration);
             foreach ($migfiles as $version => $sql) {
-                $this->logger->debug($sql);
+                $this->logger->debug((string) $sql);
                 $migrationTable->attach($version);
             }
         }

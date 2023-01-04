@@ -3,65 +3,61 @@
 namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Index;
-use Doctrine\DBAL\Schema\SchemaDiff;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Types\Type;
+use DomainException;
+use ryunosuke\DbMigration\FileType\AbstractFile;
 
 class MigrationTable
 {
-    /** @var Connection */
-    private $connection;
+    private Connection $connection;
 
-    /** @var Table */
-    private $table;
+    private AbstractSchemaManager $schemaManager;
 
-    public function __construct(Connection $connection, $tableName)
+    private Table $table;
+
+    public function __construct(Connection $connection, string $tableName)
     {
-        $this->connection = $connection;
+        $this->connection    = $connection;
+        $this->schemaManager = $this->connection->createSchemaManager();
 
         $this->table = new Table($tableName, [
-            new Column('version', \Doctrine\DBAL\Types\Type::getType('string')),
-            new Column('apply_at', \Doctrine\DBAL\Types\Type::getType('datetime')),
-            new Column('sqls', \Doctrine\DBAL\Types\Type::getType('text'), [
-                'default' => null,
-                'notnull' => false,
-            ]),
+            new Column('version', Type::getType('string')),
+            new Column('apply_at', Type::getType('datetime')),
+            new Column('logs', Type::getType('json')),
         ], [
             new Index('PRIMARY', ['version'], true, true),
         ]);
     }
 
-    public function exists()
+    public function exists(): bool
     {
-        return $this->connection->createSchemaManager()->tablesExist($this->table->getName());
+        return $this->schemaManager->tablesExist($this->table->getName());
     }
 
-    public function create()
+    public function create(): bool
     {
         if (!$this->exists()) {
-            $this->connection->createSchemaManager()->createTable($this->table);
+            $this->schemaManager->createTable($this->table);
             return true;
         }
         return false;
     }
 
-    public function diff()
+    public function diff(): array
     {
         if ($this->exists()) {
-            $sm = $this->connection->createSchemaManager();
-            $table = $sm->listTableDetails($this->table->getName());
-            $tableDiff = $sm->createComparator()->diffTable($table, $this->table);
-            if ($tableDiff === false) {
-                return [];
-            }
-            $diff = new SchemaDiff([], [$tableDiff]);
-            return $diff->toSql($this->connection->getDatabasePlatform());
+            $table     = $this->schemaManager->introspectTable($this->table->getName());
+            $tableDiff = $this->schemaManager->createComparator()->compareTables($table, $this->table);
+            return $this->connection->getDatabasePlatform()->getAlterTableSQL($tableDiff);
         }
         return [];
     }
 
-    public function alter()
+    public function alter(): bool
     {
         $diff = $this->diff();
         if ($diff) {
@@ -73,22 +69,34 @@ class MigrationTable
         return false;
     }
 
-    public function drop()
+    public function drop(): bool
     {
         if ($this->exists()) {
-            $this->connection->createSchemaManager()->dropTable($this->table);
+            $this->schemaManager->dropTable($this->table->getName());
             return true;
         }
         return false;
     }
 
-    public function glob($migdir)
+    public function glob($migdir): array
     {
-        $migfiles = glob($migdir . '/*.{sql,php}', GLOB_BRACE);
-        return array_combine(array_map('basename', $migfiles), array_map('file_get_contents', $migfiles));
+        $migfiles = [];
+        foreach (glob($migdir . '/*') as $filename) {
+            try {
+                $file = AbstractFile::create($filename, [
+                    'connection' => $this->connection,
+                ]);
+
+                $migfiles[$file->pathinfo()['basename']] = $file;
+            }
+            catch (DomainException $e) {
+                // through unsupported file
+            }
+        }
+        return $migfiles;
     }
 
-    public function fetch()
+    public function fetch(): array
     {
         if (!$this->exists()) {
             return [];
@@ -96,54 +104,56 @@ class MigrationTable
         return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAllAssociativeIndexed();
     }
 
-    public function apply($version, $content)
+    public function apply(string $version, array $records): int
     {
-        $affected = 0;
-        $ext = pathinfo($version, PATHINFO_EXTENSION);
-        switch ($ext) {
-            default:
-                throw new \InvalidArgumentException("'$ext' is not supported.");
+        $tablenames = array_flip($this->schemaManager->listTableNames());
 
-            case 'sql':
-                $sqls = (array) $content;
-                $affected += $this->connection->executeStatement($content);
-                break;
-            case 'php':
-                $connection = $this->connection;
-                $return = eval("?>$content;");
-                if ($return instanceof \Closure) {
-                    $return = call_user_func($return, $connection);
+        $insert = function ($value, &$logs) use (&$insert, $tablenames) {
+            if (!is_array($value)) {
+                $logs[] = $value;
+                return $this->connection->executeStatement($value);
+            }
+
+            $affected = 0;
+            foreach ($value as $k => $v) {
+                if (isset($tablenames[$k])) {
+                    foreach ($v as $row) {
+                        $logs[]   = $row;
+                        $affected += $this->connection->insert($k, $row);
+                    }
                 }
-                $sqls = array_filter((array) $return);
-                foreach ($sqls as $sql) {
-                    $affected += $this->connection->executeStatement($sql);
+                else {
+                    $affected += $insert($v, $logs);
                 }
-                break;
-        }
-        $this->attach($version);
-        $this->connection->update($this->table->getName(), [
-            'sqls' => implode(';', $sqls),
-        ], [
-            'version' => $version,
+            }
+            return $affected;
+        };
+
+        $affected = $insert($records, $logs);
+
+        $this->connection->insert($this->table->getName(), [
+            'version'  => $version,
+            'apply_at' => date('Y-m-d H:i:s'),
+            'logs'     => json_encode($logs),
         ]);
         return $affected;
     }
 
-    public function attach($version)
+    public function attach($version): int
     {
-        $now = date('Y-m-d H:i:s');
+        $now      = date('Y-m-d H:i:s');
         $affected = 0;
         foreach ((array) $version as $v) {
             $affected += $this->connection->insert($this->table->getName(), [
                 'version'  => $v,
                 'apply_at' => $now,
-                'sqls'     => null,
+                'logs'     => 'null',
             ]);
         }
         return $affected;
     }
 
-    public function detach($version)
+    public function detach($version): int
     {
         $affected = 0;
         foreach ((array) $version as $v) {

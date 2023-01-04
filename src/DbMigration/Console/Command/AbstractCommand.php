@@ -9,6 +9,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
+use function ryunosuke\DbMigration\sql_format;
+use function ryunosuke\DbMigration\var_pretty;
 
 abstract class AbstractCommand extends Command
 {
@@ -140,7 +142,7 @@ abstract class AbstractCommand extends Command
 
     protected function setInputOutput(InputInterface $input, OutputInterface $output)
     {
-        $this->input = $input;
+        $this->input  = $input;
         $this->output = $output;
         $this->logger = new Logger($input, $output);
 
@@ -196,7 +198,7 @@ abstract class AbstractCommand extends Command
         }
 
         $allConfig = require $configFile;
-        $config = ($allConfig[$this->getName()] ?? []) + ($allConfig['default'] ?? []);
+        $config    = ($allConfig[$this->getName()] ?? []) + ($allConfig['default'] ?? []);
         foreach ($config as $name => $value) {
             $definition = $this->getDefinition();
             if (ctype_digit("$name")) {
@@ -237,8 +239,8 @@ abstract class AbstractCommand extends Command
 
         // question
         $selection = implode('/', $choices);
-        $question = new Question("<question>{$message} [{$selection}]:</question>", $default);
-        $answer = $this->getHelper('question')->ask($this->input, $this->output, $question);
+        $question  = new Question("<question>{$message} [{$selection}]:</question>", $default);
+        $answer    = $this->getHelper('question')->ask($this->input, $this->output, $question);
 
         // return answer index
         $return = null;
@@ -316,29 +318,46 @@ abstract class AbstractCommand extends Command
         return $result;
     }
 
+    protected function splitByComma($values)
+    {
+        $result = [];
+        foreach ((array) $values as $value) {
+            $result = array_merge($result, array_filter(array_map('trim', explode(',', $value)), 'strlen'));
+        }
+        return $result;
+    }
+
     public function formatSql($sql)
     {
         $sql .= ';';
-        switch ($this->input->getOption('format')) {
-            case 'pretty':
-                $sql = \SqlFormatter::format($sql, true);
-                break;
-            case 'format':
-                $sql = \SqlFormatter::format($sql, false);
-                break;
-            case 'highlight':
-                $sql = \SqlFormatter::highlight($sql);
-                break;
-            case 'compress':
-                $sql = \SqlFormatter::compress($sql);
-                break;
-        }
 
         $omitlength = intval($this->input->getOption('omit')) ?: 65535;
-        if (mb_strlen($sql) > $omitlength) {
+        if (mb_strwidth($sql) > $omitlength) {
             $sql = mb_strimwidth($sql, 0, $omitlength, "\n...(omitted)");
         }
 
-        return $sql;
+        $opt = [
+            'indent'    => str_repeat(' ', $this->input->getOption('indent')),
+            'nestlevel' => 1,
+            'case'      => null,
+        ];
+        switch ($this->input->getOption('format')) {
+            default:
+                return $sql;
+            case 'pretty':
+                return sql_format($sql, $opt + ['highlight' => $this->output->isDecorated() ? 'cli' : false]);
+            case 'format':
+                return sql_format($sql, $opt + ['highlight' => false]);
+        }
+    }
+
+    public function dump($value)
+    {
+        return var_pretty($value, [
+            'indent'  => $this->input->getOption('indent'),
+            'context' => $this->output->isDecorated() ? 'cli' : 'plain',
+            'return'  => true,
+            'trace'   => false,
+        ]);
     }
 }

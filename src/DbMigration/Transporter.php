@@ -4,33 +4,31 @@ namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Schema\AbstractAsset;
+use Doctrine\DBAL\Schema\AbstractSchemaManager;
+use Doctrine\DBAL\Schema\Event;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Index;
+use Doctrine\DBAL\Schema\Routine;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\Trigger;
 use Doctrine\DBAL\Schema\View;
-use ryunosuke\DbMigration\Exception\MigrationException;
-use Symfony\Component\Yaml\Yaml;
+use Generator;
+use ryunosuke\DbMigration\FileType\AbstractFile;
+use ryunosuke\DbMigration\FileType\Tool\Exportion;
 
 class Transporter
 {
-    /** @var Connection */
-    private $connection;
+    private Connection $connection;
 
-    /** @var AbstractPlatform */
-    private $platform;
+    private AbstractPlatform $platform;
 
-    /** @var bool */
-    private $viewEnabled = true;
+    private AbstractSchemaManager $schemaManager;
 
-    /** @var array */
-    private $bulkmode = false;
+    private Schema $schema;
 
-    /** @var array */
-    private $encodings = [];
-
-    /** @var array */
+    /** @var bool[] */
     private array $disableds = [
         'table'   => false,
         'view'    => false,
@@ -51,8 +49,7 @@ class Transporter
         'delimiter' => null,
     ];
 
-    /** @var array */
-    private $defaultColumnAttributes = [
+    private array $defaultColumnAttributes = [
         'length'           => null,
         'precision'        => 10,
         'scale'            => 0,
@@ -61,31 +58,45 @@ class Transporter
         'columnDefinition' => null,
     ];
 
-    /** @var array */
-    private $defaultIndexAttributes = [
+    private array $defaultIndexAttributes = [
         'primary' => false,
         'flag'    => [],
         'option'  => [],
     ];
 
-    /** @var array */
-    private $ignoreTableOptionAttributes = [
-        'autoincrement'  => true,
-        'create_options' => [
-            // something
-        ],
+    private array $ignoreTableOptionAttributes = [
+        'autoincrement'  => null,
+        'create_options' => null,
     ];
 
-    /** @var array */
-    private $ignoreColumnOptionAttributes = [
+    private array $ignoreColumnOptionAttributes = [
         // for ryunosuke/dbal
         'beforeColumn' => null,
     ];
 
+    private array $ignoreViewOptionAttributes = [
+        'updatable' => null,
+    ];
+
+    private array $ignoreTriggerOptionAttributes = [
+        // something
+    ];
+
+    private array $ignoreRoutineOptionAttributes = [
+        // something
+    ];
+
+    private array $ignoreEventOptionAttributes = [
+        'timeZone' => null,
+        'interval' => null,
+    ];
+
     public function __construct(Connection $connection)
     {
-        $this->connection = $connection;
-        $this->platform = $connection->getDatabasePlatform();
+        $this->connection    = $connection;
+        $this->platform      = $connection->getDatabasePlatform();
+        $this->schemaManager = $connection->createSchemaManager();
+        $this->schema        = $this->schemaManager->introspectSchema();
     }
 
     public function setDisabled(array $disableds)
@@ -110,618 +121,398 @@ class Transporter
         }
     }
 
-    public function setYmlOption($option, $value)
+    public function getDefinition(): array
     {
-        $this->ymlOptions[$option] = $value;
+        $sortAssets = function ($assets) {
+            uasort($assets, fn(AbstractAsset $a, AbstractAsset $b) => $a->getName() <=> $b->getName());
+            return $assets;
+        };
+        return [
+            'table'   => [
+                'get'        => fn(Schema $schema) => $sortAssets($schema->getTables()),
+                'add'        => fn(Schema $schema, Table $table) => $schema->addTable($table),
+                'drop'       => fn(Schema $schema, Table $table) => $schema->dropTable($table->getName()),
+                'array'      => function (Table $table) use($sortAssets) {
+                    // charset
+                    $options = $table->getOptions();
+                    if (!isset($options['charset']) && isset($options['collation'])) {
+                        $options['charset'] = explode('_', $options['collation'])[0];
+                    }
+
+                    // entry keys
+                    $entry = [
+                        'column'  => [],
+                        'index'   => [],
+                        'foreign' => [],
+                        'option'  => array_diff_key($options, $this->ignoreTableOptionAttributes),
+                    ];
+
+                    // add columns
+                    foreach ($table->getColumns() as $column) {
+                        $array = [
+                            'type'             => $column->getType()->getName(),
+                            'default'          => $column->getDefault(),
+                            'notnull'          => $column->getNotnull(),
+                            'length'           => $column->getLength(),
+                            'precision'        => $column->getPrecision(),
+                            'scale'            => $column->getScale(),
+                            'fixed'            => $column->getFixed(),
+                            'unsigned'         => $column->getUnsigned(),
+                            'autoincrement'    => $column->getAutoincrement(),
+                            'columnDefinition' => $column->getColumnDefinition(),
+                            'comment'          => $column->getComment(),
+                            'platformOptions'  => array_diff_key($column->getPlatformOptions(), $this->ignoreColumnOptionAttributes),
+                        ];
+                        if (!in_array($array['type'], ['smallint', 'integer', 'bigint', 'decimal', 'float'], true)) {
+                            unset($array['unsigned']);
+                        }
+
+                        $entry['column'][$column->getName()] = Utility::array_diff_exists($array, $this->defaultColumnAttributes);
+                    }
+
+                    // add indexes
+                    $indexes = $this->tableUnsetImplicitIndex($table)->getIndexes();
+                    array_multisort(array_map(fn(Index $v) => $v->isPrimary() ? '' : $v->getName(), $indexes), $indexes);
+                    foreach ($indexes as $index) {
+                        $array = [
+                            'column'  => $index->getColumns(),
+                            'primary' => $index->isPrimary(),
+                            'unique'  => $index->isUnique(),
+                            'flag'    => $index->getFlags(),
+                            'option'  => $index->getOptions(),
+                        ];
+
+                        $entry['index'][$index->getName()] = Utility::array_diff_exists($array, $this->defaultIndexAttributes);
+                    }
+
+                    // add foreign keys
+                    $fkeys = $sortAssets($table->getForeignKeys());
+                    foreach ($fkeys as $fkey) {
+                        $entry['foreign'][$fkey->getName()] = [
+                            'table'  => $fkey->getForeignTableName(),
+                            'column' => array_combine($fkey->getLocalColumns(), $fkey->getForeignColumns()),
+                            'option' => $fkey->getOptions(),
+                        ];
+                    }
+
+                    return $entry;
+                },
+                'object'     => function (string $name, array $array) {
+                    // base table
+                    $table = new Table($name, [], [], [], [], $array['option']);
+
+                    // add columns
+                    foreach ($array['column'] ?? [] as $name => $column) {
+                        $type = $column['type'];
+                        unset($column['type']);
+                        $column += $this->defaultColumnAttributes;
+                        $table->addColumn($name, $type, $column);
+                    }
+
+                    // add indexes
+                    foreach ($array['index'] ?? [] as $name => $index) {
+                        $index += $this->defaultIndexAttributes;
+                        if ($index['primary']) {
+                            $table->setPrimaryKey($index['column'], $name);
+                        }
+                        elseif ($index['unique']) {
+                            $table->addUniqueIndex($index['column'], $name, $index['option']);
+                        }
+                        else {
+                            $table->addIndex($index['column'], $name, $index['flag'], $index['option']);
+                        }
+                    }
+
+                    // add foreign keys
+                    foreach ($array['foreign'] ?? [] as $name => $fkey) {
+                        $table->addForeignKeyConstraint($fkey['table'], array_keys($fkey['column']), array_values($fkey['column']), $fkey['option'], $name);
+                    }
+
+                    // ignore implicit index
+                    $this->tableUnsetImplicitIndex($table);
+
+                    return $table;
+                },
+                'createSQLs' => fn($tables) => $this->platform->getCreateTablesSQL($tables),
+            ],
+            'view'    => [
+                'get'        => fn(Schema $schema) => $sortAssets($schema->getViews()),
+                'add'        => fn(Schema $schema, View $view) => $schema->addView($view),
+                'drop'       => fn(Schema $schema, View $view) => $schema->dropView($view->getName()),
+                'array'      => function (View $view) {
+                    return array_replace([
+                        'sql' => $view->getSql(),
+                    ], array_diff_key($view->getOptions(), $this->ignoreViewOptionAttributes));
+                },
+                'object'     => function ($name, $array) {
+                    return new View($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreViewOptionAttributes), 'sql'));
+                },
+                'createSQLs' => fn($views) => array_map(fn($view) => $this->platform->getCreateViewSQL($view->getName(), $view->getSql(), $view->getOptions()), $views),
+            ],
+            'trigger' => [
+                'get'        => fn(Schema $schema) => $sortAssets($schema->getTriggers()),
+                'add'        => fn(Schema $schema, Trigger $trigger) => $schema->addTrigger($trigger),
+                'drop'       => fn(Schema $schema, Trigger $trigger) => $schema->dropTrigger($trigger->getName()),
+                'array'      => function (Trigger $trigger) {
+                    return array_replace([
+                        'statement' => $trigger->getStatement(),
+                        'table'     => $trigger->getTableName(),
+                    ], array_diff_key($trigger->getOptions(), $this->ignoreTriggerOptionAttributes));
+                },
+                'object'     => function ($name, $array) {
+                    return new Trigger($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreTriggerOptionAttributes), 'statement', 'table'));
+                },
+                'createSQLs' => fn($triggers) => array_map(fn($trigger) => $this->platform->getCreateTriggerSQL($trigger), $triggers),
+            ],
+            'routine' => [
+                'get'        => fn(Schema $schema) => $sortAssets($schema->getRoutines()),
+                'add'        => fn(Schema $schema, Routine $routine) => $schema->addRoutine($routine),
+                'drop'       => fn(Schema $schema, Routine $routine) => $schema->dropRoutine($routine->getName()),
+                'array'      => function (Routine $routine) {
+                    return array_replace([
+                        'statement' => $routine->getStatement(),
+                    ], array_diff_key($routine->getOptions(), $this->ignoreRoutineOptionAttributes));
+                },
+                'object'     => function ($name, $array) {
+                    return new Routine($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreRoutineOptionAttributes), 'statement'));
+                },
+                'createSQLs' => fn($routines) => array_map(fn($routine) => (fn($routine) => $this->platform->{"getCreate{$routine->getType()}SQL"}($routine))($routine), $routines),
+            ],
+            'event'   => [
+                'get'        => fn(Schema $schema) => $sortAssets($schema->getEvents()),
+                'add'        => fn(Schema $schema, Event $event) => $schema->addEvent($event),
+                'drop'       => fn(Schema $schema, Event $event) => $schema->dropEvent($event->getName()),
+                'array'      => function (Event $event) {
+                    return array_replace([
+                        'statement' => $event->getStatement(),
+                    ], array_diff_key($event->getOptions(), $this->ignoreEventOptionAttributes));
+                },
+                'object'     => function ($name, $array) {
+                    return new Event($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreEventOptionAttributes), 'statement'));
+                },
+                'createSQLs' => fn($events) => array_map(fn($event) => $this->platform->getCreateEventSQL($event), $events),
+            ],
+        ];
     }
 
-    public function exportDDL($filename, $includes = [], $excludes = [])
+    public function exportDDL(string $filename, array $includes = [], array $excludes = []): string
     {
-        $schema = Utility::getSchema($this->connection);
-        $pathinfo = $this->parseFilename($filename);
+        $file       = $this->getFileByFilename($filename);
+        $pathinfo   = $file->pathinfo();
+        $definition = $this->getDefinition();
 
-        // SQL is special
-        if ($pathinfo['extension'] === 'sql') {
-            $tables = $views = [];
-            foreach ($schema->getTables() as $table) {
-                if (Utility::filterTable($table->getName(), $includes, $excludes) > 0) {
+        $categories = array_fill_keys(array_keys($definition), []);
+        foreach ($definition as $category => $setting) {
+            if ($this->disableds[$category]) {
+                continue;
+            }
+            foreach ($setting['get']($this->schema) as $object) {
+                $name = $object->getName();
+
+                if (Utility::filterTable($name, $includes, $excludes) > 0) {
                     continue;
                 }
-                $tables[] = $table;
-            }
-            if ($this->viewEnabled) {
-                foreach ($schema->getViews() as $view) {
-                    if (Utility::filterTable($view->getName(), $includes, $excludes) > 0) {
-                        continue;
-                    }
-                    $views[] = $view;
-                }
-            }
 
-            $sqls = $this->objectToSql($tables, $views);
-            $content = implode(";\n", array_map(function ($sql) { return \SqlFormatter::format($sql, false); }, $sqls)) . ";\n";
-        }
-        else {
-            // generate schema array
-            $schemaArray = [
-                'platform' => $this->platform->getName(),
-                'table'    => [],
-                'view'     => [],
-            ];
-            foreach ($schema->getTables() as $table) {
-                if (Utility::filterTable($table->getName(), $includes, $excludes) > 0) {
+                if ($object instanceof Table) {
+                    $this->tableUnsetImplicitIndex($object);
+                }
+
+                if ($file->sqlable()) {
+                    $categories[$category][$name] = $object;
                     continue;
                 }
-                if ($this->directories['table']) {
-                    $fname = $this->directories['table'] . '/' . $table->getName() . '.' . $pathinfo['extension'];
-                    $tarray = new Exportion($pathinfo['dirname'], $fname, $this->tableToArray($table));
+
+                $array = $setting['array']($object);
+                if ($this->directory) {
+                    $array = new Exportion("$this->directory/$category/$name.{$pathinfo['extension']}", $array);
                 }
-                else {
-                    $tarray = $this->tableToArray($table);
-                }
-                $schemaArray['table'][$table->getName()] = $tarray;
-            }
-            if ($this->viewEnabled) {
-                foreach ($schema->getViews() as $view) {
-                    if (Utility::filterTable($view->getName(), $includes, $excludes) > 0) {
-                        continue;
-                    }
-                    if ($this->directories['view']) {
-                        $fname = $this->directories['view'] . '/' . $view->getName() . '.' . $pathinfo['extension'];
-                        $varray = new Exportion($pathinfo['dirname'], $fname, ['sql' => $view->getSql()]);
-                    }
-                    else {
-                        $varray = ['sql' => $view->getSql()];
-                    }
-                    $schemaArray['view'][$view->getName()] = $varray;
-                }
+                $categories[$category][$name] = $array;
             }
 
-            // by Data Description Language
-            switch ($pathinfo['extension']) {
-                default:
-                    throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
-                case 'php':
-                    if ($this->directories['table']) {
-                        $schemaArray['table'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return /** @lang text */ "<?php return " . Utility::var_export($data) . ";\n"; });
-                        }, $schemaArray['table']);
-                    }
-                    if ($this->directories['view']) {
-                        $schemaArray['view'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return /** @lang text */ "<?php return " . Utility::var_export($data) . ";\n"; });
-                        }, $schemaArray['view']);
-                    }
-                    $content = /** @lang text */ "<?php return " . Utility::var_export($schemaArray) . ";\n";
-                    break;
-                case 'json':
-                    if ($this->directories['table']) {
-                        $schemaArray['table'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return Utility::json_encode($data); });
-                        }, $schemaArray['table']);
-                    }
-                    if ($this->directories['view']) {
-                        $schemaArray['view'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return Utility::json_encode($data); });
-                        }, $schemaArray['view']);
-                    }
-                    $content = Utility::json_encode($schemaArray) . "\n";
-                    break;
-                case 'yml':
-                case 'yaml':
-                    $options = $this->ymlOptions;
-                    if ($this->directories['table']) {
-                        $schemaArray['table'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return Utility::yaml_emit($data, ['builtin' => true]); });
-                        }, $schemaArray['table']);
-                    }
-                    if ($this->directories['view']) {
-                        $schemaArray['view'] = array_map(function (Exportion $exportion) {
-                            return $exportion->setProvider(function ($data) { return Utility::yaml_emit($data, ['builtin' => true]); });
-                        }, $schemaArray['view']);
-                    }
-                    if ($this->directories['table'] || $this->directories['view']) {
-                        $options['callback'][Exportion::class] = function (Exportion $exportion) {
-                            return [
-                                'tag'  => '!include',
-                                'data' => $exportion->export(),
-                            ];
-                        };
-                    }
-                    $content = Utility::yaml_emit($schemaArray, $options);
-                    break;
+            ksort($categories[$category]);
+            if ($file->sqlable()) {
+                $categories[$category] = $setting['createSQLs']($categories[$category]);
             }
         }
 
-        Utility::file_put_contents($filename, $content);
-        return $content;
+        return $file->writeSchema($categories);
     }
 
-    public function exportDML($filename, $filterCondition = [], $ignoreColumn = [])
+    public function exportDML(string $filename, array $filterCondition = [], array $ignoreColumn = []): Generator
     {
-        $pathinfo = $this->parseFilename($filename);
+        $file     = $this->getFileByFilename($filename);
+        $pathinfo = $file->pathinfo();
 
         // create TableScanner
-        $tablename = $pathinfo['filename'];
-        $table = Utility::getSchema($this->connection)->getTable($tablename);
+        $table   = $this->schema->getTable($pathinfo['filename']);
         $scanner = new TableScanner($this->connection, $table, $filterCondition, $ignoreColumn);
 
         // for too many records
         $current = $scanner->switchBufferedQuery(false);
 
-        switch ($pathinfo['extension']) {
-            default:
-                throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
-            case 'sql':
-                $qtable = Utility::quoteIdentifier($this->connection, $tablename);
-                $result = [];
-                foreach ($scanner->getAllRows() as $row) {
-                    $row = $scanner->fillDefaultValue($row);
-                    $columns = implode(', ', Utility::quoteIdentifier($this->connection, array_keys($row)));
-                    $values = implode(', ', Utility::quote($this->connection, $row));
-                    $result[] = "INSERT INTO $qtable ($columns) VALUES ($values);";
-                }
-                $result = implode("\n", $result) . "\n";
-                break;
-            case 'php':
-                // through if callback
-                if (file_exists($filename) && (require $filename) instanceof \Closure) {
-                    return "'$filename' is skipped.";
-                }
-                $result = [];
-                foreach ($scanner->getAllRows() as $row) {
-                    $result[] = Utility::var_export($scanner->fillDefaultValue($row), 1);
-                }
-                $result = /** @lang text */ "<?php return [\n    " . implode(",\n    ", $result) . "\n];\n";
-                break;
-            case 'json':
-                $result = [];
-                foreach ($scanner->getAllRows() as $row) {
-                    $result[] = preg_replace('#(\A\\[\R)|(\R]\z)#', '', Utility::json_encode([$scanner->fillDefaultValue($row)]));
-                }
-                $result = "[\n" . implode(",\n", $result) . "\n]\n";
-                break;
-            case 'yml':
-            case 'yaml':
-                $option = $this->ymlOptions;
-                $option['inline'] = 999;
-                $result = [];
-                foreach ($scanner->getAllRows() as $row) {
-                    $result[] = Utility::yaml_emit([$scanner->fillDefaultValue($row)], $option);
-                }
-                $result = implode("", $result);
-                break;
-            case 'csv':
-                $handle = fopen('php://temp', "w");
-                $first = true;
-                foreach ($scanner->getAllRows() as $row) {
-                    // first row is used as CSV header
-                    if ($first) {
-                        $first = false;
-                        fputcsv($handle, array_keys($row));
-                    }
-                    fputcsv($handle, $row);
-                }
-                rewind($handle);
-                $result = stream_get_contents($handle);
-                fclose($handle);
-                break;
-        }
+        yield from $file->writeRecords($scanner->getAllRows());
 
         // restore
         $scanner->switchBufferedQuery($current);
-
-        Utility::mb_convert_variables($pathinfo['encoding'], mb_internal_encoding(), $result);
-        Utility::file_put_contents($filename, $result);
-        return $result;
     }
 
-    public function importDDL($filename, $includes = [], $excludes = [])
+    public function importDDL(string $filename): array
     {
-        $pathinfo = $this->parseFilename($filename);
+        $file = $this->getFileByFilename($filename);
 
-        switch ($pathinfo['extension']) {
-            default:
-                throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
-            case 'sql':
-                if ($includes || $excludes) {
-                    throw new \DomainException('sql is not supported include, exclude option.');
-                }
-                $contents = file_get_contents($filename);
-                return [$contents];
-            case 'php':
-                $schemaArray = require $filename;
-                break;
-            case 'json':
-                $options = [];
-                if ($this->directories['table'] || $this->directories['view']) {
-                    $dirname = $pathinfo['dirname'];
-                    $options['callback'] = [
-                        '!include' => function ($value) use ($dirname) {
-                            return Utility::json_decode(file_get_contents("$dirname/$value"));
-                        },
-                    ];
-                }
-                $schemaArray = Utility::json_decode(file_get_contents($filename), $options);
-                break;
-            case 'yml':
-            case 'yaml':
-                $options = $this->ymlOptions;
-                if ($this->directories['table'] || $this->directories['view']) {
-                    $dirname = $pathinfo['dirname'];
-                    $options['callback'] = [
-                        '!include' => function ($value) use ($dirname) {
-                            return Utility::yaml_parse(file_get_contents("$dirname/$value"), ['builtin' => true]);
-                        },
-                    ];
-                }
-                $schemaArray = Utility::yaml_parse(file_get_contents($filename), $options);
-                break;
+        $schemaArray = $file->readSchema();
+
+        if ($file->sqlable()) {
+            return $schemaArray;
         }
 
-        if (isset($schemaArray['platform']) && $schemaArray['platform']) {
-            if ($schemaArray['platform'] !== $this->platform->getName()) {
-                throw new \RuntimeException('platform is different.');
-            }
-        }
+        $newSchema = $this->schemaFromArray($schemaArray);
+        $oldSchema = new Schema([], [], $this->schemaManager->createSchemaConfig());
 
-        $tables = $views = [];
-        foreach ($schemaArray['table'] as $name => $tarray) {
-            if (Utility::filterTable($name, $includes, $excludes) > 0) {
-                continue;
-            }
-            $tables[] = $this->tableFromArray($name, $tarray);
-        }
-        if ($this->viewEnabled) {
-            foreach ($schemaArray['view'] as $name => $varray) {
-                if (Utility::filterTable($name, $includes, $excludes) > 0) {
-                    continue;
-                }
-                $views[] = new View($name, $varray['sql']);
-            }
-        }
-
-        return $this->objectToSql($tables, $views);
+        $diff = $this->schemaManager->createComparator()->compareSchemas($oldSchema, $newSchema);
+        return $this->platform->getAlterSchemaSQL($diff);
     }
 
-    public function importDML($filename)
+    public function importDML(string $filename): array
     {
-        $pathinfo = $this->parseFilename($filename);
-        $to_encoding = mb_internal_encoding();
+        $file     = $this->getFileByFilename($filename);
+        $pathinfo = $file->pathinfo();
 
-        switch ($pathinfo['extension']) {
-            default:
-                throw new \DomainException("'{$pathinfo['extension']}' is not supported.");
-            case 'sql':
-                $contents = file_get_contents($filename);
-                Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
-                return [$contents];
-            case 'php':
-                $rows = require $filename;
-                if ($rows instanceof \Closure) {
-                    $rows = $rows($this->connection);
-                }
-                Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $rows);
-                break;
-            case 'json':
-                $contents = file_get_contents($filename);
-                Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
-                $rows = json_decode($contents, true) ?? [];
-                break;
-            case 'yml':
-            case 'yaml':
-                $contents = file_get_contents($filename);
-                Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $contents);
-                $rows = Yaml::parse($contents) ?? [];
-                break;
-            case 'csv':
-                $rows = [];
-                $header = [];
-                if (($handle = fopen($filename, "r")) !== false) {
-                    while (($line = fgets($handle)) !== false) {
-                        Utility::mb_convert_variables($to_encoding, $pathinfo['encoding'], $line);
-                        $data = str_getcsv($line);
-                        // first row is used as CSV header
-                        if (!$header) {
-                            $header = $data;
-                        }
-                        else {
-                            $rows[] = array_combine($header, $data);
-                        }
-                    }
-                    fclose($handle);
-                }
-                break;
+        $records = $file->readRecords();
+
+        if ($file->sqlable()) {
+            return $records;
         }
 
-        $qtable = Utility::quoteIdentifier($this->connection, $pathinfo['filename']);
+        $table   = $this->schema->getTable($pathinfo['filename']);
+        $scanner = new TableScanner($this->connection, $table, [], []);
 
-        $sqls = [];
-        if ($this->bulkmode) {
-            $columns = array_keys(reset($rows));
-            $values = [];
-            foreach ($rows as $row) {
-                $value = [];
-                foreach ($columns as $column) {
-                    $value[] = Utility::quote($this->connection, $row[$column]);
-                }
-                $values[] = '(' . implode(',', $value) . ')';
-            }
-            $sqls[] = "INSERT INTO $qtable (" . implode(',', $columns) . ") VALUES " . implode(',', $values);
-        }
-        else {
-            foreach ($rows as $row) {
-                $columns = array_keys($row);
-                $values = Utility::quote($this->connection, $row);
-                $sqls[] = "INSERT INTO $qtable (" . implode(',', $columns) . ") VALUES (" . implode(',', $values) . ")";
-            }
-        }
+        $dataRecords = $scanner->associateRecords($records);
 
-        return $sqls;
+        return $scanner->getInsertSql($dataRecords, $this->bulkmode);
     }
 
-    public function migrateDDL(Connection $target, $includes = [], $excludes = [])
+    public function migrateDDL(string $filename, array $excludes = []): array
     {
-        $oldSchema = Utility::getSchema($this->connection);
-        $newSchema = Utility::getSchema($target);
-        $diff = $target->createSchemaManager()->createComparator()->compareSchemas($oldSchema, $newSchema);
+        $file = $this->getFileByFilename($filename);
 
-        foreach ($diff->newTables as $name => $table) {
-            $filterdResult = Utility::filterTable($name, $includes, $excludes);
-            if ($filterdResult > 0) {
-                unset($diff->newTables[$name]);
+        if ($file->sqlable()) {
+            throw $file->newUnsupported(__FUNCTION__);
+        }
+
+        $schemaArray = $file->readSchema();
+
+        $newSchema = $this->schemaFromArray($schemaArray);
+        $oldSchema = $this->schema;
+
+        $definition = $this->getDefinition();
+        foreach ($definition as $setting) {
+            foreach ($setting['get']($oldSchema) as $object) {
+                if (Utility::filterTable($object->getName(), [], $excludes) > 0) {
+                    $setting['drop']($oldSchema, $object);
+                }
+            }
+            foreach ($setting['get']($newSchema) as $object) {
+                if (Utility::filterTable($object->getName(), [], $excludes) > 0) {
+                    $setting['drop']($newSchema, $object);
+                }
             }
         }
 
-        foreach ($diff->changedTables as $name => $table) {
-            $filterdResult = Utility::filterTable($name, $includes, $excludes);
-            if ($filterdResult > 0) {
-                unset($diff->changedTables[$name]);
-            }
+        foreach ($oldSchema->getTables() as $table) {
+            $this->tableUnsetImplicitIndex($table);
         }
 
-        foreach ($diff->removedTables as $name => $table) {
-            $filterdResult = Utility::filterTable($name, $includes, $excludes);
-            if ($filterdResult > 0) {
-                unset($diff->removedTables[$name]);
-            }
-        }
-
-        if (!$this->viewEnabled) {
-            $diff->newViews = [];
-            $diff->changedViews = [];
-            $diff->removedViews = [];
-        }
-
-        return $diff->toSql($target->getDatabasePlatform());
+        $diff = $this->schemaManager->createComparator()->compareSchemas($oldSchema, $newSchema);
+        return $this->platform->getAlterSchemaSQL($diff);
     }
 
-    public function migrateDML(Connection $target, $table, array $wheres = [], array $ignores = [], $dmltypes = [])
+    public function migrateDML(string $filename, array $dmltypes = [], array $ignoreColumn = []): array
     {
-        // result dmls
-        $dmls = [];
+        $file     = $this->getFileByFilename($filename);
+        $pathinfo = $file->pathinfo();
+
+        $records = $file->readRecords();
+
+        if ($file->sqlable()) {
+            return $records;
+        }
 
         // scanner objects
-        $oldSchema = Utility::getSchema($this->connection);
-        $newSchema = Utility::getSchema($target);
-        $oldScanner = new TableScanner($this->connection, $oldSchema->getTable($table), $wheres, $ignores);
-        $newScanner = new TableScanner($target, $newSchema->getTable($table), $wheres, $ignores);
-
-        // check different column definitation
-        if (!$oldScanner->equals($newScanner)) {
-            throw new MigrationException("has different definition between schema.");
-        }
+        $table   = $this->schema->getTable($pathinfo['filename']);
+        $scanner = new TableScanner($this->connection, $table, [], $ignoreColumn);
 
         // primary key tuples
-        $oldTuples = $oldScanner->getPrimaryRows();
-        $newTuples = $newScanner->getPrimaryRows();
+        $primaryTuples = $scanner->getPrimaryRows();
+        $dataRecords   = $scanner->associateRecords($records);
 
-        $defaulttypes = [
-            'insert' => true,
-            'delete' => true,
-            'update' => true,
-        ];
-        $dmltypes += $defaulttypes;
+        $dmls = [];
 
         // DELETE if old only
-        if ($dmltypes['delete'] && $tuples = array_diff_key($oldTuples, $newTuples)) {
-            $dmls = array_merge($dmls, $oldScanner->getDeleteSql($tuples, $oldScanner));
+        if (($dmltypes['delete'] ?? false) && $tuples = array_diff_key($primaryTuples, $dataRecords)) {
+            $dmls = array_merge($dmls, $scanner->getDeleteSql($tuples));
         }
 
         // UPDATE if common
-        if ($dmltypes['update'] && $tuples = array_intersect_key($oldTuples, $newTuples)) {
-            $dmls = array_merge($dmls, $oldScanner->getUpdateSql($tuples, $newScanner));
+        if (($dmltypes['update'] ?? false) && $tuples = array_intersect_key($primaryTuples, $dataRecords)) {
+            $dmls = array_merge($dmls, $scanner->getUpdateSql($tuples, $dataRecords));
         }
 
         // INSERT if new only
-        if ($dmltypes['insert'] && $tuples = array_diff_key($newTuples, $oldTuples)) {
-            $dmls = array_merge($dmls, $oldScanner->getInsertSql($tuples, $newScanner));
+        if (($dmltypes['insert'] ?? false) && $tuples = array_diff_key($dataRecords, $primaryTuples)) {
+            $dmls = array_merge($dmls, $scanner->getInsertSql($tuples, $this->bulkmode));
         }
 
         return $dmls;
     }
 
-    private function tableToArray(Table $table)
+    public function refresh()
     {
-        $options = $table->getOptions();
-        if (!isset($options['charset']) && isset($options['collation'])) {
-            $options['charset'] = explode('_', $options['collation'])[0];
-        }
-
-        // entry keys
-        $entry = [
-            'column'  => [],
-            'index'   => [],
-            'foreign' => [],
-            'trigger' => [],
-            'option'  => array_replace(array_diff_key($options, $this->ignoreTableOptionAttributes), [
-                'create_options' => array_diff_key($options['create_options'], $this->ignoreTableOptionAttributes['create_options']),
-            ]),
-        ];
-
-        // add columns
-        foreach ($table->getColumns() as $column) {
-            $array = [
-                'type'                => $column->getType()->getName(),
-                'default'             => $column->getDefault(),
-                'notnull'             => $column->getNotnull(),
-                'length'              => $column->getLength(),
-                'precision'           => $column->getPrecision(),
-                'scale'               => $column->getScale(),
-                'fixed'               => $column->getFixed(),
-                'unsigned'            => $column->getUnsigned(),
-                'autoincrement'       => $column->getAutoincrement(),
-                'columnDefinition'    => $column->getColumnDefinition(),
-                'comment'             => $column->getComment(),
-                'platformOptions'     => array_diff_key($column->getPlatformOptions(), $this->ignoreColumnOptionAttributes),
-                'customSchemaOptions' => array_diff_key($column->getCustomSchemaOptions(), $this->ignoreColumnOptionAttributes),
-            ];
-            $array = Utility::array_diff_exists($array, $this->defaultColumnAttributes);
-            if (!in_array($array['type'], ['smallint', 'integer', 'bigint', 'decimal', 'float'], true)) {
-                unset($array['unsigned']);
-            }
-            $entry['column'][$column->getName()] = $array;
-        }
-
-        // add indexes
-        $indexes = array_diff_key($table->getIndexes(), $this->getImplicitIndexes($table));
-        uasort($indexes, function (Index $a, Index $b) {
-            if ($a->isPrimary() || $b->isPrimary()) {
-                return $a->isPrimary() ? -1 : 1;
-            }
-            return strcmp($a->getName(), $b->getName());
-        });
-        foreach ($indexes as $index) {
-            $array = [
-                'column'  => $index->getColumns(),
-                'primary' => $index->isPrimary(),
-                'unique'  => $index->isUnique(),
-                'flag'    => $index->getFlags(),
-                'option'  => $index->getOptions(),
-            ];
-            $array = Utility::array_diff_exists($array, $this->defaultIndexAttributes);
-            $entry['index'][$index->getName()] = $array;
-        }
-
-        // add foreign keys
-        $fkeys = $table->getForeignKeys();
-        uasort($fkeys, function (ForeignKeyConstraint $a, ForeignKeyConstraint $b) {
-            return strcmp($a->getName(), $b->getName());
-        });
-        foreach ($fkeys as $fkey) {
-            $entry['foreign'][$fkey->getName()] = [
-                'table'  => $fkey->getForeignTableName(),
-                'column' => array_combine($fkey->getLocalColumns(), $fkey->getForeignColumns()),
-                'option' => $fkey->getOptions(),
-            ];
-        }
-
-        // add trigger
-        $triggers = $table->getTriggers();
-        uasort($triggers, function (Trigger $a, Trigger $b) {
-            return strcmp($a->getName(), $b->getName());
-        });
-        foreach ($triggers as $trigger) {
-            $entry['trigger'][$trigger->getName()] = [
-                'statement' => $trigger->getStatement(),
-                'option'    => $trigger->getOptions(),
-            ];
-        }
-
-        return $entry;
+        $this->schema = $this->schemaManager->introspectSchema();
     }
 
-    private function tableFromArray($name, array $array)
+    private function getFileByFilename(string $filename): AbstractFile
     {
-        // base table
-        $table = new Table($name, [], [], [], [], [], $array['option']);
+        $options = array_replace($this->dataDescriptionOptions, [
+            'connection' => $this->connection,
+        ]);
 
-        // add columns
-        foreach ($array['column'] ?? [] as $name => $column) {
-            $type = $column['type'];
-            unset($column['type']);
-            $column += $this->defaultColumnAttributes;
-            $table->addColumn($name, $type, $column);
-        }
+        return AbstractFile::create($filename, $options);
+    }
 
-        // add indexes
-        foreach ($array['index'] ?? [] as $name => $index) {
-            $index += $this->defaultIndexAttributes;
-            if ($index['primary']) {
-                $table->setPrimaryKey($index['column'], $name);
-            }
-            elseif ($index['unique']) {
-                $table->addUniqueIndex($index['column'], $name, $index['option']);
-            }
-            else {
-                $table->addIndex($index['column'], $name, $index['flag'], $index['option']);
+    private function schemaFromArray(array $schemaArray): Schema
+    {
+        $schema = new class([], [], $this->schemaManager->createSchemaConfig()) extends Schema {
+            public function addTable(Table $table) { return parent::_addTable($table); }
+        };
+
+        $definition = $this->getDefinition();
+        foreach ($definition as $category => $setting) {
+            foreach ($schemaArray[$category] ?? [] as $name => $array) {
+                $setting['add']($schema, $setting['object']($name, $array));
             }
         }
 
-        // add foreign keys
-        foreach ($array['foreign'] ?? [] as $name => $fkey) {
-            $table->addForeignKeyConstraint($fkey['table'], array_keys($fkey['column']), array_values($fkey['column']), $fkey['option'], $name);
-        }
+        return $schema;
+    }
 
-        // add triggers
-        foreach ($array['trigger'] ?? [] as $name => $trigger) {
-            $table->addTrigger($name, $trigger['statement'], $trigger['option']);
+    private function tableUnsetImplicitIndex(Table $table): Table
+    {
+        foreach ($table->getIndexes() as $index) {
+            if ($index->hasFlag('implicit')) {
+                $table->dropIndex($index->getName());
+            }
         }
-
-        // ignore implicit index
-        foreach ($this->getImplicitIndexes($table) as $index) {
-            $table->dropIndex($index->getName());
-        }
-
         return $table;
     }
 
-    private function objectToSql($tables, $views)
+    private function arrayToObject(array $array, string ...$unset_keys): array
     {
-        $schemaManager = $this->connection->createSchemaManager();
-        $comparator = $schemaManager->createComparator();
-        $schemaConfig = $schemaManager->createSchemaConfig();
-        $schemaSrc = new Schema([], [], [], $schemaConfig);
-        $schemaDst = new Schema($tables, $views, [], $schemaConfig);
-
-        return $comparator->compareSchemas($schemaSrc, $schemaDst)->toSql($this->platform);
-    }
-
-    /**
-     * @param Table $table
-     * @return Index[]
-     */
-    private function getImplicitIndexes($table)
-    {
-        $result = [];
-        try {
-            $implicitIndexes = new \ReflectionProperty($table, 'implicitIndexes');
-            $implicitIndexes->setAccessible(true);
-            $result = $implicitIndexes->getValue($table);
+        $unsets = [];
+        foreach ($unset_keys as $key) {
+            $unsets[] = $array[$key];
+            unset($array[$key]);
         }
-        catch (\ReflectionException $ex) {
-            // If it is a fatal error, no action can be taken, so convert it to Notice
-            trigger_error('Table::$implicitIndexes is undefined.', E_USER_NOTICE);
-        }
-        return $result;
-    }
-
-    public function parseFilename($filename)
-    {
-        $pathinfo = pathinfo($filename);
-        $extension = $pathinfo['extension'] ?? '';
-        $pathinfo2 = pathinfo($pathinfo['filename']);
-        $encoding = $pathinfo2['extension'] ?? '';
-        if (!strlen($encoding) && ($this->encodings[$extension] ?? '')) {
-            $encoding = $this->encodings[$extension];
-        }
-
-        return [
-            'dirname'   => $pathinfo['dirname'],
-            'basename'  => $pathinfo['basename'],
-            'filename'  => $pathinfo2['filename'],
-            'extension' => $extension,
-            'encoding'  => $encoding,
-        ];
+        return [...$unsets, $array];
     }
 }

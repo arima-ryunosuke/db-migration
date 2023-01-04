@@ -15,7 +15,7 @@ class Logger
 
     public function __construct(InputInterface $input, OutputInterface $output)
     {
-        $this->input = $input;
+        $this->input  = $input;
         $this->output = $output;
     }
 
