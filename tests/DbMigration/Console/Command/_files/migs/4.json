@@ -1,0 +1,10 @@
+[
+  "INSERT INTO notexist (id) VALUES(41)",
+  {
+    "notexist": [
+      {
+        "id": 42
+      }
+    ]
+  }
+]

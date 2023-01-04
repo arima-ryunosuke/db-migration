@@ -2,14 +2,13 @@
 
 namespace ryunosuke\Test\DbMigration;
 
-use InvalidArgumentException;
 use ryunosuke\DbMigration\MigrationTable;
 
 class MigrationTableTest extends AbstractTestCase
 {
     public function test_exists_create_alter_drop()
     {
-        $migrationTable = new MigrationTable($this->old, 'migtable');
+        $migrationTable = new MigrationTable($this->connection, 'migtable');
 
         $this->assertEquals([], $migrationTable->diff());
         $this->assertFalse($migrationTable->exists());
@@ -18,7 +17,7 @@ class MigrationTableTest extends AbstractTestCase
         $this->assertFalse($migrationTable->create());
 
         $this->assertFalse($migrationTable->alter());
-        $this->old->executeStatement('ALTER TABLE migtable ADD COLUMN dummy INT');
+        $this->connection->executeStatement('ALTER TABLE migtable ADD COLUMN dummy INT');
         $this->assertEquals(['ALTER TABLE migtable DROP dummy'], $migrationTable->diff());
         $this->assertTrue($migrationTable->alter());
 
@@ -29,56 +28,54 @@ class MigrationTableTest extends AbstractTestCase
 
     public function test_glob()
     {
-        $migrationTable = new MigrationTable($this->old, 'migtable');
-        $versions = $migrationTable->glob(__DIR__ . '/_files/migs');
+        $migrationTable = new MigrationTable($this->connection, 'migtable');
+        $versions       = $migrationTable->glob(__DIR__ . '/_files/migs');
         $this->assertEquals([
             'aaa.sql' => 'insert into hoge values ()',
             'bbb.php' => "<?php\nreturn 'insert into hoge values ()';\n",
-        ], $versions);
+        ], array_map('strval', $versions));
     }
 
     public function test_apply()
     {
-        $this->oldSchema->createTable($this->createSimpleTable('ttt', 'string', 'name'));
+        $this->schema->createTable($this->createSimpleTable('ttt', 'string', 'name'));
 
-        $migrationTable = new MigrationTable($this->old, 'migtable');
+        $migrationTable = new MigrationTable($this->connection, 'migtable');
         $migrationTable->drop();
+        $this->assertEquals([], $migrationTable->fetch());
         $migrationTable->create();
 
-        $this->assertEquals(1, $migrationTable->apply('1.sql', 'insert into ttt values("from sql")'));
-        $this->assertEquals(1, $migrationTable->apply('2.php', '<?php return "insert into ttt values(\"from php(return)\")";'));
-        $this->assertEquals(0, $migrationTable->apply('3.php', '<?php $connection->insert("ttt", array("name" => "from php(code)"));'));
-        $this->assertEquals(1, $migrationTable->apply('4.php', '<?php return function($connection){$connection->insert("ttt", array("name" => "from php(mixed code)"));return "insert into ttt values(\"from php(mixed closure)\")";};'));
+        $this->assertEquals(2, $migrationTable->apply('1.sql', [
+            'insert into ttt values("from sql1")',
+            'insert into ttt values("from sql2")',
+        ]));
+        $this->assertEquals(2, $migrationTable->apply('2.sql', [
+            'ttt' => [
+                ['name' => 'from array1'],
+                ['name' => 'from array2'],
+            ],
+        ]));
 
         // attached
         $versions = $migrationTable->fetch();
-        $this->assertEquals([
-            '1.sql' => 'insert into ttt values("from sql")',
-            '2.php' => 'insert into ttt values("from php(return)")',
-            '3.php' => '',
-            '4.php' => 'insert into ttt values("from php(mixed closure)")',
-        ], array_combine(array_keys($versions), array_column($versions, 'sqls')));
+        $this->assertJsonStringEqualsJsonString(json_encode(['insert into ttt values("from sql1")', 'insert into ttt values("from sql2")']), $versions['1.sql']['logs']);
+        $this->assertJsonStringEqualsJsonString(json_encode([["name" => "from array1"], ["name" => "from array2"]]), $versions['2.sql']['logs']);
 
         // migrated
         $this->assertEquals([
-            ['name' => 'from php(code)'],
-            ['name' => 'from php(mixed closure)'],
-            ['name' => 'from php(mixed code)'],
-            ['name' => 'from php(return)'],
-            ['name' => 'from sql'],
-        ], $this->old->fetchAllAssociative('select * from ttt'));
+            ['name' => 'from array1'],
+            ['name' => 'from array2'],
+            ['name' => 'from sql1'],
+            ['name' => 'from sql2'],
+        ], $this->connection->fetchAllAssociative('select * from ttt'));
 
-        $this->assertEquals(5, $migrationTable->apply('11.sql', 'update ttt set name = concat(name, " suffix")'));
-        $this->assertEquals(4, $migrationTable->apply('12.sql', 'delete from ttt where name <> "from sql suffix"'));
-
-        // throws
-        $this->expectException(InvalidArgumentException::class);
-        $migrationTable->apply('bad.SQL', 'insert into ttt values("bad")');
+        $this->assertEquals(4, $migrationTable->apply('11.sql', (array) 'update ttt set name = concat(name, " suffix")'));
+        $this->assertEquals(3, $migrationTable->apply('12.sql', (array) 'delete from ttt where name <> "from sql1 suffix"'));
     }
 
     public function test_attach_detach()
     {
-        $migrationTable = new MigrationTable($this->old, 'migtable');
+        $migrationTable = new MigrationTable($this->connection, 'migtable');
         $migrationTable->create();
 
         $this->assertEquals(3, $migrationTable->attach(['aaa', 'bbb', 'ccc']));

@@ -17,7 +17,7 @@ class ImportCommandTest extends AbstractTestCase
         $this->defaultArgs = [
             '--format' => 'none',
             '-n'       => true,
-            'dstdsn'   => $GLOBALS['old_db'],
+            'dsn'      => $GLOBALS['db'],
         ];
     }
 
@@ -30,8 +30,12 @@ class ImportCommandTest extends AbstractTestCase
             '-v'    => true,
             '-m'    => $this->getFile('migs'),
             'files' => [
-                $this->getFile('table.sql'),
-                $this->getFile('data.sql'),
+                $this->getFile('table.php'),
+                $this->getFile('data/difftable.php'),
+                $this->getFile('data/longtable.php'),
+                $this->getFile('data/migtable.php'),
+                $this->getFile('data/notexist.php'),
+                $this->getFile('data/sametable.php'),
             ],
         ]);
         $this->assertStringContainsString("importDDL", $result);
@@ -39,7 +43,7 @@ class ImportCommandTest extends AbstractTestCase
         $this->assertStringContainsString("attachMigration", $result);
         $this->assertStringNotContainsString("diff DDL", $result);
         $this->assertStringNotContainsString("diff DML", $result);
-        $this->assertTrue($this->oldSchema->tablesExist(['migs']));
+        $this->assertTrue($this->schema->tablesExist(['migs']));
     }
 
     /**
@@ -47,7 +51,10 @@ class ImportCommandTest extends AbstractTestCase
      */
     function run_nonedb()
     {
-        $file = sys_get_temp_dir() . '/dummy.sql';
+        $dbname = $this->dbparams['dbname'];
+        $this->connection->createSchemaManager()->dropDatabase($dbname);
+
+        $file = self::$tmpdir . '/dummy.sql';
         file_put_contents($file, "CREATE TABLE dummy (id INT) -- " . uniqid('dummy', true));
 
         $result = $this->runApp([
@@ -55,10 +62,10 @@ class ImportCommandTest extends AbstractTestCase
             'files' => [
                 $file,
             ],
-            'dstdsn' => $GLOBALS['none_db'],
+            'dsn'   => $GLOBALS['db'],
         ]);
-        $this->assertStringContainsString("no drop database tmp_", $result);
-        $this->assertStringContainsString("create database tmp_", $result);
+        $this->assertStringContainsString("no drop database $dbname", $result);
+        $this->assertStringContainsString("create database $dbname", $result);
     }
 
     /**
@@ -72,8 +79,12 @@ class ImportCommandTest extends AbstractTestCase
         $this->assertExceptionMessage("canceled", $this->runApp, [
             '-v'    => true,
             'files' => [
-                $this->getFile('table.sql'),
-                $this->getFile('data.sql'),
+                $this->getFile('table.php'),
+                $this->getFile('data/difftable.php'),
+                $this->getFile('data/longtable.php'),
+                $this->getFile('data/migtable.php'),
+                $this->getFile('data/notexist.php'),
+                $this->getFile('data/sametable.php'),
             ],
         ]);
     }
@@ -99,7 +110,7 @@ class ImportCommandTest extends AbstractTestCase
         $this->assertExceptionMessage("very invalid sql", $this->runApp, [
             '-v'    => true,
             'files' => [
-                $this->getFile('table.sql'),
+                $this->getFile('table.php'),
                 $this->getFile('invalid.sql'),
             ],
         ]);

@@ -63,7 +63,7 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
                 'command' => $this->commandName,
             ] + $inputArray + $this->defaultArgs;
 
-        $input = new ArrayInput($inputArray);
+        $input  = new ArrayInput($inputArray);
         $output = new BufferedOutput();
 
         $this->app->run($input, $output);

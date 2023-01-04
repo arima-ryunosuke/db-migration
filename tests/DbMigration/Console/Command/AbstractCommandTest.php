@@ -38,10 +38,9 @@ class AbstractCommandTest extends AbstractTestCase
 
         $this->command->event($this->connection);
 
-        $tableName = $this->old->getDatabase() . '.events';
+        $tableName = $this->connection->getDatabase() . '.events';
         $this->readyTable($this->connection->createSchemaManager(), $this->createSimpleTable($tableName, 'integer', 'id'));
 
-        $this->assertEquals('concrete', $this->connection->fetchOne('SELECT @postConnect'));
         $this->assertEquals($tableName, $this->connection->fetchOne('SELECT @onSchemaCreateTable'));
 
         $input->setOption('event', __DIR__ . '/notfound.php');
@@ -52,7 +51,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_config()
     {
-        $input = new ArrayInput([], $this->command->getDefinition());
+        $input  = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -86,7 +85,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_choice()
     {
-        $input = new ArrayInput([], $this->command->getDefinition());
+        $input  = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -113,7 +112,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_choice_exception()
     {
-        $input = new ArrayInput([], $this->command->getDefinition());
+        $input  = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -147,7 +146,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_confirm()
     {
-        $input = new ArrayInput([], $this->command->getDefinition());
+        $input  = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -169,7 +168,7 @@ class AbstractCommandTest extends AbstractTestCase
 
     function test_parseDsn()
     {
-        $input = new ArrayInput([], $this->command->getDefinition());
+        $input  = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -199,7 +198,7 @@ class AbstractCommandTest extends AbstractTestCase
             'path'     => 'dbname',
         ], $this->command->parseDsn('sqlite://user:@hostname/dbname'));
 
-        $home = $_SERVER['HOME'] ?? null;
+        $home            = $_SERVER['HOME'] ?? null;
         $_SERVER['HOME'] = sys_get_temp_dir();
         file_put_contents($_SERVER['HOME'] . '/.my.cnf', '[client]
 user = hoge
@@ -217,7 +216,7 @@ password = fuga
 
     function test_normalizeFile()
     {
-        $input = new ArrayInput([], $this->command->getDefinition());
+        $input  = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
@@ -227,25 +226,36 @@ password = fuga
 
     function test_format()
     {
-        $input = new ArrayInput([], $this->command->getDefinition());
+        $input  = new ArrayInput([], $this->command->getDefinition());
         $output = new BufferedOutput();
+        $output->setDecorated(true);
         $this->command->setInputOutput($input, $output);
 
         $input->setOption('format', '');
         $this->assertEquals('SELECT hoge FROM tablename;', $this->command->formatSql('SELECT hoge FROM tablename'));
 
-        $input->setOption('format', 'compress');
-        $this->assertStringContainsString('SELECT hoge FROM tablename;', $this->command->formatSql('SELECT   hoge FROM    tablename'));
-
         $input->setOption('format', 'pretty');
-        $this->assertStringContainsString("[0m", $this->command->formatSql('SELECT hoge FROM tablename'));
+        $this->assertStringContainsString("[m", $this->command->formatSql('SELECT hoge FROM tablename'));
         $this->assertStringContainsString("\n", $this->command->formatSql('SELECT hoge FROM tablename'));
 
         $input->setOption('format', 'format');
         $this->assertStringContainsString("\n", $this->command->formatSql('SELECT hoge FROM tablename'));
 
-        $input->setOption('format', 'highlight');
-        $this->assertStringContainsString("[0m", $this->command->formatSql('SELECT hoge FROM tablename'));
+        $input->setOption('indent', '3');
+        $this->assertEquals(<<<SQL
+        SELECT
+           level0
+           and (
+              level1
+              and (
+                 level2
+                 and (
+                    level3
+                    and (level4)
+                 )
+              )
+           );
+        SQL, $this->command->formatSql('SELECT level0 and (level1 and (level2 and (level3 and (level4))))'));
 
         $input->setOption('omit', '24');
         $input->setOption('format', '');
@@ -261,6 +271,8 @@ class ConcreteCommand extends AbstractCommand
         $this->setDefinition([
             new InputArgument('arg1', InputArgument::OPTIONAL, '', 'arg1'),
             new InputArgument('argN', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, '', ['arg2', 'arg3']),
+            new InputOption('indent', null, InputOption::VALUE_OPTIONAL, '', '4'),
+            new InputOption('inline', null, InputOption::VALUE_OPTIONAL, '', '4'),
             new InputOption('format', null, InputOption::VALUE_OPTIONAL, '', 'format'),
             new InputOption('omit', null, InputOption::VALUE_REQUIRED, '', 'omit'),
             new InputOption('opts', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, '', []),

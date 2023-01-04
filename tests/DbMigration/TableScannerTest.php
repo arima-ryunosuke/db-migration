@@ -26,19 +26,20 @@ class TableScannerTest extends AbstractTestCase
         parent::setUp();
 
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
-        $this->readyTable($this->oldSchema, $table_hoge);
+        $this->readyTable($this->schema, $table_hoge);
 
         $table_fuga = new Table('fuga');
         $table_fuga->addColumn('id1', 'integer');
         $table_fuga->addColumn('id2', 'integer');
         $table_fuga->addColumn('data', 'string');
+        $table_fuga->addColumn('ignored', 'string');
         $table_fuga->setPrimaryKey(['id1', 'id2']);
-        $this->readyTable($this->oldSchema, $table_fuga);
+        $this->readyTable($this->schema, $table_fuga);
 
-        $this->scanner = new TableScanner($this->old, $table_hoge, ['TRUE']);
+        $this->scanner  = new TableScanner($this->connection, $table_hoge, ['TRUE']);
         $this->refClass = new \ReflectionClass($this->scanner);
 
-        $this->scanner_fuga = new TableScanner($this->old, $table_fuga, ['TRUE']);
+        $this->scanner_fuga = new TableScanner($this->connection, $table_fuga, ['TRUE'], ['fuga.ignored']);
     }
 
     private function invoke($methodName, $args)
@@ -46,6 +47,39 @@ class TableScannerTest extends AbstractTestCase
         $method = $this->refClass->getMethod($methodName);
         $method->setAccessible(true);
         return $method->invokeArgs($this->scanner, array_slice(func_get_args(), 1));
+    }
+
+    /**
+     * @test
+     */
+    function constructor()
+    {
+        $condition = $this->invoke('parseCondition', '', '`');
+        $this->assertEquals('1', $condition);
+
+        $condition = $this->invoke('parseCondition', 'hoge.fuga = 1', '`');
+        $this->assertEquals('1', $condition);
+
+        $condition = $this->invoke('parseCondition', 'fuga.id = 1', '`');
+        $this->assertEquals('1', $condition);
+
+        $condition = $this->invoke('parseCondition', '`fuga`.`id` = 1', '`');
+        $this->assertEquals('1', $condition);
+
+        $condition = $this->invoke('parseCondition', 'hoge.id = 1', '`');
+        $this->assertEquals('hoge.id = 1', $condition);
+
+        $condition = $this->invoke('parseCondition', 'id = 1', '`');
+        $this->assertEquals('id = 1', $condition);
+
+        $condition = $this->invoke('parseCondition', '`hoge`.`id` = 1', '`');
+        $this->assertEquals('`hoge`.`id` = 1', $condition);
+
+        $condition = $this->invoke('parseCondition', '`id` = 1', '`');
+        $this->assertEquals('`id` = 1', $condition);
+
+        $condition = $this->invoke('parseCondition', ['`id` > 1', '`id` < 10'], '`');
+        $this->assertEquals('`id` > 1 AND `id` < 10', $condition);
     }
 
     /**
@@ -114,41 +148,59 @@ class TableScannerTest extends AbstractTestCase
     {
         $rows = array_map(function ($i) {
             return [
-                'id1'  => $i,
-                'id2'  => $i,
-                'data' => $i,
+                'id1'     => $i,
+                'id2'     => $i,
+                'data'    => $i,
+                'ignored' => $i,
             ];
         }, range(1, 10));
-        $this->insertMultiple($this->old, 'fuga', $rows);
+        $this->insertMultiple($this->connection, 'fuga', $rows);
 
         $tuples = $this->scanner_fuga->getPrimaryRows();
 
         $refmethod = new \ReflectionMethod($this->scanner_fuga, 'getRecordFromPrimaryKeys');
         $refmethod->setAccessible(true);
 
+        $rows = array_map(function ($row) {
+            unset($row['ignored']);
+            return $row;
+        }, $rows);
         $this->assertEquals($rows, iterator_to_array($refmethod->invoke($this->scanner_fuga, $tuples, false)));
     }
 
     /**
      * @test
      */
-    function getRecordFromPrimaryKeys_page()
+    function associateRecords()
     {
-        $this->insertMultiple($this->old, 'hoge', array_map(function ($i) {
-            return [
-                'id' => $i,
-            ];
-        }, range(1, 10)));
-
-        TableScanner::$pageCount = 4;
-
-        $method = 'getRecordFromPrimaryKeys';
-        $tuples = $this->scanner->getPrimaryRows();
-
-        $this->assertCount(4, $this->invoke($method, $tuples, true, 0));
-        $this->assertCount(4, $this->invoke($method, $tuples, true, 1));
-        $this->assertCount(2, $this->invoke($method, $tuples, true, 2));
-        $this->assertCount(0, $this->invoke($method, $tuples, true, 3));
+        $tuples = $this->scanner_fuga->associateRecords([
+            [
+                'id1'     => 1,
+                'id2'     => 1,
+                'data'    => 'data1',
+                'ignored' => 'ignored1',
+            ],
+            [
+                'id1'     => 2,
+                'id2'     => 2,
+                'data'    => 'data2',
+                'ignored' => 'ignored2',
+            ],
+        ]);
+        $this->assertEquals([
+            "1\t1" => [
+                'id1'     => 1,
+                'id2'     => 1,
+                'data'    => 'data1',
+                'ignored' => '',
+            ],
+            "2\t2" => [
+                'id1'     => 2,
+                'id2'     => 2,
+                'data'    => 'data2',
+                'ignored' => '',
+            ],
+        ], $tuples);
     }
 
     /**
@@ -183,6 +235,7 @@ class TableScannerTest extends AbstractTestCase
                 new Column('id', Type::getType('integer')),
                 new Column('havedef', Type::getType('integer'), ['default' => 9]),
                 new Column('nullable', Type::getType('integer'), ['notnull' => false]),
+                (new Column('generated', Type::getType('integer'), ['notnull' => false]))->setPlatformOption('generation', ['type' => 'STORED']),
             ],
             [new Index('PRIMARY', ['id'], true, true)]
         );
@@ -217,7 +270,7 @@ class TableScannerTest extends AbstractTestCase
         $this->insertMultiple($new, 'hogetable', [['id' => 1]]);
 
         $scanner = new TableScanner($old, $table, ['1']);
-        $inserts = $scanner->getInsertSql([['id' => 1]], new TableScanner($new, $table, ['1']));
+        $inserts = $scanner->getInsertSql([['id' => 1]], false);
 
         // sqlite no support INSERT SET syntax. Therefore VALUES (value)
         $this->assertStringContainsString('INSERT INTO "hogetable" ("id") VALUES', $inserts[0]);

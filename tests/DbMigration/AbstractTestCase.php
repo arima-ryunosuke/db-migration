@@ -15,12 +15,17 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
     /**
      * @var Connection
      */
-    protected $connection, $old, $new;
+    protected $connection;
 
     /**
      * @var AbstractSchemaManager
      */
-    protected $oldSchema, $newSchema;
+    protected $schema;
+
+    /**
+     * @var array
+     */
+    protected $dbparams;
 
     public static function setUpBeforeClass(): void
     {
@@ -47,7 +52,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         // if exsists method and @closurable, return that closure
         if (method_exists($this, $name)) {
             $refclass = new \ReflectionClass($this);
-            $method = $refclass->getMethod($name);
+            $method   = $refclass->getMethod($name);
             if (strpos($method->getDocComment(), '@closurable') !== false) {
                 $method->setAccessible(true);
                 return $method->getClosure($this);
@@ -67,27 +72,20 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
             return $array;
         };
 
-        $oldParams = $this->parseDsn($GLOBALS['old_db']);
-        $newParams = $this->parseDsn($GLOBALS['new_db']);
-        $oldDbname = $oldParams['dbname'];
-        $newDbname = $newParams['dbname'];
+        $params = $this->parseDsn($GLOBALS['db']);
 
         // drop schema
-        $c = DriverManager::getConnection($unset($oldParams, 'dbname'));
-        $this->readyDatabase($c->createSchemaManager(), $oldDbname);
-        $c->close();
-        $c = DriverManager::getConnection($unset($newParams, 'dbname'));
-        $this->readyDatabase($c->createSchemaManager(), $newDbname);
+        $c = DriverManager::getConnection($unset($params, 'dbname'));
+        $this->readyDatabase($c->createSchemaManager(), $params['dbname']);
         $c->close();
 
         // get connection
-        $this->connection = DriverManager::getConnection($unset($oldParams, 'dbname'));
-        $this->old = DriverManager::getConnection($oldParams);
-        $this->new = DriverManager::getConnection($newParams);
+        $this->connection = DriverManager::getConnection($params);
 
         // get schema
-        $this->oldSchema = $this->old->createSchemaManager();
-        $this->newSchema = $this->new->createSchemaManager();
+        $this->schema = $this->connection->createSchemaManager();
+
+        $this->dbparams = $params;
     }
 
     protected function rmdir_r($dir_path = null)
@@ -121,8 +119,6 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
     {
         parent::tearDown();
         $this->connection->close();
-        $this->old->close();
-        $this->new->close();
     }
 
     public function parseDsn($dsn)
@@ -181,7 +177,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 
     public function createSimpleTable($name, $type)
     {
-        $table = new Table($name);
+        $table   = new Table($name);
         $columns = array_slice(func_get_args(), 2);
         foreach ($columns as $column) {
             $table->addColumn($column, $type);
@@ -190,6 +186,15 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
             reset($columns),
         ]);
         return $table;
+    }
+
+    public function readyPhpFile($filename, $contents)
+    {
+        if ($filename[0] !== '/') {
+            $filename = self::$tmpdir . "/$filename";
+        }
+        file_put_contents($filename, '<?php return ' . var_export($contents, true) . ';');
+        return $filename;
     }
 
     public function insertMultiple(Connection $conn, $table, $records)
@@ -229,7 +234,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 
     public static function assertExceptionMessage($message, callable $callback)
     {
-        $args = func_get_args();
+        $args    = func_get_args();
         $args[0] = new \Exception($message);
         call_user_func_array('self::assertException', $args);
     }

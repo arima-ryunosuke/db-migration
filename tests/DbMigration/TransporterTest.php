@@ -2,13 +2,14 @@
 
 namespace ryunosuke\Test\DbMigration;
 
-use Doctrine\DBAL\Schema\Index;
-use Doctrine\DBAL\Schema\SchemaException;
+use Doctrine\DBAL\Schema\Event;
+use Doctrine\DBAL\Schema\Exception\TableDoesNotExist;
+use Doctrine\DBAL\Schema\Routine;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Schema\Trigger;
 use Doctrine\DBAL\Schema\View;
 use ryunosuke\DbMigration\Exception\MigrationException;
 use ryunosuke\DbMigration\Transporter;
-use ryunosuke\DbMigration\Utility;
 use Symfony\Component\Yaml\Yaml;
 
 class TransporterTest extends AbstractTestCase
@@ -34,49 +35,65 @@ class TransporterTest extends AbstractTestCase
         $table->setPrimaryKey(['id']);
         $table->addIndex(['name'], 'SECONDARY');
         $table->addUniqueIndex(['data']);
-        $this->readyTable($this->oldSchema, $table);
+        $this->readyTable($this->schema, $table);
 
         $table = new Table('fuga');
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
         $table->addForeignKeyConstraint('hoge', ['id'], ['id']);
-        $this->readyTable($this->oldSchema, $table);
+        $this->readyTable($this->schema, $table);
 
         $table = new Table('parent');
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
-        $this->readyTable($this->oldSchema, $table);
+        $this->readyTable($this->schema, $table);
 
         $table = new Table('child');
         $table->addColumn('id', 'integer');
         $table->addColumn('pid', 'integer');
         $table->setPrimaryKey(['id', 'pid']);
         $table->addForeignKeyConstraint('parent', ['id'], ['id']);
-        $indexes = new \ReflectionProperty($table, 'implicitIndexes');
-        $indexes->setAccessible(true);
-        foreach ($indexes->getValue($table) as $index) {
-            /** @var Index $index */
-            $table->dropIndex($index->getName());
+        foreach ($table->getIndexes() as $index) {
+            if ($index->hasFlag('implicit')) {
+                $table->dropIndex($index->getName());
+            }
         }
-        $this->readyTable($this->oldSchema, $table);
+        $this->readyTable($this->schema, $table);
 
         $table = new Table('zzz');
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
-        $table->addTrigger('trg1', 'INSERT INTO hoge VALUES()', [
-            'Timing' => 'BEFORE',
-            'Event'  => 'UPDATE',
-        ]);
-        $table->addTrigger('trg2', 'INSERT INTO hoge VALUES()', [
-            'Timing' => 'AFTER',
-            'Event'  => 'DELETE',
-        ]);
-        $this->readyTable($this->oldSchema, $table);
+        $this->readyTable($this->schema, $table);
+        $this->schema->createTrigger(new Trigger('trg1', "INSERT INTO hoge\nVALUES()", 'zzz', [
+            'timing' => 'BEFORE',
+            'event'  => 'UPDATE',
+        ]));
+        $this->schema->createTrigger(new Trigger('trg2', "INSERT INTO hoge\nVALUES()", 'zzz', [
+            'timing' => 'AFTER',
+            'event'  => 'DELETE',
+        ]));
+        $this->schema->createRoutine(new Routine('function1', "RETURN\n1", [
+            'type'                  => 'FUNCTION',
+            'parameters'            => [],
+            'returnTypeDeclaration' => 'int',
+            'deterministic'         => true,
+            'dataAccess'            => 'READS SQL DATA',
+            'comment'               => 'function1comment',
+        ]));
+        $this->schema->createEvent(new Event('event1', "SELECT\n1", [
+            'intervalValue' => '1',
+            'intervalField' => 'YEAR',
+            'since'         => '2022-12-24 00:00:00',
+            'until'         => '2023-12-24 00:00:00',
+            'completion'    => 'PRESERVE',
+            'status'        => 'ENABLE',
+            'comment'       => 'event1comment',
+        ]));
 
         $view = new View('vvview', 'select * from hoge');
-        $this->readyView($this->oldSchema, $view);
+        $this->readyView($this->schema, $view);
 
-        $this->insertMultiple($this->old, 'hoge', array_map(function ($i) {
+        $this->insertMultiple($this->connection, 'hoge', array_map(function ($i) {
             return [
                 'id'   => $i,
                 'name' => 'name-' . $i,
@@ -86,26 +103,21 @@ class TransporterTest extends AbstractTestCase
 
 
         // create migration table different name
-        $this->readyTable($this->oldSchema, $this->createSimpleTable('hogera', 'integer', 'id'));
-        $this->readyTable($this->newSchema, $this->createSimpleTable('fugata', 'integer', 'id'));
+        $this->readyTable($this->schema, $this->createSimpleTable('hogera', 'integer', 'id'));
 
         // create migration table no pkey
         $table = $this->createSimpleTable('nopkey', 'integer', 'id');
         $table->dropPrimaryKey();
-        $this->readyTable($this->oldSchema, $table);
-        $this->readyTable($this->newSchema, $table);
+        $this->readyTable($this->schema, $table);
 
         // create migration table different pkey
-        $this->readyTable($this->oldSchema, $this->createSimpleTable('diffpkey', 'integer', 'id'));
-        $this->readyTable($this->newSchema, $this->createSimpleTable('diffpkey', 'integer', 'seq'));
+        $this->readyTable($this->schema, $this->createSimpleTable('diffpkey', 'integer', 'id'));
 
         // create migration table different column
-        $this->readyTable($this->oldSchema, $this->createSimpleTable('diffcolumn', 'integer', 'id'));
-        $this->readyTable($this->newSchema, $this->createSimpleTable('diffcolumn', 'integer', 'id', 'seq'));
+        $this->readyTable($this->schema, $this->createSimpleTable('diffcolumn', 'integer', 'id'));
 
         // create migration table different type
-        $this->readyTable($this->oldSchema, $this->createSimpleTable('difftype', 'string', 'id'));
-        $this->readyTable($this->newSchema, $this->createSimpleTable('difftype', 'integer', 'id'));
+        $this->readyTable($this->schema, $this->createSimpleTable('difftype', 'string', 'id'));
 
         // create migration table different record
         $table = $this->createSimpleTable('foo', 'integer', 'id');
@@ -115,10 +127,9 @@ class TransporterTest extends AbstractTestCase
         $table->addColumn('c_text', 'text');
         $table->addColumn('c_datetime', 'datetime');
 
-        $this->readyTable($this->oldSchema, $table);
-        $this->readyTable($this->newSchema, $table);
+        $this->readyTable($this->schema, $table);
 
-        $this->insertMultiple($this->old, 'foo', [
+        $this->insertMultiple($this->connection, 'foo', [
             '{"id":0,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":1,"c_int":2,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":2,"c_int":1,"c_float":2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
@@ -130,27 +141,11 @@ class TransporterTest extends AbstractTestCase
             '{"id":9,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
             '{"id":99,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
         ]);
-        $this->insertMultiple($this->new, 'foo', [
-            '{"id":-2,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":-1,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":0,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":1,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":2,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":3,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":4,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":5,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":6,"c_int":1,"c_float":1,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-            '{"id":99,"c_int":2,"c_float":1.4,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',
-        ]);
 
-        $this->transporter = new Transporter($this->old);
-        $this->refClass = new \ReflectionClass($this->transporter);
+        $this->transporter = new Transporter($this->connection);
+        $this->refClass    = new \ReflectionClass($this->transporter);
 
-        $this->transporter->setDirectory('table', null);
-        $this->transporter->setDirectory('view', null);
-
-        Utility::getSchema($this->old, true);
-        Utility::getSchema($this->new, true);
+        $this->transporter->setDirectory('');
     }
 
     /**
@@ -158,14 +153,11 @@ class TransporterTest extends AbstractTestCase
      */
     function exportDDL()
     {
-        $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
-        $this->assertFileContains('CREATE TABLE hoge', self::$tmpdir . '/table.sql');
-
         $this->transporter->exportDDL(self::$tmpdir . '/table.php');
         $this->transporter->exportDDL(self::$tmpdir . '/table.json');
         $this->transporter->exportDDL(self::$tmpdir . '/table.yaml');
 
-        $php = include self::$tmpdir . '/table.php';
+        $php  = include self::$tmpdir . '/table.php';
         $json = json_decode(file_get_contents(self::$tmpdir . '/table.json'), true);
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/table.yaml'));
 
@@ -175,8 +167,8 @@ class TransporterTest extends AbstractTestCase
 
         $this->assertArrayHasKey('table', $php);
         $this->assertArrayHasKey('zzz', $php['table']);
-        $this->assertArrayHasKey('trigger', $php['table']['zzz']);
-        $this->assertArrayHasKey('trg1', $php['table']['zzz']['trigger']);
+        $this->assertArrayHasKey('trigger', $php);
+        $this->assertArrayHasKey('trg1', $php['trigger']);
 
         $this->assertException(new \DomainException("is not supported"), function () {
             $this->transporter->exportDDL(self::$tmpdir . '/table.ext');
@@ -188,11 +180,6 @@ class TransporterTest extends AbstractTestCase
      */
     function exportDDL_filter()
     {
-        $this->transporter->exportDDL(self::$tmpdir . '/table.sql', ['.*g.*'], ['fuga']);
-        $sql = file_get_contents(self::$tmpdir . '/table.sql');
-        $this->assertStringContainsString('CREATE TABLE hoge', $sql);
-        $this->assertStringNotContainsString('CREATE TABLE fuga', $sql);
-
         $this->transporter->exportDDL(self::$tmpdir . '/table.yaml', ['.*g.*'], []);
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/table.yaml'));
         $this->assertEquals(['fuga', 'hoge', 'hogera'], array_keys($yaml['table']));
@@ -211,10 +198,7 @@ class TransporterTest extends AbstractTestCase
      */
     function exportDDL_noview()
     {
-        $this->transporter->enableView(false);
-        $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
-        $sql = file_get_contents(self::$tmpdir . '/table.sql');
-        $this->assertStringNotContainsString('CREATE VIEW vvview', $sql);
+        $this->transporter->setDisabled(['view' => true]);
 
         $this->transporter->exportDDL(self::$tmpdir . '/table.yaml');
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/table.yaml'));
@@ -224,16 +208,30 @@ class TransporterTest extends AbstractTestCase
     /**
      * @test
      */
+    function exportDDL_sql()
+    {
+        $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE TABLE child', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('ALTER TABLE child', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE VIEW', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE TRIGGER', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE FUNCTION', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE EVENT', self::$tmpdir . '/table.sql');
+    }
+
+    /**
+     * @test
+     */
     function exportDML()
     {
-        $this->transporter->exportDML(self::$tmpdir . '/hoge.sql');
+        iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.sql'));
         $this->assertFileContains("INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'name-1', '1.5')", self::$tmpdir . '/hoge.sql');
 
-        $this->transporter->exportDML(self::$tmpdir . '/hoge.php');
-        $this->transporter->exportDML(self::$tmpdir . '/hoge.json');
-        $this->transporter->exportDML(self::$tmpdir . '/hoge.yaml');
+        iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.php'));
+        iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.json'));
+        iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.yaml'));
 
-        $php = include self::$tmpdir . '/hoge.php';
+        $php  = include self::$tmpdir . '/hoge.php';
         $json = json_decode(file_get_contents(self::$tmpdir . '/hoge.json'), true);
         $yaml = Yaml::parse(file_get_contents(self::$tmpdir . '/hoge.yaml'));
 
@@ -242,7 +240,7 @@ class TransporterTest extends AbstractTestCase
         $this->assertEquals($yaml, $php);
 
         $this->assertException(new \DomainException("is not supported"), function () {
-            $this->transporter->exportDML(self::$tmpdir . '/hoge.ext');
+            iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.ext'));
         });
     }
 
@@ -251,7 +249,7 @@ class TransporterTest extends AbstractTestCase
      */
     function exportDML_closure()
     {
-        $array = var_export([
+        $array    = var_export([
             [
                 'id'   => '1',
                 'name' => 'name1',
@@ -270,8 +268,8 @@ class TransporterTest extends AbstractTestCase
         ], true);
         $contents = "<?php return function(){return $array;};";
         file_put_contents(self::$tmpdir . "/hoge.php", $contents);
-        $result = $this->transporter->exportDML(self::$tmpdir . "/hoge.php");
-        $this->assertStringContainsString('skipped', $result);
+        $result = implode("\n", iterator_to_array($this->transporter->exportDML(self::$tmpdir . "/hoge.php")));
+        $this->assertStringContainsString('closure file', $result);
         $this->assertStringEqualsFile(self::$tmpdir . "/hoge.php", $contents);
     }
 
@@ -280,9 +278,14 @@ class TransporterTest extends AbstractTestCase
      */
     function exportDML_where()
     {
-        $this->transporter->exportDML(self::$tmpdir . '/hoge.sql', ['id=2'], []);
-        $this->assertFileContains("INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('2', 'name-2', '2.5')", self::$tmpdir . '/hoge.sql');
-        $this->assertFileNotContains("INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('3', 'name-3', '3.5')", self::$tmpdir . '/hoge.sql');
+        iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.php', ['id=2'], []));
+        $this->assertEquals([
+            [
+                'id'   => '2',
+                'name' => 'name-2',
+                'data' => '2.5',
+            ],
+        ], include self::$tmpdir . '/hoge.php');
     }
 
     /**
@@ -290,8 +293,14 @@ class TransporterTest extends AbstractTestCase
      */
     function exportDML_ignore()
     {
-        $this->transporter->exportDML(self::$tmpdir . '/hoge.sql', [], ['name']);
-        $this->assertFileContains("INSERT INTO `hoge` (`id`, `data`, `name`) VALUES ('1', '1.5', '')", self::$tmpdir . '/hoge.sql');
+        iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.php', ['id=2'], ['name']));
+        $this->assertEquals([
+            [
+                'id'   => '2',
+                'name' => '',
+                'data' => '2.5',
+            ],
+        ], include self::$tmpdir . '/hoge.php');
     }
 
     /**
@@ -299,7 +308,7 @@ class TransporterTest extends AbstractTestCase
      */
     function importDDL()
     {
-        $supported = ['sql', 'php', 'json', 'yaml'];
+        $supported = ['php', 'json', 'yaml', 'yaml5'];
         foreach ($supported as $ext) {
             $this->transporter->exportDDL(self::$tmpdir . "/table.$ext");
         }
@@ -315,48 +324,6 @@ class TransporterTest extends AbstractTestCase
         $this->assertException(new \DomainException("is not supported"), function () {
             $this->transporter->importDDL(self::$tmpdir . '/table.ext');
         });
-
-        $this->assertException(new \RuntimeException("platform is different"), function () {
-            $this->transporter->exportDDL(self::$tmpdir . "/table.json");
-            $schema = json_decode(file_get_contents(self::$tmpdir . "/table.json"), true);
-            $schema['platform'] = 'unknown';
-            file_put_contents(self::$tmpdir . "/table.json", json_encode($schema));
-            $this->transporter->importDDL(self::$tmpdir . '/table.json');
-        });
-    }
-
-    /**
-     * @test
-     */
-    function importDDL_filter()
-    {
-        $supported = ['php', 'json', 'yaml'];
-        foreach ($supported as $ext) {
-            $this->transporter->exportDDL(self::$tmpdir . "/table.$ext");
-        }
-        foreach ($supported as $ext) {
-            $ddls = $this->transporter->importDDL(self::$tmpdir . "/table.$ext", ['.*g.*'], ['fuga']);
-            $this->assertContainsString('CREATE TABLE hoge', $ddls);
-            $this->assertNotContainsString('CREATE TABLE fuga', $ddls);
-        }
-
-        $this->transporter->exportDDL(self::$tmpdir . "/table.sql");
-        $this->assertException(new \DomainException("sql is not supported"), function () {
-            $this->transporter->importDDL(self::$tmpdir . '/table.sql', ['dummy']);
-        });
-    }
-
-    /**
-     * @test
-     */
-    function importDDL_noview()
-    {
-        $this->transporter->enableView(true);
-        $this->transporter->exportDDL(self::$tmpdir . "/table.yaml");
-        $this->transporter->enableView(false);
-
-        $ddls = $this->transporter->importDDL(self::$tmpdir . "/table.yaml");
-        $this->assertNotContainsString('CREATE VIEW', $ddls);
     }
 
     /**
@@ -364,15 +331,15 @@ class TransporterTest extends AbstractTestCase
      */
     function importDML()
     {
-        $this->insertMultiple($this->old, 'fuga', array_map(function ($i) {
+        $this->insertMultiple($this->connection, 'fuga', array_map(function ($i) {
             return [
                 'id' => $i,
             ];
         }, range(1, 10)));
 
-        $supported = ['sql', 'php', 'json', 'yaml', 'csv'];
+        $supported = ['sql', 'php', 'json', 'yaml', 'yaml5', 'csv'];
         foreach ($supported as $ext) {
-            $this->transporter->exportDML(self::$tmpdir . "/fuga.$ext");
+            iterator_to_array($this->transporter->exportDML(self::$tmpdir . "/fuga.$ext"));
         }
         foreach ($supported as $ext) {
             $dmls = $this->transporter->importDML(self::$tmpdir . "/fuga.$ext");
@@ -389,7 +356,7 @@ class TransporterTest extends AbstractTestCase
      */
     function importDML_closure()
     {
-        $array = var_export([
+        $fn = $this->readyPhpFile("hoge.php", [
             [
                 'id'   => '1',
                 'name' => 'name1',
@@ -405,10 +372,9 @@ class TransporterTest extends AbstractTestCase
                 'name' => 'name3',
                 'data' => '1.3',
             ],
-        ], true);
-        file_put_contents(self::$tmpdir . "/hoge.php", "<?php return function(){return $array;};");
+        ]);
 
-        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.php");
+        $dmls = $this->transporter->importDML($fn);
         $this->assertEquals(3, substr_count(implode(";", $dmls), 'INSERT INTO'));
     }
 
@@ -417,7 +383,7 @@ class TransporterTest extends AbstractTestCase
      */
     function importDML_bulkmode()
     {
-        $array = json_encode([
+        $fn = $this->readyPhpFile("hoge.php", [
             [
                 'id'   => '1',
                 'name' => 'name1',
@@ -433,15 +399,14 @@ class TransporterTest extends AbstractTestCase
                 'name' => 'name3',
                 'data' => '1.3',
             ],
-        ], true);
-        file_put_contents(self::$tmpdir . "/hoge.json", $array);
+        ]);
 
         $this->transporter->setBulkMode(false);
-        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.json");
+        $dmls = $this->transporter->importDML($fn);
         $this->assertCount(3, $dmls);
 
         $this->transporter->setBulkMode(true);
-        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.json");
+        $dmls = $this->transporter->importDML($fn);
         $this->assertCount(1, $dmls);
     }
 
@@ -450,10 +415,46 @@ class TransporterTest extends AbstractTestCase
      */
     function migrateDdl()
     {
-        $ddls = $this->transporter->migrateDDL($this->new);
+        $fn   = $this->readyPhpFile("ddl.php", [
+            'table' => [
+                'fugata' => [
+                    'column' => [
+                        'hoge_id' => [
+                            'type' => 'smallint',
+                        ],
+                    ],
+                    'option' => [],
+                ],
+            ],
+        ]);
+        $ddls = $this->transporter->migrateDDL($fn);
 
         $this->assertContainsString('CREATE TABLE fugata', $ddls);
         $this->assertContainsString('DROP TABLE hogera', $ddls);
+
+        $this->assertException(new \DomainException('does not support migrateDDL'), fn() => $this->transporter->migrateDDL("ddl.sql"));
+    }
+
+    /**
+     * @test
+     */
+    function migrateDdl_exclude()
+    {
+        $fn   = $this->readyPhpFile("ddl.php", [
+            'table' => [
+                'hogera' => [
+                    'column' => [
+                        'hoge_id' => [
+                            'type' => 'smallint',
+                        ],
+                    ],
+                    'option' => [],
+                ],
+            ],
+        ]);
+        $ddls = $this->transporter->migrateDDL($fn, ['hogera']);
+
+        $this->assertNotContainsString('hogera', $ddls);
     }
 
     /**
@@ -461,51 +462,45 @@ class TransporterTest extends AbstractTestCase
      */
     function migrateDml()
     {
-        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['1']);
+        $fn   = $this->readyPhpFile("foo.php", [
+            ['id' => -2, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => -1, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 0, 'c_int' => 1, 'c_float' => 1.2, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 1, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 2, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 3, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 4, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 5, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 6, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 99, 'c_int' => 2, 'c_float' => 1.4, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+        ]);
+        $dmls = $this->transporter->migrateDML($fn, ['insert' => true, 'update' => true, 'delete' => true]);
         $this->assertCount(11, $dmls);
 
         foreach ($dmls as $sql) {
-            $this->old->executeStatement($sql);
+            $this->connection->executeStatement($sql);
         }
 
-        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['1']);
+        $dmls = $this->transporter->migrateDML($fn, ['insert' => true, 'update' => true, 'delete' => true]);
         $this->assertCount(0, $dmls);
     }
 
     /**
      * @test
      */
-    function migrateDml_where()
+    function migrateDml_sql()
     {
-        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = -1']);
-        $this->assertCount(1, $dmls);
-    }
-
-    /**
-     * @test
-     */
-    function migrateDml_ignore()
-    {
-        // c_int,c_float しか違いがないので無視すれば差分なしのはず
-        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = 99'], ['c_int', 'c_float']);
-        $this->assertCount(0, $dmls);
-
-        // 修飾してもテーブルが一致すれば同様のはず
-        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = 99'], ['foo.c_int', 'foo.c_float']);
-        $this->assertCount(0, $dmls);
-
-        // クォートできるはず
-        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = 99'], ['`foo`.`c_int`', '`c_float`']);
-        $this->assertCount(0, $dmls);
-
-        // テーブルが不一致なら普通に差分ありのはず
-        $dmls = $this->transporter->migrateDML($this->new, 'foo', ['id = 99'], ['bar.c_int', 'bar.c_float']);
+        file_put_contents(self::$tmpdir . "/foo.sql", '
+            INSERT INTO foo VALUES (-3, 1, 1, "text1", "text2", NOW())
+        ');
+        $dmls = $this->transporter->migrateDML(self::$tmpdir . "/foo.sql");
         $this->assertCount(1, $dmls);
 
-        // INSERT には影響しないはず
-        $dmls1 = $this->transporter->migrateDML($this->new, 'foo', ['id = -1']);
-        $dmls2 = $this->transporter->migrateDML($this->new, 'foo', ['id = -1'], ['c_int', 'c_float', 'c_varchar']);
-        $this->assertEquals($dmls1, $dmls2);
+        foreach ($dmls as $sql) {
+            $this->connection->executeStatement($sql);
+        }
+
+        $this->assertEquals(-3, $this->connection->fetchOne('SELECT id FROM foo WHERE id=-3'));
     }
 
     /**
@@ -513,9 +508,25 @@ class TransporterTest extends AbstractTestCase
      */
     function migrateDml_dmltypes()
     {
-        // UPDATE は含まれないはず
-        $dmls = $this->transporter->migrateDML($this->new, 'foo', [], [], ['update' => false]);
-        $this->assertCount(4, $dmls);
+        $fn = $this->readyPhpFile("foo.php", [
+            ['id' => 99, 'c_int' => 1, 'c_float' => 1.2, 'c_varchar' => 'char', 'c_text' => 'change', 'c_datetime' => '2000-01-01 00:00:00',],
+            ['id' => 999, 'c_int' => 1, 'c_float' => 1.2, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+        ]);
+
+        $dmls = $this->transporter->migrateDML($fn, ['insert' => true, 'update' => false, 'delete' => false]);
+        $this->assertContainsString('INSERT', implode("\n", $dmls));
+        $this->assertNotContainsString('UPDATE', implode("\n", $dmls));
+        $this->assertNotContainsString('DELETE', implode("\n", $dmls));
+
+        $dmls = $this->transporter->migrateDML($fn, ['insert' => false, 'update' => true, 'delete' => false]);
+        $this->assertNotContainsString('INSERT', implode("\n", $dmls));
+        $this->assertContainsString('UPDATE', implode("\n", $dmls));
+        $this->assertNotContainsString('DELETE', implode("\n", $dmls));
+
+        $dmls = $this->transporter->migrateDML($fn, ['insert' => false, 'update' => false, 'delete' => true]);
+        $this->assertNotContainsString('INSERT', implode("\n", $dmls));
+        $this->assertNotContainsString('UPDATE', implode("\n", $dmls));
+        $this->assertContainsString('DELETE', implode("\n", $dmls));
     }
 
     /**
@@ -523,10 +534,13 @@ class TransporterTest extends AbstractTestCase
      */
     function migrateDml_name()
     {
-        $e = new SchemaException("There is no table with name", SchemaException::TABLE_DOESNT_EXIST);
+        $e          = new TableDoesNotExist("notable");
         $migrateDml = [$this->transporter, 'migrateDml'];
 
-        $this->assertException($e, $migrateDml, $this->new, 'notable', ['1']);
+        $fn = $this->readyPhpFile("notable.php", [
+            ['id' => -2, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+        ]);
+        $this->assertException($e, $migrateDml, $fn);
     }
 
     /**
@@ -534,23 +548,13 @@ class TransporterTest extends AbstractTestCase
      */
     function migrateDml_nopkey()
     {
-        $e = new MigrationException("has no primary key");
+        $e          = new MigrationException("has no primary key");
         $migrateDml = [$this->transporter, 'migrateDml'];
 
-        $this->assertException($e, $migrateDml, $this->new, 'nopkey', ['1']);
-    }
-
-    /**
-     * @test
-     */
-    function migrateDml_equals()
-    {
-        $e = new MigrationException("has different definition");
-        $migrateDml = [$this->transporter, 'migrateDml'];
-
-        $this->assertException($e, $migrateDml, $this->new, 'diffpkey', ['1']);
-        $this->assertException($e, $migrateDml, $this->new, 'diffcolumn', ['1']);
-        $this->assertException($e, $migrateDml, $this->new, 'difftype', ['1']);
+        $fn = $this->readyPhpFile("nopkey.php", [
+            ['id' => -2, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
+        ]);
+        $this->assertException($e, $migrateDml, $fn);
     }
 
     /**
@@ -570,9 +574,6 @@ class TransporterTest extends AbstractTestCase
      */
     function ordered()
     {
-        $method = $this->refClass->getMethod('tableToArray');
-        $method->setAccessible(true);
-
         $table = new Table('ordered');
         $table->addColumn('id1', 'integer')->setAutoincrement(true);
         $table->addColumn('id2', 'integer');
@@ -586,36 +587,15 @@ class TransporterTest extends AbstractTestCase
         $table->addForeignKeyConstraint('parent', ['id3'], ['id'], [], 'fk_xxx');
         $table->addOption('collation', 'utf8_bin');
 
-        $tablearray = $method->invoke($this->transporter, $table);
+        $definitation = $this->transporter->getDefinition();
+        $tablearray = $definitation['table']['array']($table);
         $this->assertEquals(['id1', 'id2', 'id3'], array_keys($tablearray['column']));
         $this->assertEquals(['primary', 'idx_xxx', 'idx_yyy', 'idx_zzz'], array_keys($tablearray['index']));
         $this->assertEquals(['fk_xxx', 'fk_yyy', 'fk_zzz'], array_keys($tablearray['foreign']));
         $this->assertEquals([
-            'collation'      => 'utf8_bin',
-            'charset'        => 'utf8',
-            'create_options' => [],
+            'collation' => 'utf8_bin',
+            'charset'   => 'utf8',
         ], $tablearray['option']);
-    }
-
-    /**
-     * @test
-     */
-    function getImplicitIndexes()
-    {
-        $method = $this->refClass->getMethod('getImplicitIndexes');
-        $method->setAccessible(true);
-
-        $table = new Table('implicit');
-        $table->addColumn('id', 'integer');
-        $table->addColumn('pid', 'integer');
-        $table->addColumn('name', 'string');
-        $table->addIndex(['name'], 'idx_name');
-        $table->setPrimaryKey(['id']);
-        $table->addForeignKeyConstraint('parent', ['pid'], ['id'], [], 'fk_implicit');
-        $this->assertCount(1, $method->invoke($this->transporter, $table));
-
-        $this->assertEmpty(@$method->invoke($this->transporter, new \stdClass()));
-        $this->assertStringContainsString('is undefined', error_get_last()['message']);
     }
 
     static function encodeDataProvider()
@@ -627,7 +607,7 @@ class TransporterTest extends AbstractTestCase
 INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'あいうえお', '3.14');
 INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('2', 'かきくけこ', '6.28');
 SQL
-    ,
+                ,
             ],
             [
                 'php',
@@ -642,10 +622,10 @@ SQL
         'id'   => '2',
         'name' => 'かきくけこ',
         'data' => '6.28',
-    ]
+    ],
 ];
 PHP
-    ,
+                ,
             ],
             [
                 'json',
@@ -663,7 +643,7 @@ PHP
     }
 ]
 JSON
-    ,
+                ,
             ],
             [
                 'yaml',
@@ -677,7 +657,25 @@ JSON
     name: かきくけこ
     data: '6.28'
 YAML
-    ,
+                ,
+            ],
+            [
+                'yaml5',
+                <<<YAML5
+[
+    {
+        id: '1',
+        name: あいうえお,
+        data: '3.14',
+    },
+    {
+        id: '2',
+        name: かきくけこ,
+        data: '6.28',
+    },
+]
+YAML5
+                ,
             ],
             [
                 'csv',
@@ -686,7 +684,16 @@ id,name,data
 1,あいうえお,3.14
 2,かきくけこ,6.28
 CSV
-    ,
+                ,
+            ],
+            [
+                'tsv',
+                <<<TSV
+id	name	data
+1	あいうえお	3.14
+2	かきくけこ	6.28
+TSV
+                ,
             ],
         ];
         array_walk_recursive($supported, function (&$v) {
@@ -703,49 +710,19 @@ CSV
      */
     function encoding($ext, $content)
     {
-        $this->transporter->setEncoding($ext, 'SJIS-win');
-
-        $this->old->delete('hoge', [0]);
-        $this->old->insert('hoge', [
+        $this->connection->delete('hoge', [0]);
+        $this->connection->insert('hoge', [
             'id'   => 1,
             'name' => 'あいうえお',
             'data' => 3.14,
         ]);
-        $this->old->insert('hoge', [
+        $this->connection->insert('hoge', [
             'id'   => 2,
             'name' => 'かきくけこ',
             'data' => 6.28,
         ]);
 
-        $this->transporter->exportDML(self::$tmpdir . "/hoge.$ext");
-        $this->assertStringEqualsFile(self::$tmpdir . "/hoge.$ext", "$content\n");
-
-        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.$ext");
-        $this->assertContainsString('あいうえお', $dmls);
-        $this->assertContainsString('かきくけこ', $dmls);
-    }
-
-    /**
-     * @dataProvider encodeDataProvider
-     * @param $ext
-     * @param $content
-     * @test
-     */
-    function encoding_via_filename($ext, $content)
-    {
-        $this->old->delete('hoge', [0]);
-        $this->old->insert('hoge', [
-            'id'   => 1,
-            'name' => 'あいうえお',
-            'data' => 3.14,
-        ]);
-        $this->old->insert('hoge', [
-            'id'   => 2,
-            'name' => 'かきくけこ',
-            'data' => 6.28,
-        ]);
-
-        $this->transporter->exportDML(self::$tmpdir . "/hoge.sjis-win.$ext");
+        iterator_to_array($this->transporter->exportDML(self::$tmpdir . "/hoge.sjis-win.$ext"));
         $this->assertStringEqualsFile(self::$tmpdir . "/hoge.sjis-win.$ext", "$content\n");
 
         $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.sjis-win.$ext");
@@ -758,70 +735,132 @@ CSV
         return [
             [
                 'php',
-                "<?php return [
-    'platform' => 'mysql',
-    'table'    => [
-        'child'      => include 'table/child.php',
-        'diffcolumn' => include 'table/diffcolumn.php',
-        'diffpkey'   => include 'table/diffpkey.php',
-        'difftype'   => include 'table/difftype.php',
-        'foo'        => include 'table/foo.php',
-        'fuga'       => include 'table/fuga.php',
-        'hoge'       => include 'table/hoge.php',
-        'hogera'     => include 'table/hogera.php',
-        'nopkey'     => include 'table/nopkey.php',
-        'parent'     => include 'table/parent.php',
-        'zzz'        => include 'table/zzz.php',
-    ],
-    'view'     => [
-        'vvview' => include 'view/vvview.php',
-    ],
-];
-",
+                <<<PHP
+                <?php return [
+                        'table'   => [
+                                'child'      => include 'object/table/child.php',
+                                'diffcolumn' => include 'object/table/diffcolumn.php',
+                                'diffpkey'   => include 'object/table/diffpkey.php',
+                                'difftype'   => include 'object/table/difftype.php',
+                                'foo'        => include 'object/table/foo.php',
+                                'fuga'       => include 'object/table/fuga.php',
+                                'hoge'       => include 'object/table/hoge.php',
+                                'hogera'     => include 'object/table/hogera.php',
+                                'nopkey'     => include 'object/table/nopkey.php',
+                                'parent'     => include 'object/table/parent.php',
+                                'zzz'        => include 'object/table/zzz.php',
+                        ],
+                        'view'    => [
+                                'vvview' => include 'object/view/vvview.php',
+                        ],
+                        'trigger' => [
+                                'trg1' => include 'object/trigger/trg1.php',
+                                'trg2' => include 'object/trigger/trg2.php',
+                        ],
+                        'routine' => [
+                                'function1' => include 'object/routine/function1.php',
+                        ],
+                        'event'   => [
+                                'event1' => include 'object/event/event1.php',
+                        ],
+                ];
+                
+                PHP,
             ],
             [
                 'yaml',
-                "---
-platform: mysql
-table:
-  child: !include table/child.yaml
-  diffcolumn: !include table/diffcolumn.yaml
-  diffpkey: !include table/diffpkey.yaml
-  difftype: !include table/difftype.yaml
-  foo: !include table/foo.yaml
-  fuga: !include table/fuga.yaml
-  hoge: !include table/hoge.yaml
-  hogera: !include table/hogera.yaml
-  nopkey: !include table/nopkey.yaml
-  parent: !include table/parent.yaml
-  zzz: !include table/zzz.yaml
-view:
-  vvview: !include view/vvview.yaml
-...
-",
+                <<<YAML
+                table:
+                        child:      !include object/table/child.yaml
+                        diffcolumn: !include object/table/diffcolumn.yaml
+                        diffpkey:   !include object/table/diffpkey.yaml
+                        difftype:   !include object/table/difftype.yaml
+                        foo:        !include object/table/foo.yaml
+                        fuga:       !include object/table/fuga.yaml
+                        hoge:       !include object/table/hoge.yaml
+                        hogera:     !include object/table/hogera.yaml
+                        nopkey:     !include object/table/nopkey.yaml
+                        parent:     !include object/table/parent.yaml
+                        zzz:        !include object/table/zzz.yaml
+                view:
+                        vvview: !include object/view/vvview.yaml
+                trigger:
+                        trg1: !include object/trigger/trg1.yaml
+                        trg2: !include object/trigger/trg2.yaml
+                routine:
+                        function1: !include object/routine/function1.yaml
+                event:
+                        event1: !include object/event/event1.yaml
+                
+                YAML,
+            ],
+            [
+                'yaml5',
+                <<<YAML5
+                {
+                        table:   {
+                                child:      !include object/table/child.yaml5,
+                                diffcolumn: !include object/table/diffcolumn.yaml5,
+                                diffpkey:   !include object/table/diffpkey.yaml5,
+                                difftype:   !include object/table/difftype.yaml5,
+                                foo:        !include object/table/foo.yaml5,
+                                fuga:       !include object/table/fuga.yaml5,
+                                hoge:       !include object/table/hoge.yaml5,
+                                hogera:     !include object/table/hogera.yaml5,
+                                nopkey:     !include object/table/nopkey.yaml5,
+                                parent:     !include object/table/parent.yaml5,
+                                zzz:        !include object/table/zzz.yaml5,
+                        },
+                        view:    {
+                                vvview: !include object/view/vvview.yaml5,
+                        },
+                        trigger: {
+                                trg1: !include object/trigger/trg1.yaml5,
+                                trg2: !include object/trigger/trg2.yaml5,
+                        },
+                        routine: {
+                                function1: !include object/routine/function1.yaml5,
+                        },
+                        event:   {
+                                event1: !include object/event/event1.yaml5,
+                        },
+                }
+                
+                YAML5,
             ],
             [
                 'json',
-                '{
-    "platform": "mysql",
-    "table": {
-        "child": "!include: table/child.json",
-        "diffcolumn": "!include: table/diffcolumn.json",
-        "diffpkey": "!include: table/diffpkey.json",
-        "difftype": "!include: table/difftype.json",
-        "foo": "!include: table/foo.json",
-        "fuga": "!include: table/fuga.json",
-        "hoge": "!include: table/hoge.json",
-        "hogera": "!include: table/hogera.json",
-        "nopkey": "!include: table/nopkey.json",
-        "parent": "!include: table/parent.json",
-        "zzz": "!include: table/zzz.json"
-    },
-    "view": {
-        "vvview": "!include: view/vvview.json"
-    }
-}
-',
+                <<<JSON
+                {
+                        "table":   {
+                                "child":      "!include: object/table/child.json",
+                                "diffcolumn": "!include: object/table/diffcolumn.json",
+                                "diffpkey":   "!include: object/table/diffpkey.json",
+                                "difftype":   "!include: object/table/difftype.json",
+                                "foo":        "!include: object/table/foo.json",
+                                "fuga":       "!include: object/table/fuga.json",
+                                "hoge":       "!include: object/table/hoge.json",
+                                "hogera":     "!include: object/table/hogera.json",
+                                "nopkey":     "!include: object/table/nopkey.json",
+                                "parent":     "!include: object/table/parent.json",
+                                "zzz":        "!include: object/table/zzz.json"
+                        },
+                        "view":    {
+                                "vvview": "!include: object/view/vvview.json"
+                        },
+                        "trigger": {
+                                "trg1": "!include: object/trigger/trg1.json",
+                                "trg2": "!include: object/trigger/trg2.json"
+                        },
+                        "routine": {
+                                "function1": "!include: object/routine/function1.json"
+                        },
+                        "event":   {
+                                "event1": "!include: object/event/event1.json"
+                        }
+                }
+
+                JSON,
             ],
         ];
     }
@@ -832,18 +871,27 @@ view:
      * @param $ext
      * @param $content
      */
-    function directory($ext, $content)
+    function setDataDescriptionOptions($ext, $content)
     {
-        $this->transporter->setDirectory('table', 'table');
-        $this->transporter->setDirectory('view', 'view');
+        $this->transporter->setDirectory('object');
+        $this->transporter->setDataDescriptionOptions([
+            'inline'    => 2,
+            'indent'    => 8,
+            'multiline' => true,
+            'align'     => true,
+        ]);
 
         $this->transporter->exportDDL(self::$tmpdir . "/table.$ext");
 
-        $this->assertFileExists(self::$tmpdir . "/table/child.$ext");
-        $this->assertFileExists(self::$tmpdir . "/table/fuga.$ext");
-        $this->assertFileExists(self::$tmpdir . "/table/hoge.$ext");
-        $this->assertFileExists(self::$tmpdir . "/table/parent.$ext");
-        $this->assertFileExists(self::$tmpdir . "/view/vvview.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/table/child.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/table/fuga.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/table/hoge.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/table/parent.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/view/vvview.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/trigger/trg1.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/trigger/trg1.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/routine/function1.$ext");
+        $this->assertFileExists(self::$tmpdir . "/object/event/event1.$ext");
         $this->assertStringEqualsFile(self::$tmpdir . "/table.$ext", $content);
 
         $ddls = $this->transporter->importDDL(self::$tmpdir . "/table.$ext");
@@ -857,59 +905,13 @@ view:
     /**
      * @test
      */
-    function ymlOption()
+    function setDataDescriptionOptions_misc()
     {
         // 2 inline, 8 indent
-        $this->transporter->setYmlOption('inline', 2);
-        $this->transporter->setYmlOption('indent', 8);
-        $this->transporter->exportDDL(self::$tmpdir . '/table.yml');
-        $this->assertFileContains('        child: { column: { id: { type: integer, default: null, notnull: true, unsigned:', self::$tmpdir . '/table.yml');
-
-        // 4 inline, 8 indent
-        $this->transporter->setYmlOption('inline', 4);
-        $this->transporter->setYmlOption('indent', 1);
-        $this->transporter->exportDDL(self::$tmpdir . '/table.yml');
-        $this->assertFileContains('   PRIMARY: { column: [id, pid], primary: true, unique: true, option: { lengths: [null, null] } }', self::$tmpdir . '/table.yml');
-    }
-
-    /**
-     * @test
-     */
-    function parseFilename()
-    {
-        $parseFilename = $this->refClass->getMethod('parseFilename');
-        $parseFilename->setAccessible(true);
-
-        $this->assertEquals([
-            'dirname'   => '/dir',
-            'basename'  => 'x.txt',
-            'filename'  => 'x',
-            'extension' => 'txt',
-            'encoding'  => '',
-        ], $parseFilename->invoke($this->transporter, '/dir/x.txt'));
-
-        $this->assertEquals([
-            'dirname'   => '.',
-            'basename'  => 'x',
-            'filename'  => 'x',
-            'extension' => '',
-            'encoding'  => '',
-        ], $parseFilename->invoke($this->transporter, 'x'));
-
-        $this->assertEquals([
-            'dirname'   => '/dir',
-            'basename'  => 'x.utf8.txt',
-            'filename'  => 'x',
-            'extension' => 'txt',
-            'encoding'  => 'utf8',
-        ], $parseFilename->invoke($this->transporter, '/dir/x.utf8.txt'));
-
-        $this->assertEquals([
-            'dirname'   => '.',
-            'basename'  => 'x.sjis-win.txt',
-            'filename'  => 'x',
-            'extension' => 'txt',
-            'encoding'  => 'sjis-win',
-        ], $parseFilename->invoke($this->transporter, 'x.sjis-win.txt'));
+        $this->transporter->setDataDescriptionOptions([
+            'delimiter' => '//',
+        ]);
+        $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
+        $this->assertFileContains("CREATE TRIGGER trg1 BEFORE UPDATE ON zzz FOR EACH ROW INSERT INTO hoge\nVALUES()//", self::$tmpdir . '/table.sql');
     }
 }
