@@ -1,0 +1,601 @@
+table:
+    actor:
+        column:
+            actor_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
+            first_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+            fulltext_column: { type: string, default: null, notnull: false, length: 100, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci, generation: { type: STORED, expression: "concat(`first_name`,_utf8mb4'\t',`last_name`)" } } }
+        index:
+            PRIMARY: { column: [actor_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_actor_last_name: { column: [last_name], unique: false, option: { lengths: [null] } }
+            idx_fulltext: { column: [fulltext_column], unique: false, flag: [fulltext], option: { lengths: [null], parser: ngram } }
+        foreign: {  }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    address:
+        column:
+            address_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
+            address: { type: string, default: null, notnull: true, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            address2: { type: string, default: null, notnull: false, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            district: { type: string, default: null, notnull: true, length: 20, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            city_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            postal_code: { type: string, default: null, notnull: false, length: 10, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            phone: { type: string, default: null, notnull: true, length: 20, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [address_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_fk_city_id: { column: [city_id], unique: false, option: { lengths: [null] } }
+        foreign:
+            fk_address_city: { table: city, column: { city_id: city_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    category:
+        column:
+            category_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            name: { type: string, default: null, notnull: true, length: 25, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [category_id], primary: true, unique: true, option: { lengths: [null] } }
+        foreign: {  }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    city:
+        column:
+            city_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
+            city: { type: string, default: null, notnull: true, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            country_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [city_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_fk_country_id: { column: [country_id], unique: false, option: { lengths: [null] } }
+        foreign:
+            fk_city_country: { table: country, column: { country_id: country_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    country:
+        column:
+            country_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
+            country: { type: string, default: null, notnull: true, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [country_id], primary: true, unique: true, option: { lengths: [null] } }
+        foreign: {  }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    customer:
+        column:
+            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
+            store_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            first_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            email: { type: string, default: null, notnull: false, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            active: { type: boolean, default: '1', notnull: true, comment: null, platformOptions: {  } }
+            create_date: { type: datetime, default: null, notnull: true, length: 0, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: false, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [customer_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_fk_address_id: { column: [address_id], unique: false, option: { lengths: [null] } }
+            idx_fk_store_id: { column: [store_id], unique: false, option: { lengths: [null] } }
+            idx_last_name: { column: [last_name], unique: false, option: { lengths: [null] } }
+        foreign:
+            fk_customer_address: { table: address, column: { address_id: address_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_customer_store: { table: store, column: { store_id: store_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    film:
+        column:
+            film_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
+            title: { type: string, default: null, notnull: true, length: 128, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            description: { type: text, default: null, notnull: false, length: 65535, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            release_year: { type: date, default: null, notnull: false, length: 0, comment: null, platformOptions: {  } }
+            language_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            original_language_id: { type: boolean, default: null, notnull: false, comment: null, platformOptions: {  } }
+            rental_duration: { type: boolean, default: '3', notnull: true, comment: null, platformOptions: {  } }
+            rental_rate: { type: decimal, default: '4.99', notnull: true, precision: 4, scale: 2, unsigned: false, comment: null, platformOptions: {  } }
+            length: { type: smallint, default: null, notnull: false, unsigned: true, comment: null, platformOptions: {  } }
+            replacement_cost: { type: decimal, default: '19.99', notnull: true, precision: 5, scale: 2, unsigned: false, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [film_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_fk_language_id: { column: [language_id], unique: false, option: { lengths: [null] } }
+            idx_fk_original_language_id: { column: [original_language_id], unique: false, option: { lengths: [null] } }
+            idx_title: { column: [title], unique: false, option: { lengths: [null] } }
+        foreign:
+            fk_film_language: { table: language, column: { language_id: language_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_film_language_original: { table: language, column: { original_language_id: language_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    film_actor:
+        column:
+            actor_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [actor_id, film_id], primary: true, unique: true, option: { lengths: [null, null] } }
+            idx_fk_film_id: { column: [film_id], unique: false, option: { lengths: [null] } }
+        foreign:
+            fk_film_actor_actor: { table: actor, column: { actor_id: actor_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_film_actor_film: { table: film, column: { film_id: film_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    film_category:
+        column:
+            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            category_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [film_id, category_id], primary: true, unique: true, option: { lengths: [null, null] } }
+            fk_film_category_category: { column: [category_id], unique: false, option: { lengths: [null] } }
+        foreign:
+            fk_film_category_category: { table: category, column: { category_id: category_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_film_category_film: { table: film, column: { film_id: film_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    film_text:
+        column:
+            film_id: { type: smallint, default: null, notnull: true, unsigned: false, comment: null, platformOptions: {  } }
+            title: { type: string, default: null, notnull: true, length: 255, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            description: { type: text, default: null, notnull: false, length: 65535, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+        index:
+            PRIMARY: { column: [film_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_title_description: { column: [title, description], unique: false, flag: [fulltext], option: { lengths: [null, null] } }
+        foreign: {  }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    inventory:
+        column:
+            inventory_id: { type: integer, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
+            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            store_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [inventory_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_fk_film_id: { column: [film_id], unique: false, option: { lengths: [null] } }
+            idx_store_id_film_id: { column: [store_id, film_id], unique: false, option: { lengths: [null, null] } }
+        foreign:
+            fk_inventory_film: { table: film, column: { film_id: film_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_inventory_store: { table: store, column: { store_id: store_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    language:
+        column:
+            language_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            name: { type: string, default: null, notnull: true, length: 20, fixed: true, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [language_id], primary: true, unique: true, option: { lengths: [null] } }
+        foreign: {  }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    payment:
+        column:
+            payment_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
+            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            staff_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            rental_id: { type: integer, default: null, notnull: false, unsigned: false, comment: null, platformOptions: {  } }
+            amount: { type: decimal, default: null, notnull: true, precision: 5, scale: 2, unsigned: false, comment: null, platformOptions: {  } }
+            payment_date: { type: datetime, default: null, notnull: true, length: 0, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: false, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [payment_id], primary: true, unique: true, option: { lengths: [null] } }
+            fk_payment_rental: { column: [rental_id], unique: false, option: { lengths: [null] } }
+            idx_fk_customer_id: { column: [customer_id], unique: false, option: { lengths: [null] } }
+            idx_fk_staff_id: { column: [staff_id], unique: false, option: { lengths: [null] } }
+        foreign:
+            fk_payment_customer: { table: customer, column: { customer_id: customer_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_payment_rental: { table: rental, column: { rental_id: rental_id }, option: { onDelete: 'SET NULL', onUpdate: CASCADE } }
+            fk_payment_staff: { table: staff, column: { staff_id: staff_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    rental:
+        column:
+            rental_id: { type: integer, default: null, notnull: true, unsigned: false, autoincrement: true, comment: null, platformOptions: {  } }
+            rental_date: { type: datetime, default: null, notnull: true, length: 0, comment: null, platformOptions: {  } }
+            inventory_id: { type: integer, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            return_date: { type: datetime, default: null, notnull: false, length: 0, comment: null, platformOptions: {  } }
+            staff_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [rental_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_fk_customer_id: { column: [customer_id], unique: false, option: { lengths: [null] } }
+            idx_fk_inventory_id: { column: [inventory_id], unique: false, option: { lengths: [null] } }
+            idx_fk_staff_id: { column: [staff_id], unique: false, option: { lengths: [null] } }
+            rental_date: { column: [rental_date, inventory_id, customer_id], unique: true, option: { lengths: [null, null, null] } }
+        foreign:
+            fk_rental_customer: { table: customer, column: { customer_id: customer_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_rental_inventory: { table: inventory, column: { inventory_id: inventory_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_rental_staff: { table: staff, column: { staff_id: staff_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    staff:
+        column:
+            staff_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            first_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            picture: { type: blob, default: null, notnull: false, length: 65535, comment: null, platformOptions: {  } }
+            email: { type: string, default: null, notnull: false, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            store_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            active: { type: boolean, default: '1', notnull: true, comment: null, platformOptions: {  } }
+            username: { type: string, default: null, notnull: true, length: 16, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            password: { type: string, default: null, notnull: false, length: 40, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_bin } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [staff_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_fk_address_id: { column: [address_id], unique: false, option: { lengths: [null] } }
+            idx_fk_store_id: { column: [store_id], unique: false, option: { lengths: [null] } }
+        foreign:
+            fk_staff_address: { table: address, column: { address_id: address_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_staff_store: { table: store, column: { store_id: store_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+    store:
+        column:
+            store_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            manager_staff_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
+            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, length: 0, comment: null, platformOptions: {  } }
+        index:
+            PRIMARY: { column: [store_id], primary: true, unique: true, option: { lengths: [null] } }
+            idx_fk_address_id: { column: [address_id], unique: false, option: { lengths: [null] } }
+            idx_unique_manager: { column: [manager_staff_id], unique: true, option: { lengths: [null] } }
+        foreign:
+            fk_store_address: { table: address, column: { address_id: address_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+            fk_store_staff: { table: staff, column: { manager_staff_id: staff_id }, option: { onDelete: 'NO ACTION', onUpdate: CASCADE } }
+        option:
+            engine: InnoDB
+            collation: utf8mb4_0900_ai_ci
+            charset: utf8mb4
+            comment: ''
+            row_format: Dynamic
+view:
+    actor_info:
+        sql: 'select `a`.`actor_id` AS `actor_id`,`a`.`first_name` AS `first_name`,`a`.`last_name` AS `last_name`,group_concat(distinct concat(`c`.`name`,'': '',(select group_concat(`f`.`title` order by `f`.`title` ASC separator '', '') from ((`sakila`.`film` `f` join `sakila`.`film_category` `fc` on((`f`.`film_id` = `fc`.`film_id`))) join `sakila`.`film_actor` `fa` on((`f`.`film_id` = `fa`.`film_id`))) where ((`fc`.`category_id` = `c`.`category_id`) and (`fa`.`actor_id` = `a`.`actor_id`)))) order by `c`.`name` ASC separator ''; '') AS `film_info` from (((`sakila`.`actor` `a` left join `sakila`.`film_actor` `fa` on((`a`.`actor_id` = `fa`.`actor_id`))) left join `sakila`.`film_category` `fc` on((`fa`.`film_id` = `fc`.`film_id`))) left join `sakila`.`category` `c` on((`fc`.`category_id` = `c`.`category_id`))) group by `a`.`actor_id`,`a`.`first_name`,`a`.`last_name`'
+        checkOption: NONE
+    customer_list:
+        sql: 'select `cu`.`customer_id` AS `ID`,concat(`cu`.`first_name`,'' '',`cu`.`last_name`) AS `name`,`a`.`address` AS `address`,`a`.`postal_code` AS `zip code`,`a`.`phone` AS `phone`,`sakila`.`city`.`city` AS `city`,`sakila`.`country`.`country` AS `country`,if(`cu`.`active`,''active'','''') AS `notes`,`cu`.`store_id` AS `SID` from (((`sakila`.`customer` `cu` join `sakila`.`address` `a` on((`cu`.`address_id` = `a`.`address_id`))) join `sakila`.`city` on((`a`.`city_id` = `sakila`.`city`.`city_id`))) join `sakila`.`country` on((`sakila`.`city`.`country_id` = `sakila`.`country`.`country_id`)))'
+        checkOption: NONE
+    film_list:
+        sql: 'select `sakila`.`film`.`film_id` AS `FID`,`sakila`.`film`.`title` AS `title`,`sakila`.`film`.`description` AS `description`,`sakila`.`category`.`name` AS `category`,`sakila`.`film`.`rental_rate` AS `price`,`sakila`.`film`.`length` AS `length`,group_concat(concat(`sakila`.`actor`.`first_name`,'' '',`sakila`.`actor`.`last_name`) separator '', '') AS `actors` from ((((`sakila`.`film` left join `sakila`.`film_category` on((`sakila`.`film_category`.`film_id` = `sakila`.`film`.`film_id`))) left join `sakila`.`category` on((`sakila`.`category`.`category_id` = `sakila`.`film_category`.`category_id`))) left join `sakila`.`film_actor` on((`sakila`.`film`.`film_id` = `sakila`.`film_actor`.`film_id`))) left join `sakila`.`actor` on((`sakila`.`film_actor`.`actor_id` = `sakila`.`actor`.`actor_id`))) group by `sakila`.`film`.`film_id`,`sakila`.`category`.`name`'
+        checkOption: NONE
+    nicer_but_slower_film_list:
+        sql: 'select `sakila`.`film`.`film_id` AS `FID`,`sakila`.`film`.`title` AS `title`,`sakila`.`film`.`description` AS `description`,`sakila`.`category`.`name` AS `category`,`sakila`.`film`.`rental_rate` AS `price`,`sakila`.`film`.`length` AS `length`,group_concat(concat(concat(upper(substr(`sakila`.`actor`.`first_name`,1,1)),lower(substr(`sakila`.`actor`.`first_name`,2,length(`sakila`.`actor`.`first_name`))),'' '',concat(upper(substr(`sakila`.`actor`.`last_name`,1,1)),lower(substr(`sakila`.`actor`.`last_name`,2,length(`sakila`.`actor`.`last_name`)))))) separator '', '') AS `actors` from ((((`sakila`.`film` left join `sakila`.`film_category` on((`sakila`.`film_category`.`film_id` = `sakila`.`film`.`film_id`))) left join `sakila`.`category` on((`sakila`.`category`.`category_id` = `sakila`.`film_category`.`category_id`))) left join `sakila`.`film_actor` on((`sakila`.`film`.`film_id` = `sakila`.`film_actor`.`film_id`))) left join `sakila`.`actor` on((`sakila`.`film_actor`.`actor_id` = `sakila`.`actor`.`actor_id`))) group by `sakila`.`film`.`film_id`,`sakila`.`category`.`name`'
+        checkOption: NONE
+    sales_by_film_category:
+        sql: 'select `c`.`name` AS `category`,sum(`p`.`amount`) AS `total_sales` from (((((`sakila`.`payment` `p` join `sakila`.`rental` `r` on((`p`.`rental_id` = `r`.`rental_id`))) join `sakila`.`inventory` `i` on((`r`.`inventory_id` = `i`.`inventory_id`))) join `sakila`.`film` `f` on((`i`.`film_id` = `f`.`film_id`))) join `sakila`.`film_category` `fc` on((`f`.`film_id` = `fc`.`film_id`))) join `sakila`.`category` `c` on((`fc`.`category_id` = `c`.`category_id`))) group by `c`.`name` order by `total_sales` desc'
+        checkOption: NONE
+    sales_by_store:
+        sql: 'select concat(`c`.`city`,'','',`cy`.`country`) AS `store`,concat(`m`.`first_name`,'' '',`m`.`last_name`) AS `manager`,sum(`p`.`amount`) AS `total_sales` from (((((((`sakila`.`payment` `p` join `sakila`.`rental` `r` on((`p`.`rental_id` = `r`.`rental_id`))) join `sakila`.`inventory` `i` on((`r`.`inventory_id` = `i`.`inventory_id`))) join `sakila`.`store` `s` on((`i`.`store_id` = `s`.`store_id`))) join `sakila`.`address` `a` on((`s`.`address_id` = `a`.`address_id`))) join `sakila`.`city` `c` on((`a`.`city_id` = `c`.`city_id`))) join `sakila`.`country` `cy` on((`c`.`country_id` = `cy`.`country_id`))) join `sakila`.`staff` `m` on((`s`.`manager_staff_id` = `m`.`staff_id`))) group by `s`.`store_id` order by `cy`.`country`,`c`.`city`'
+        checkOption: NONE
+    staff_list:
+        sql: 'select `s`.`staff_id` AS `ID`,concat(`s`.`first_name`,'' '',`s`.`last_name`) AS `name`,`a`.`address` AS `address`,`a`.`postal_code` AS `zip code`,`a`.`phone` AS `phone`,`sakila`.`city`.`city` AS `city`,`sakila`.`country`.`country` AS `country`,`s`.`store_id` AS `SID` from (((`sakila`.`staff` `s` join `sakila`.`address` `a` on((`s`.`address_id` = `a`.`address_id`))) join `sakila`.`city` on((`a`.`city_id` = `sakila`.`city`.`city_id`))) join `sakila`.`country` on((`sakila`.`city`.`country_id` = `sakila`.`country`.`country_id`)))'
+        checkOption: NONE
+trigger:
+    del_film:
+        statement: |-
+            BEGIN
+                DELETE FROM film_text WHERE film_id = old.film_id;
+              END
+        table: film
+        event: DELETE
+        timing: AFTER
+    ins_film:
+        statement: |-
+            BEGIN
+                INSERT INTO film_text (film_id, title, description)
+                    VALUES (new.film_id, new.title, new.description);
+              END
+        table: film
+        event: INSERT
+        timing: AFTER
+    upd_film:
+        statement: |-
+            BEGIN
+                IF (old.title != new.title) OR (old.description != new.description) OR (old.film_id != new.film_id)
+                THEN
+                    UPDATE film_text
+                        SET title=new.title,
+                            description=new.description,
+                            film_id=new.film_id
+                    WHERE film_id=old.film_id;
+                END IF;
+              END
+        table: film
+        event: UPDATE
+        timing: AFTER
+routine:
+    film_in_stock:
+        statement: |-
+            BEGIN
+                 SELECT inventory_id
+                 FROM inventory
+                 WHERE film_id = p_film_id
+                 AND store_id = p_store_id
+                 AND inventory_in_stock(inventory_id);
+
+                 SELECT COUNT(*)
+                 FROM inventory
+                 WHERE film_id = p_film_id
+                 AND store_id = p_store_id
+                 AND inventory_in_stock(inventory_id)
+                 INTO p_film_count;
+            END
+        type: PROCEDURE
+        returnType: null
+        returnTypeDeclaration: null
+        deterministic: false
+        dataAccess: 'READS SQL DATA'
+        language: SQL
+        comment: ''
+        parameters:
+            p_film_id: { type: int, typeDeclaration: int, mode: IN }
+            p_store_id: { type: int, typeDeclaration: int, mode: IN }
+            p_film_count: { type: int, typeDeclaration: int, mode: OUT }
+    film_not_in_stock:
+        statement: |-
+            BEGIN
+                 SELECT inventory_id
+                 FROM inventory
+                 WHERE film_id = p_film_id
+                 AND store_id = p_store_id
+                 AND NOT inventory_in_stock(inventory_id);
+
+                 SELECT COUNT(*)
+                 FROM inventory
+                 WHERE film_id = p_film_id
+                 AND store_id = p_store_id
+                 AND NOT inventory_in_stock(inventory_id)
+                 INTO p_film_count;
+            END
+        type: PROCEDURE
+        returnType: null
+        returnTypeDeclaration: null
+        deterministic: false
+        dataAccess: 'READS SQL DATA'
+        language: SQL
+        comment: ''
+        parameters:
+            p_film_id: { type: int, typeDeclaration: int, mode: IN }
+            p_store_id: { type: int, typeDeclaration: int, mode: IN }
+            p_film_count: { type: int, typeDeclaration: int, mode: OUT }
+    get_customer_balance:
+        statement: |-
+            BEGIN
+
+                   
+                   
+                   
+                   
+                   
+                   
+
+              DECLARE v_rentfees DECIMAL(5,2); 
+              DECLARE v_overfees INTEGER;      
+              DECLARE v_payments DECIMAL(5,2); 
+
+              SELECT IFNULL(SUM(film.rental_rate),0) INTO v_rentfees
+                FROM film, inventory, rental
+                WHERE film.film_id = inventory.film_id
+                  AND inventory.inventory_id = rental.inventory_id
+                  AND rental.rental_date <= p_effective_date
+                  AND rental.customer_id = p_customer_id;
+
+              SELECT IFNULL(SUM(IF((TO_DAYS(rental.return_date) - TO_DAYS(rental.rental_date)) > film.rental_duration,
+                    ((TO_DAYS(rental.return_date) - TO_DAYS(rental.rental_date)) - film.rental_duration),0)),0) INTO v_overfees
+                FROM rental, inventory, film
+                WHERE film.film_id = inventory.film_id
+                  AND inventory.inventory_id = rental.inventory_id
+                  AND rental.rental_date <= p_effective_date
+                  AND rental.customer_id = p_customer_id;
+
+
+              SELECT IFNULL(SUM(payment.amount),0) INTO v_payments
+                FROM payment
+
+                WHERE payment.payment_date <= p_effective_date
+                AND payment.customer_id = p_customer_id;
+
+              RETURN v_rentfees + v_overfees - v_payments;
+            END
+        type: FUNCTION
+        returnType: decimal
+        returnTypeDeclaration: 'decimal(5,2)'
+        deterministic: true
+        dataAccess: 'READS SQL DATA'
+        language: SQL
+        comment: ''
+        parameters:
+            p_customer_id: { type: int, typeDeclaration: int, mode: IN }
+            p_effective_date: { type: datetime, typeDeclaration: datetime, mode: IN }
+    inventory_held_by_customer:
+        statement: |-
+            BEGIN
+              DECLARE v_customer_id INT;
+              DECLARE EXIT HANDLER FOR NOT FOUND RETURN NULL;
+
+              SELECT customer_id INTO v_customer_id
+              FROM rental
+              WHERE return_date IS NULL
+              AND inventory_id = p_inventory_id;
+
+              RETURN v_customer_id;
+            END
+        type: FUNCTION
+        returnType: int
+        returnTypeDeclaration: int
+        deterministic: false
+        dataAccess: 'READS SQL DATA'
+        language: SQL
+        comment: ''
+        parameters:
+            p_inventory_id: { type: int, typeDeclaration: int, mode: IN }
+    inventory_in_stock:
+        statement: |-
+            BEGIN
+                DECLARE v_rentals INT;
+                DECLARE v_out     INT;
+
+                
+                
+
+                SELECT COUNT(*) INTO v_rentals
+                FROM rental
+                WHERE inventory_id = p_inventory_id;
+
+                IF v_rentals = 0 THEN
+                  RETURN TRUE;
+                END IF;
+
+                SELECT COUNT(rental_id) INTO v_out
+                FROM inventory LEFT JOIN rental USING(inventory_id)
+                WHERE inventory.inventory_id = p_inventory_id
+                AND rental.return_date IS NULL;
+
+                IF v_out > 0 THEN
+                  RETURN FALSE;
+                ELSE
+                  RETURN TRUE;
+                END IF;
+            END
+        type: FUNCTION
+        returnType: tinyint
+        returnTypeDeclaration: tinyint(1)
+        deterministic: false
+        dataAccess: 'READS SQL DATA'
+        language: SQL
+        comment: ''
+        parameters:
+            p_inventory_id: { type: int, typeDeclaration: int, mode: IN }
+    rewards_report:
+        statement: |-
+            proc: BEGIN
+
+                DECLARE last_month_start DATE;
+                DECLARE last_month_end DATE;
+
+                
+                IF min_monthly_purchases = 0 THEN
+                    SELECT 'Minimum monthly purchases parameter must be > 0';
+                    LEAVE proc;
+                END IF;
+                IF min_dollar_amount_purchased = 0.00 THEN
+                    SELECT 'Minimum monthly dollar amount purchased parameter must be > $0.00';
+                    LEAVE proc;
+                END IF;
+
+                
+                SET last_month_start = DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH);
+                SET last_month_start = STR_TO_DATE(CONCAT(YEAR(last_month_start),'-',MONTH(last_month_start),'-01'),'%Y-%m-%d');
+                SET last_month_end = LAST_DAY(last_month_start);
+
+                
+                CREATE TEMPORARY TABLE tmpCustomer (customer_id SMALLINT UNSIGNED NOT NULL PRIMARY KEY);
+
+                
+                INSERT INTO tmpCustomer (customer_id)
+                SELECT p.customer_id
+                FROM payment AS p
+                WHERE DATE(p.payment_date) BETWEEN last_month_start AND last_month_end
+                GROUP BY customer_id
+                HAVING SUM(p.amount) > min_dollar_amount_purchased
+                AND COUNT(customer_id) > min_monthly_purchases;
+
+                
+                SELECT COUNT(*) FROM tmpCustomer INTO count_rewardees;
+
+                
+                SELECT c.*
+                FROM tmpCustomer AS t
+                INNER JOIN customer AS c ON t.customer_id = c.customer_id;
+
+                
+                DROP TABLE tmpCustomer;
+            END
+        type: PROCEDURE
+        returnType: null
+        returnTypeDeclaration: null
+        deterministic: false
+        dataAccess: 'READS SQL DATA'
+        language: SQL
+        comment: 'Provides a customizable report on best customers'
+        parameters:
+            min_monthly_purchases: { type: tinyint, typeDeclaration: 'tinyint unsigned', mode: IN }
+            min_dollar_amount_purchased: { type: decimal, typeDeclaration: 'decimal(10,2)', mode: IN }
+            count_rewardees: { type: int, typeDeclaration: int, mode: OUT }
+event:
+    event1:
+        statement: |-
+            BEGIN
+              SELECT 1;
+            END
+        status: ENABLE
+        since: '2022-01-01 00:00:00'
+        until: '2040-12-31 23:59:59'
+        intervalValue: '1'
+        intervalField: DAY
+        completion: 'NOT PRESERVE'
+        language: SQL
+        comment: event1

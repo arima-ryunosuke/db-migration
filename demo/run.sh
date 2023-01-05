@@ -1,23 +1,35 @@
 #!/bin/bash
 
+USER=user
+PASS=pass
+
 cd $(dirname $(dirname $(readlink -f $0)))
 
 function techo {
   echo -e "\e[0;42m$*\e[0m"
 }
 
-techo "import current database definitation. (imitate running database)"
-php dbmigration.phar import mysql://127.0.0.1/demo_migration demo/current/* -n -v -C demo/config.php
+# php dbmigration.phar export mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml -n -v --multiline --migration demo/migration
 
-techo "export current database definitation and records. (as sql)"
-php dbmigration.phar export mysql://127.0.0.1/demo_migration /tmp/schema.sql /tmp/RecordTable.sql -v -C demo/config.php
+techo "import database definitation."
+php dbmigration.phar import mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml -n -v
 
-techo "export current database definitation and records. (as yml)"
-php dbmigration.phar export mysql://127.0.0.1/demo_migration /tmp/schema.yml /tmp/RecordTable.yml -v -C demo/config.php
+techo "migrate database definitation. (no-diff)"
+php dbmigration.phar migrate mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml -n -v
 
-techo "migrate latest database definitation. (no-interaction)"
-php dbmigration.phar import mysql://127.0.0.1/demo_latest demo/latest/* -n -v -C demo/config.php
-php dbmigration.phar migrate mysql://127.0.0.1/demo_migration mysql://127.0.0.1/demo_latest -n -v -C demo/config.php
+techo "change database. (ALTER/UPDATE)"
+mysql -h 127.0.0.1 -u $USER -p$PASS demo_migration << SQL
+ALTER TABLE actor ADD COLUMN dummy INT NOT NULL AFTER last_update;
+UPDATE actor SET first_name = "changed" WHERE actor_id = 1;
+SQL
+
+techo "migrate database definitation. (diff above and migration)"
+php dbmigration.phar migrate mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml --dml-type insert --migration demo/migration -n -v
 
 techo "confirm no diff"
-php dbmigration.phar migrate mysql://127.0.0.1/demo_migration mysql://127.0.0.1/demo_latest --check -C demo/config.php
+php dbmigration.phar migrate mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml --dml-type insert --migration demo/migration --check
+
+techo "show migration result"
+mysql -h 127.0.0.1 -u $USER -p$PASS demo_migration << SQL
+SELECT * FROM actor;
+SQL

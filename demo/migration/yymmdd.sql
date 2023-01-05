@@ -1,1 +1,1 @@
-UPDATE AlteredTable SET created_column = CONCAT("new_", altered_column)
+INSERT INTO actor (first_name, last_name) VALUES ('appended by sql', 'appended by sql')
