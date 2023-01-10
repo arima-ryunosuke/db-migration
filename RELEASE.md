@@ -19,6 +19,18 @@
 ## x.y.z
 
 - choice, confirm を Symfony 標準のものに差し替える？
+- DoctrineEventManager が廃止になるようなので撤廃する
+
+## 3.0.0
+
+- ストアド/イベントに対応
+- DB<->DB の比較ではなく DB<->FILE の比較に変更
+- Directory 設定を共通に変更
+- Enabled 設定を共通に変更
+- inline/indent 設定を共通に変更
+- ファイルタイプをクラスに分離
+  - tsv 追加
+  - yaml5 追加
 
 ## 2.0.15
 
