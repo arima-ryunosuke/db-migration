@@ -37,7 +37,7 @@ class Transporter
         'event'   => false,
     ];
 
-    private bool $bulkmode = false;
+    private int $bulksize = 0;
 
     private ?string $directory = null;
 
@@ -106,9 +106,9 @@ class Transporter
         $this->disableds = $disableds + $this->disableds;
     }
 
-    public function setBulkMode(bool $bulkmode)
+    public function setBulkSize(int $bulksize)
     {
-        $this->bulkmode = $bulkmode;
+        $this->bulksize = $bulksize;
     }
 
     public function setDirectory(?string $directory)
@@ -392,7 +392,7 @@ class Transporter
 
         $dataRecords = $scanner->associateRecords($records);
 
-        return $scanner->getInsertSql($dataRecords, $this->bulkmode);
+        return $scanner->getInsertSql($dataRecords, $this->bulksize);
     }
 
     public function migrateDDL(string $filename, array $excludes = []): array
@@ -463,7 +463,7 @@ class Transporter
 
         // INSERT if new only
         if (($dmltypes['insert'] ?? false) && $tuples = array_diff_key($dataRecords, $primaryTuples)) {
-            $dmls = array_merge($dmls, $scanner->getInsertSql($tuples, $this->bulkmode));
+            $dmls = array_merge($dmls, $scanner->getInsertSql($tuples, $this->bulksize));
         }
 
         return $dmls;

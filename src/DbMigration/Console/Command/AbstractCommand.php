@@ -49,8 +49,9 @@ abstract class AbstractCommand extends Command
             ],
             'bulk-insert' => [
                 null,
-                InputOption::VALUE_NONE,
-                'Enable bulk insert',
+                InputOption::VALUE_OPTIONAL,
+                'Specify bulk insert chunk size',
+                null,
             ],
             'where'       => [
                 'w',

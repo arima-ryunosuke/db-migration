@@ -103,21 +103,26 @@ class TableScanner
         return $sqls;
     }
 
-    public function getInsertSql(array $newrows, bool $bulkmode): array
+    public function getInsertSql(array $newrows, int $bulksize): array
     {
         $sqls = [];
 
-        if ($bulkmode) {
+        if ($bulksize) {
             $columns = array_keys(reset($newrows));
             $values  = [];
+            $n = 0;
             foreach ($newrows as $newrow) {
                 $value = [];
                 foreach ($columns as $column) {
                     $value[] = Utility::quote($this->conn, $newrow[$column]);
                 }
-                $values[] = '(' . implode(',', $value) . ')';
+                $values[floor($n++ / $bulksize)][] = '(' . implode(',', $value) . ')';
             }
-            return ["INSERT INTO $this->quotedName (" . implode(',', $columns) . ") VALUES \n" . implode(",\n", $values)];
+            foreach ($values as $value) {
+                $sqls[] = "INSERT INTO $this->quotedName (" . implode(',', $columns) . ") VALUES \n" . implode(",\n", $value);
+            }
+
+            return $sqls;
         }
 
         $isMysql      = $this->conn->getDatabasePlatform() instanceof MySqlPlatform;

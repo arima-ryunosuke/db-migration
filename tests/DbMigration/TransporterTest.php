@@ -381,7 +381,7 @@ class TransporterTest extends AbstractTestCase
     /**
      * @test
      */
-    function importDML_bulkmode()
+    function importDML_bulksize()
     {
         $fn = $this->readyPhpFile("hoge.php", [
             [
@@ -401,11 +401,15 @@ class TransporterTest extends AbstractTestCase
             ],
         ]);
 
-        $this->transporter->setBulkMode(false);
+        $this->transporter->setBulkSize(0);
         $dmls = $this->transporter->importDML($fn);
         $this->assertCount(3, $dmls);
 
-        $this->transporter->setBulkMode(true);
+        $this->transporter->setBulkSize(2);
+        $dmls = $this->transporter->importDML($fn);
+        $this->assertCount(2, $dmls);
+
+        $this->transporter->setBulkSize(999);
         $dmls = $this->transporter->importDML($fn);
         $this->assertCount(1, $dmls);
     }

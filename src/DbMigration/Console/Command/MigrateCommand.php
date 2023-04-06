@@ -68,7 +68,7 @@ class MigrateCommand extends AbstractCommand
 
         $transporter = new Transporter($conn);
         $transporter->setDirectory($this->input->getOption('directory'));
-        $transporter->setBulkMode($this->input->getOption('bulk-insert'));
+        $transporter->setBulkSize($this->input->getParameterOption('--bulk-insert', 0) ?? PHP_INT_MAX);
         $transporter->setDataDescriptionOptions([
             'inline'    => $this->input->getOption('inline'),
             'indent'    => $this->input->getOption('indent'),

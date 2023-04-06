@@ -134,6 +134,29 @@ class TableScannerTest extends AbstractTestCase
     /**
      * @test
      */
+    function getInsertSql_bulk()
+    {
+        $rows      = [
+            ['id' => 1],
+            ['id' => 2],
+            ['id' => 3],
+            ['id' => 4],
+            ['id' => 5],
+        ];
+        $this->assertCount(5, $this->scanner->getInsertSql($rows, 0));
+
+        $sqls = $this->scanner->getInsertSql($rows, 3);
+        $this->assertCount(2, $sqls);
+        $this->assertStringContainsString("('1')", $sqls[0]);
+        $this->assertStringContainsString("('2')", $sqls[0]);
+        $this->assertStringContainsString("('3')", $sqls[0]);
+        $this->assertStringContainsString("('4')", $sqls[1]);
+        $this->assertStringContainsString("('5')", $sqls[1]);
+    }
+
+    /**
+     * @test
+     */
     function getRecordFromPrimaryKeys_empty()
     {
         $rows = $this->invoke('getRecordFromPrimaryKeys', [], true);
@@ -270,7 +293,7 @@ class TableScannerTest extends AbstractTestCase
         $this->insertMultiple($new, 'hogetable', [['id' => 1]]);
 
         $scanner = new TableScanner($old, $table, ['1']);
-        $inserts = $scanner->getInsertSql([['id' => 1]], false);
+        $inserts = $scanner->getInsertSql([['id' => 1]], 0);
 
         // sqlite no support INSERT SET syntax. Therefore VALUES (value)
         $this->assertStringContainsString('INSERT INTO "hogetable" ("id") VALUES', $inserts[0]);
