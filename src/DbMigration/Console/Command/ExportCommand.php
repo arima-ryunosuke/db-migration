@@ -83,7 +83,7 @@ class ExportCommand extends AbstractCommand
         ]);
         $ddl = $transporter->exportDDL(array_shift($files), $includes, $excludes);
         $this->logger->info($ddl);
-        foreach ($files as $filename) {
+        foreach ($transporter->globTable($files) as $filename) {
             $dmls = $transporter->exportDML($filename, $wheres, $ignores);
             foreach ($dmls as $dml) {
                 $this->logger->info(fn($v) => $this->dump($v), $dml, true);

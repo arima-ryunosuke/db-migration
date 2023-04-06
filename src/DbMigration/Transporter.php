@@ -299,6 +299,48 @@ class Transporter
         ];
     }
 
+    public function globTable(array $filenames): array
+    {
+        $pathinfos  = array_map(fn($f) => $this->getFileByFilename($f)->pathinfo(), $filenames);
+        $tableNames = array_map(fn($t) => $t->getName(), $this->schema->getTables());
+
+        $normalize = fn($pathinfo, $tableName) => strtr(concat($pathinfo['dirname'], '/') . $tableName . $pathinfo['extensions'], ['\\' => '/']);
+
+        $list = null;
+
+        foreach ($pathinfos as $pathinfo) {
+
+            $pattern = $pathinfo['filename'];
+            $not     = $pattern[0] === '!';
+            if ($not) {
+                $pattern = substr($pattern, 1);
+            }
+
+            foreach ($tableNames as $tableName) {
+                if (fnmatch($pattern, $tableName)) {
+                    $path = $normalize($pathinfo, $tableName);
+
+                    if ($not) {
+                        if ($list === null) {
+                            $list = array_flip(array_map(fn($tableName) => $normalize($pathinfo, $tableName), $tableNames));
+                        }
+                        unset($list[$path]);
+                    }
+                    else {
+                        if ($list === null) {
+                            $list = [];
+                        }
+                        $list[$path] = true;
+                    }
+                }
+            }
+        }
+
+        $result = array_keys(($list ?? []));
+        sort($result);
+        return $result;
+    }
+
     public function exportDDL(string $filename, array $includes = [], array $excludes = []): string
     {
         $file       = $this->getFileByFilename($filename);

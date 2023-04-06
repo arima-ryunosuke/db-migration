@@ -151,6 +151,62 @@ class TransporterTest extends AbstractTestCase
     /**
      * @test
      */
+    function globTable()
+    {
+        // empty
+        $actual = $this->transporter->globTable([]);
+        $this->assertEquals([], $actual);
+
+        // nomatch
+        $actual = $this->transporter->globTable(['/not/notmatch.yml']);
+        $this->assertEquals([], $actual);
+
+        // fixed only
+        $actual = $this->transporter->globTable(['/hoge/child.yml', '/hoge/hoge.json', '/hoge/foo.yaml']);
+        $this->assertEquals([
+            '/hoge/child.yml',
+            '/hoge/foo.yaml',
+            '/hoge/hoge.json',
+        ], $actual);
+
+        // in ex fixed
+        $actual = $this->transporter->globTable(['/hoge/diff*.yml', '/hoge/!diffc*.yml', '/hoge/hoge.json']);
+        $this->assertEquals([
+            '/hoge/diffpkey.yml',
+            '/hoge/difftype.yml',
+            '/hoge/hoge.json',
+        ], $actual);
+
+        // in in fixed
+        $actual = $this->transporter->globTable(['/hoge/diff*.yml', '/hoge/h*.yml', '/hoge/hoge.json']);
+        $this->assertEquals([
+            '/hoge/diffcolumn.yml',
+            '/hoge/diffpkey.yml',
+            '/hoge/difftype.yml',
+            '/hoge/hoge.json',
+            '/hoge/hoge.yml',
+            '/hoge/hogera.yml',
+        ], $actual);
+
+        // ex in fixed
+        $actual = $this->transporter->globTable(['/hoge/!diff*.yml', '/hoge/difft*.yml', '/hoge/hoge.json']);
+        $this->assertNotContains('/hoge/diffcolumn.yml', $actual);
+        $this->assertNotContains('/hoge/diffpkey.yml', $actual);
+        $this->assertContains('/hoge/difftype.yml', $actual);
+        $this->assertContains('/hoge/hoge.json', $actual);
+
+        // ex ex fixed
+        $actual = $this->transporter->globTable(['/hoge/!diff*.yml', '/hoge/!h*.yml', '/hoge/hoge.json']);
+        $this->assertNotContains('/hoge/diffcolumn.yml', $actual);
+        $this->assertNotContains('/hoge/diffpkey.yml', $actual);
+        $this->assertNotContains('/hoge/difftype.yml', $actual);
+        $this->assertNotContains('/hoge/hogera.yml', $actual);
+        $this->assertContains('/hoge/hoge.json', $actual);
+    }
+
+    /**
+     * @test
+     */
     function exportDDL()
     {
         $this->transporter->exportDDL(self::$tmpdir . '/table.php');

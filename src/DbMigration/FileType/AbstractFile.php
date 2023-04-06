@@ -9,6 +9,7 @@ use RuntimeException;
 use ryunosuke\DbMigration\FileType\Tool\MbstringFilter;
 use ryunosuke\DbMigration\Utility;
 use SplFileObject;
+use function ryunosuke\DbMigration\concat;
 
 abstract class AbstractFile
 {
@@ -66,12 +67,13 @@ abstract class AbstractFile
         }
 
         $this->pathinfo = [
-            'fullname'  => $filename,
-            'dirname'   => $pathinfo['dirname'],
-            'basename'  => $pathinfo['basename'],
-            'filename'  => $pathinfo2['filename'],
-            'extension' => $pathinfo['extension'] ?? '',
-            'encoding'  => $encoding,
+            'fullname'   => $filename,
+            'dirname'    => $pathinfo['dirname'],
+            'basename'   => $pathinfo['basename'],
+            'filename'   => $pathinfo2['filename'],
+            'extension'  => $pathinfo['extension'] ?? '',
+            'extensions' => concat('.', $pathinfo2['extension'] ?? '') . concat('.', $pathinfo['extension']),
+            'encoding'   => $encoding,
         ];
         $this->options  = $options;
     }
