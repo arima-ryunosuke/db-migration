@@ -914,4 +914,74 @@ TSV
         $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
         $this->assertFileContains("CREATE TRIGGER trg1 BEFORE UPDATE ON zzz FOR EACH ROW INSERT INTO hoge\nVALUES()//", self::$tmpdir . '/table.sql');
     }
+
+    /**
+     * @test
+     */
+    function exchangeSchemaFromSQL()
+    {
+        $stripSchemaOf = $this->refClass->getMethod('stripSchemaOf');
+        $stripSchemaOf->setAccessible(true);
+        $restoreSchemaOf = $this->refClass->getMethod('restoreSchemaOf');
+        $restoreSchemaOf->setAccessible(true);
+
+        $schemaname = $this->connection->getDatabase();
+
+        $dataset = [
+            [
+                'original' => "select '$schemaname'",
+                'replaced' => "select '$schemaname'",
+            ],
+            [
+                'original' => "select `$schemaname`",
+                'replaced' => "select `$schemaname`",
+            ],
+            [
+                'original' => "select `$schemaname`.hoge",
+                'replaced' => "select /*`schema`.*/hoge",
+            ],
+            [
+                'original' => "select `$schemaname`.`fuga`",
+                'replaced' => "select /*`schema`.*/`fuga`",
+            ],
+            [
+                'original' => "select `$schemaname` . `piyo`",
+                'replaced' => "select /*`schema` .*/ `piyo`",
+            ],
+            [
+                'original' => "select `$schemaname`.hoge, `$schemaname`.`fuga`, `$schemaname` . `piyo`",
+                'replaced' => "select /*`schema`.*/hoge, /*`schema`.*/`fuga`, /*`schema` .*/ `piyo`",
+            ],
+            [
+                'original' => "select 'notschema'",
+                'replaced' => "select 'notschema'",
+            ],
+            [
+                'original' => "select `notschema`",
+                'replaced' => "select `notschema`",
+            ],
+            [
+                'original' => "select `notschema`.hoge",
+                'replaced' => "select `notschema`.hoge",
+            ],
+            [
+                'original' => "select `notschema`.`fuga`",
+                'replaced' => "select `notschema`.`fuga`",
+            ],
+            [
+                'original' => "select `notschema` . `piyo`",
+                'replaced' => "select `notschema` . `piyo`",
+            ],
+            [
+                'original' => "select `notschema`.hoge, `notschema`.`fuga`, `notschema` . `piyo`",
+                'replaced' => "select `notschema`.hoge, `notschema`.`fuga`, `notschema` . `piyo`",
+            ],
+        ];
+
+        foreach ($dataset as $name => $data) {
+            $message = "$name: {$data['original']} VS {$data['replaced']}";
+            $this->assertEquals($data['replaced'], $stripSchemaOf->invoke($this->transporter, $data['original']), $message);
+            $this->assertEquals($data['original'], $restoreSchemaOf->invoke($this->transporter, $data['replaced']), $message);
+        }
+    }
 }

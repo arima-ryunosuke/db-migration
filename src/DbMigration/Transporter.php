@@ -3,6 +3,7 @@
 namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\AbstractAsset;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
@@ -242,10 +243,11 @@ class Transporter
                 'drop'       => fn(Schema $schema, View $view) => $schema->dropView($view->getName()),
                 'array'      => function (View $view) {
                     return array_replace([
-                        'sql' => $view->getSql(),
+                        'sql' => $this->stripSchemaOf($view->getSql()),
                     ], array_diff_key($view->getOptions(), $this->ignoreViewOptionAttributes));
                 },
                 'object'     => function ($name, $array) {
+                    $array['sql'] = $this->restoreSchemaOf($array['sql']);
                     return new View($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreViewOptionAttributes), 'sql'));
                 },
                 'createSQLs' => fn($views) => array_map(fn($view) => $this->platform->getCreateViewSQL($view->getName(), $view->getSql(), $view->getOptions()), $views),
@@ -515,5 +517,66 @@ class Transporter
             unset($array[$key]);
         }
         return [...$unsets, $array];
+    }
+
+    private function stripSchemaOf(string $sql)
+    {
+        if ($this->platform instanceof AbstractMySQLPlatform) {
+            $schemaName = $this->schema->getName();
+
+            $tokens = parse_php($sql);
+            array_shift($tokens);
+
+            $quoted = null;
+            foreach ($tokens as $n => $token) {
+                if ($token[1] === '`') {
+                    if ($quoted === null) {
+                        $quoted = $n;
+                    }
+                    else {
+                        $modifier = implode('', array_column(array_slice($tokens, $quoted + 1, $n - $quoted - 1), 1));
+                        if ($modifier === $schemaName) {
+                            for ($i = $n + 1; $i < count($tokens); $i++) {
+                                if ($tokens[$i][0] === T_WHITESPACE) {
+                                    continue;
+                                }
+                                if ($tokens[$i][1] === '.') {
+                                    $length  = $i - $quoted + 1;
+                                    $comment = "`schema`" . implode('', array_column(array_slice($tokens, $n + 1, $i - $quoted - 2), 1));
+                                    $dummy   = array_pad([], $length - 1, null);
+                                    array_splice($tokens, $quoted, $length, array_merge($dummy, [[1 => "/*$comment*/"]]));
+                                }
+                                break;
+                            }
+                        }
+                        $quoted = null;
+                    }
+                }
+            }
+
+            $sql = implode('', array_column($tokens, 1));
+        }
+
+        return $sql;
+    }
+
+    private function restoreSchemaOf(string $sql)
+    {
+        if ($this->platform instanceof AbstractMySQLPlatform) {
+            $schemaName = $this->schema->getName();
+
+            $tokens = parse_php($sql);
+            array_shift($tokens);
+
+            foreach ($tokens as $n => $token) {
+                if ($token[0] === T_COMMENT) {
+                    $tokens[$n][1] = strtr(substr($token[1], 2, -2), ["`schema`" => "`$schemaName`"]);
+                }
+            }
+
+            $sql = implode('', array_column($tokens, 1));
+        }
+
+        return $sql;
     }
 }
