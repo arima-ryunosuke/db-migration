@@ -23,6 +23,9 @@ abstract class AbstractCommand extends Command
     /** @var Logger */
     protected $logger;
 
+    /** @var int */
+    protected $transactionLevel = 0;
+
     protected function getCommonOptions($optnames)
     {
         $options = [
@@ -46,6 +49,12 @@ abstract class AbstractCommand extends Command
                 'f',
                 InputOption::VALUE_NONE,
                 'Force continue, ignore errors',
+            ],
+            'transaction' => [
+                'T',
+                InputOption::VALUE_OPTIONAL,
+                'Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table)',
+                1,
             ],
             'bulk-insert' => [
                 null,
@@ -331,6 +340,38 @@ abstract class AbstractCommand extends Command
             $result = array_merge($result, array_filter(array_map('trim', explode(',', $value)), 'strlen'));
         }
         return $result;
+    }
+
+    protected function transact(Connection $conn, callable $try, ?callable $catch = null)
+    {
+        $currentLevel = ++$this->transactionLevel;
+        $targetLevel  = (int) $this->input->getOption('transaction');
+
+        $catch ??= function ($t) { throw $t; };
+
+        if ($currentLevel === $targetLevel) {
+            $conn->beginTransaction();
+            $this->logger->info("-- <info>begin transaction</info>");
+        }
+        try {
+            $return = $try();
+            if ($currentLevel === $targetLevel) {
+                $conn->commit();
+                $this->logger->info("-- <info>commit transaction</info>");
+            }
+            return $return;
+        }
+        catch (\Throwable $t) {
+            if ($currentLevel === $targetLevel) {
+                $conn->rollBack();
+                $this->logger->info("-- <info>rollback transaction</info>");
+            }
+            $catch($t);
+            $this->logger->debug("-- uncatch exception: ", $t);
+        }
+        finally {
+            $this->transactionLevel--;
+        }
     }
 
     public function formatSql($sql)

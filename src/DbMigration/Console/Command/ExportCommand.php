@@ -22,6 +22,7 @@ class ExportCommand extends AbstractCommand
             ...$this->getCommonOptions([
                 'directory',
                 'migration',
+                'transaction',
                 'disable',
                 'include',
                 'exclude',
@@ -61,8 +62,6 @@ class ExportCommand extends AbstractCommand
         if ($this->input->getOption('migration')) {
             $excludes[] = '^' . basename($this->input->getOption('migration')) . '$';
         }
-        $wheres  = (array) $this->input->getOption('where') ?: [];
-        $ignores = (array) $this->input->getOption('ignore') ?: [];
 
         // get target Connection
         $params = $this->parseDsn($this->input->getArgument('dsn'));
@@ -81,14 +80,23 @@ class ExportCommand extends AbstractCommand
             'align'     => $this->input->getOption('align'),
             'delimiter' => $this->input->getOption('delimiter'),
         ]);
+
         $ddl = $transporter->exportDDL(array_shift($files), $includes, $excludes);
         $this->logger->info($ddl);
-        foreach ($transporter->globTable($files) as $filename) {
-            $dmls = $transporter->exportDML($filename, $wheres, $ignores);
-            foreach ($dmls as $dml) {
-                $this->logger->info(fn($v) => $this->dump($v), $dml, true);
+
+        $this->transact($conn, function () use ($conn, $transporter, $files) {
+            foreach ($transporter->globTable($files) as $filename) {
+                $this->transact($conn, function () use ($transporter, $filename) {
+                    $wheres  = (array) $this->input->getOption('where') ?: [];
+                    $ignores = (array) $this->input->getOption('ignore') ?: [];
+
+                    $dmls = $transporter->exportDML($filename, $wheres, $ignores);
+                    foreach ($dmls as $dml) {
+                        $this->logger->info(fn($v) => $this->dump($v), $dml, true);
+                    }
+                });
             }
-        }
+        });
 
         return 0;
     }

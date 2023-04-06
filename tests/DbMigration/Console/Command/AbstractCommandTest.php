@@ -3,6 +3,7 @@
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -224,6 +225,73 @@ password = fuga
         $this->assertExceptionMessage('is directory', function () { $this->command->normalizeFile([__DIR__]); });
     }
 
+    function test_transact()
+    {
+        $input  = new ArrayInput([], $this->command->getDefinition());
+        $output = new BufferedOutput();
+        $this->command->setInputOutput($input, $output);
+
+        $output->setVerbosity(BufferedOutput::VERBOSITY_VERBOSE);
+
+        $connection = DriverManager::getConnection([
+            'driver' => 'pdo_sqlite',
+            'memory' => true,
+        ]);
+
+        $input->setOption('transaction', 0);
+        $this->command->transact($connection, function () { });
+        $log = $output->fetch();
+        $this->assertEmpty($log);
+
+        $input->setOption('transaction', 1);
+        $this->command->transact($connection, function () { });
+        $log = $output->fetch();
+        $this->assertEquals(1, substr_count($log, 'begin'));
+        $this->assertEquals(1, substr_count($log, 'commit'));
+
+        $input->setOption('transaction', 1);
+        $this->command->transact($connection, function () { throw new \RuntimeException('test'); }, function ($ex) { });
+        $log = $output->fetch();
+        $this->assertEquals(1, substr_count($log, 'begin'));
+        $this->assertEquals(1, substr_count($log, 'rollback'));
+
+        $input->setOption('transaction', 1);
+        $this->assertExceptionMessage('test', function () use ($connection) {
+            $this->command->transact($connection, function () { throw new \RuntimeException('test'); }, function ($ex) { throw $ex; });
+        });
+        $log = $output->fetch();
+        $this->assertEquals(1, substr_count($log, 'begin'));
+        $this->assertEquals(1, substr_count($log, 'rollback'));
+
+        $input->setOption('transaction', 2);
+        $this->command->transact($connection, function () { });
+        $log = $output->fetch();
+        $this->assertEmpty($log);
+
+        $input->setOption('transaction', 2);
+        $this->command->transact($connection, function () use ($connection) {
+            $this->command->transact($connection, function () { }, function ($ex) { });
+            $this->command->transact($connection, function () { }, function ($ex) { });
+            $this->command->transact($connection, function () { }, function ($ex) { });
+        }, function ($ex) { });
+        $log = $output->fetch();
+        $this->assertEquals(3, substr_count($log, 'begin'));
+        $this->assertEquals(3, substr_count($log, 'commit'));
+
+        $input->setOption('transaction', 2);
+        $this->assertExceptionMessage('test', function () use ($connection) {
+            $this->command->transact($connection, function () use ($connection) {
+                $this->command->transact($connection, function () { }, function ($ex) { });
+                $this->command->transact($connection, function () { }, function ($ex) { });
+                $this->command->transact($connection, function () { throw new \RuntimeException('test'); }, function ($ex) { throw $ex; });
+            });
+        });
+        $log = $output->fetch();
+        $this->assertEquals(3, substr_count($log, 'begin'));
+        $this->assertEquals(2, substr_count($log, 'commit'));
+        $this->assertEquals(1, substr_count($log, 'rollback'));
+    }
+
     function test_format()
     {
         $input  = new ArrayInput([], $this->command->getDefinition());
@@ -271,6 +339,7 @@ class ConcreteCommand extends AbstractCommand
         $this->setDefinition([
             new InputArgument('arg1', InputArgument::OPTIONAL, '', 'arg1'),
             new InputArgument('argN', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, '', ['arg2', 'arg3']),
+            new InputOption('transaction', null, InputOption::VALUE_OPTIONAL, 1),
             new InputOption('indent', null, InputOption::VALUE_OPTIONAL, '', '4'),
             new InputOption('inline', null, InputOption::VALUE_OPTIONAL, '', '4'),
             new InputOption('format', null, InputOption::VALUE_OPTIONAL, '', 'format'),
@@ -314,6 +383,11 @@ class ConcreteCommand extends AbstractCommand
     public function normalizeFile($files)
     {
         return parent::normalizeFile($files);
+    }
+
+    public function transact(Connection $conn, callable $try, ?callable $catch = null)
+    {
+        return parent::transact($conn, $try, $catch);
     }
 
     public function formatSql($sql)

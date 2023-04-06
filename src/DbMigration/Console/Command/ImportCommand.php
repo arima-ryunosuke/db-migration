@@ -24,6 +24,7 @@ class ImportCommand extends AbstractCommand
             ...$this->getCommonOptions([
                 'directory',
                 'migration',
+                'transaction',
                 'bulk-insert',
                 'inline',
                 'indent',
@@ -109,27 +110,27 @@ class ImportCommand extends AbstractCommand
 
         $transporter->refresh();
 
-        // importDML
-        foreach ($files as $filename) {
-            $this->logger->info("-- <info>importDML</info> $filename");
-            $sqls = $transporter->importDML($filename);
-            $conn->beginTransaction();
-            try {
-                foreach ($sqls as $sql) {
-                    $this->logger->debug([$this, 'formatSql'], $sql);
+        $this->transact($conn, function () use ($conn, $transporter, $files) {
+            // importDML
+            foreach ($files as $filename) {
+                $this->logger->info("-- <info>importDML</info> $filename");
+                $sqls = $transporter->importDML($filename);
 
-                    $conn->executeStatement($sql);
-                }
-                $conn->commit();
+                $this->transact($conn, function () use ($conn, $sqls) {
+                    foreach ($sqls as $sql) {
+                        $this->logger->debug([$this, 'formatSql'], $sql);
+
+                        $conn->executeStatement($sql);
+                    }
+                }, function (\Exception $ex) {
+                    $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
+                    if ($this->confirm('exit?', true)) {
+                        throw $ex;
+                    }
+                });
             }
-            catch (\Exception $ex) {
-                $conn->rollBack();
-                $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
-                if ($this->confirm('exit?', true)) {
-                    throw $ex;
-                }
-            }
-        }
+        });
+
 
         // create migration table and attach all
         $migration = $this->input->getOption('migration');

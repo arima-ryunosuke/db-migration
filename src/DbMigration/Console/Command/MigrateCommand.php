@@ -32,6 +32,7 @@ class MigrateCommand extends AbstractCommand
             ...$this->getCommonOptions([
                 'directory',
                 'migration',
+                'transaction',
                 'type',
                 'dml-type',
                 'ignore',
@@ -157,56 +158,51 @@ class MigrateCommand extends AbstractCommand
 
         $this->logger->log("-- <comment>diff DML</comment>");
 
-        $force = $this->input->getOption('force');
+        $dmlflag = $this->transact($conn, function () use ($conn, $files) {
+            $dmltypes = array_fill_keys($this->splitByComma($this->input->getOption('dml-type')), true);
+            $ignores  = $this->splitByComma($this->input->getOption('ignore'));
 
-        $dmltypes = array_fill_keys($this->splitByComma($this->input->getOption('dml-type')), true);
+            $dmlflag = false;
+            foreach ($files as $filename) {
+                $sqls = $this->transporter->migrateDML($filename, $dmltypes, $ignores);
 
-        $ignores = $this->splitByComma($this->input->getOption('ignore'));
+                // display sql(max 1000)
+                [$show_sqls, $rest_sqls] = iterator_split($sqls, [1000]);
+                if (!$show_sqls) {
+                    $this->logger->info("-- $filename is skipped by no diff.");
+                    continue;
+                }
 
-        $dmlflag = false;
-        foreach ($files as $filename) {
-            $sqls = $this->transporter->migrateDML($filename, $dmltypes, $ignores);
+                $this->logger->log("-- $filename has diff:");
 
-            // display sql(max 1000)
-            [$show_sqls, $rest_sqls] = iterator_split($sqls, [1000]);
-            if (!$show_sqls) {
-                $this->logger->info("-- $filename is skipped by no diff.");
-                continue;
-            }
-
-            $this->logger->log("-- $filename has diff:");
-
-            foreach ($show_sqls as $sql) {
-                $this->logger->log([$this, 'formatSql'], $sql);
-            }
-            if ($rest_sqls->valid() && $this->confirm('display more?', true)) {
-                foreach ($rest_sqls as $sql) {
-                    $show_sqls[] = $sql;
+                foreach ($show_sqls as $sql) {
                     $this->logger->log([$this, 'formatSql'], $sql);
                 }
-            }
-
-            // exec if noconfirm or confirm answer is "y"
-            $dmlflag = true;
-            if ($this->confirm('exec this query?', true)) {
-                $conn->beginTransaction();
-
-                try {
-                    foreach (iterator_join([$show_sqls, $rest_sqls]) as $sql) {
-                        $conn->executeStatement($sql);
-                    }
-                    $conn->commit();
-                }
-                catch (\Exception $e) {
-                    $conn->rollBack();
-
-                    $this->logger->log('/* <error>' . $e->getMessage() . '</error> */');
-                    if (!$force && $this->confirm('exit?', true)) {
-                        throw $e;
+                if ($rest_sqls->valid() && $this->confirm('display more?', true)) {
+                    foreach ($rest_sqls as $sql) {
+                        $show_sqls[] = $sql;
+                        $this->logger->log([$this, 'formatSql'], $sql);
                     }
                 }
+
+                // exec if noconfirm or confirm answer is "y"
+                $dmlflag = true;
+                if ($this->confirm('exec this query?', true)) {
+                    $this->transact($conn, function () use ($conn, $show_sqls, $rest_sqls) {
+                        foreach (iterator_join([$show_sqls, $rest_sqls]) as $sql) {
+                            $conn->executeStatement($sql);
+                        }
+                    }, function (\Exception $ex) {
+                        $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
+                        if (!$this->input->getOption('force') && $this->confirm('exit?', true)) {
+                            throw $ex;
+                        }
+                    });
+                }
             }
-        }
+            return $dmlflag;
+        });
+
         if (!$dmlflag) {
             $this->logger->log("-- no diff table.");
         }
@@ -224,8 +220,6 @@ class MigrateCommand extends AbstractCommand
         $migtable       = basename($migration);
         $migrationTable = new MigrationTable($conn, $migtable);
 
-        $force = $this->input->getOption('force');
-
         if (!$migrationTable->exists()) {
             if ($this->confirm('create migration table? (' . $migtable . ')', true)) {
                 if ($migrationTable->create()) {
@@ -241,45 +235,40 @@ class MigrateCommand extends AbstractCommand
             }
         }
 
-        $new = $migrationTable->glob($migration);
-        $old = $migrationTable->fetch();
-
+        $new      = $migrationTable->glob($migration);
+        $old      = $migrationTable->fetch();
         $upgrades = array_diff_key($new, $old);
-        foreach ($upgrades as $version => $file) {
-            /** @var AbstractFile $file */
-            $this->logger->log((string) $file);
 
-            if ($this->input->getOption('check')) {
-                continue;
-            }
+        $this->transact($conn, function () use ($conn, $migrationTable, $migration, $new, $old, $upgrades) {
+            foreach ($upgrades as $version => $file) {
+                /** @var AbstractFile $file */
+                $this->logger->log((string) $file);
 
-            $answer = $this->choice('exec this file?', ['y', 'n', 'p'], 0);
-            if ($answer === 2) {
-                $migrationTable->attach($version);
-                continue;
-            }
-            if ($answer === 1) {
-                continue;
-            }
-            if ($answer === 0) {
-                $conn->beginTransaction();
-
-                try {
-                    $affected = $migrationTable->apply($version, $file->readMigration());
-                    $this->logger->log("-- <comment>Affected rows: $affected</comment>");
-
-                    $conn->commit();
+                if ($this->input->getOption('check')) {
+                    continue;
                 }
-                catch (\Exception $e) {
-                    $conn->rollBack();
 
-                    $this->logger->log('/* <error>' . $e->getMessage() . '</error> */');
-                    if (!$force && $this->confirm('exit?', true)) {
-                        throw $e;
-                    }
+                $answer = $this->choice('exec this file?', ['y', 'n', 'p'], 0);
+                if ($answer === 2) {
+                    $migrationTable->attach($version);
+                    continue;
+                }
+                if ($answer === 1) {
+                    continue;
+                }
+                if ($answer === 0) {
+                    $this->transact($conn, function () use ($migrationTable, $version, $file) {
+                        $affected = $migrationTable->apply($version, $file->readMigration());
+                        $this->logger->log("-- <comment>Affected rows: $affected</comment>");
+                    }, function (\Exception $ex) {
+                        $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
+                        if (!$this->input->getOption('force') && $this->confirm('exit?', true)) {
+                            throw $ex;
+                        }
+                    });
                 }
             }
-        }
+        });
 
         if (!$upgrades) {
             $this->logger->log("-- no diff data.");
