@@ -100,6 +100,76 @@ class YamlTest extends AbstractFileTestCase
         EXPECTED, $actual);
     }
 
+    function test_yield()
+    {
+        $file = new Yaml(self::$tmpdir . '/dummy.yaml', [
+            'yield' => true,
+        ]);
+
+        file_put_contents($file->pathinfo()['fullname'], <<<DATA
+        - a: "same1A"
+          b: "same1B"
+        - a: same2A
+          b: same2B
+        
+        -
+          a: "next1A"
+          b: "next1B"
+        -
+          a: next2A
+          b: next2B
+        
+        - {
+          a: "flow1A",
+          b: "flow1B",
+        }
+        - {
+          a: flow2A,
+          b: flow2B,
+        }
+        
+        - { a: "style1A",
+            b: "style1B", }
+        - { a: style2A,
+            b: style2B, }
+        DATA,);
+
+        $this->assertEquals([
+            [
+                'a' => 'same1A',
+                'b' => 'same1B',
+            ],
+            [
+                'a' => 'same2A',
+                'b' => 'same2B',
+            ],
+            [
+                'a' => 'next1A',
+                'b' => 'next1B',
+            ],
+            [
+                'a' => 'next2A',
+                'b' => 'next2B',
+            ],
+            [
+                'a' => 'flow1A',
+                'b' => 'flow1B',
+            ],
+            [
+                'a' => 'flow2A',
+                'b' => 'flow2B',
+            ],
+            [
+                'a' => 'style1A',
+                'b' => 'style1B',
+            ],
+            [
+                'a' => 'style2A',
+                'b' => 'style2B',
+            ],
+        ], iterator_to_array($file->readRecords()));
+    }
+
     function test_yaml5()
     {
         $file = new Yaml(self::$tmpdir . '/dummy.yaml5', [

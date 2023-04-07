@@ -44,6 +44,7 @@ abstract class AbstractFile
             case 'yml5':
             case 'yaml5':
                 $options['flowstyle'] = true;
+                $options['yield']     = false;
             case 'yml':
             case 'yaml':
                 return new Yaml($filename, $options);
@@ -111,7 +112,7 @@ abstract class AbstractFile
 
     abstract public function writeSchema(array $schemaArray): string;
 
-    abstract public function readRecords(): array;
+    abstract public function readRecords(): Generator;
 
     abstract public function writeRecords(iterable $rows): Generator;
 

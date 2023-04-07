@@ -47,6 +47,7 @@ class Transporter
         'multiline' => false,
         'align'     => null,
         'delimiter' => null,
+        'yield'     => false,
     ];
 
     private array $defaultColumnAttributes = [
@@ -376,7 +377,7 @@ class Transporter
         return $this->platform->getAlterSchemaSQL($diff);
     }
 
-    public function importDML(string $filename): array
+    public function importDML(string $filename): Generator
     {
         $file     = $this->getFileByFilename($filename);
         $pathinfo = $file->pathinfo();
@@ -384,7 +385,7 @@ class Transporter
         $records = $file->readRecords();
 
         if ($file->sqlable()) {
-            return $records;
+            return yield from $records;
         }
 
         $table   = $this->schema->getTable($pathinfo['filename']);
@@ -392,7 +393,7 @@ class Transporter
 
         $dataRecords = $scanner->associateRecords($records);
 
-        return $scanner->getInsertSql($dataRecords, $this->bulksize);
+        return yield from $scanner->getInsertSql($dataRecords, $this->bulksize);
     }
 
     public function migrateDDL(string $filename, array $excludes = []): array
@@ -430,7 +431,7 @@ class Transporter
         return $this->platform->getAlterSchemaSQL($diff);
     }
 
-    public function migrateDML(string $filename, array $dmltypes = [], array $ignoreColumn = []): array
+    public function migrateDML(string $filename, array $dmltypes = [], array $ignoreColumn = []): Generator
     {
         $file     = $this->getFileByFilename($filename);
         $pathinfo = $file->pathinfo();
@@ -438,7 +439,7 @@ class Transporter
         $records = $file->readRecords();
 
         if ($file->sqlable()) {
-            return $records;
+            return yield from $records;
         }
 
         // scanner objects
@@ -447,7 +448,7 @@ class Transporter
 
         // primary key tuples
         $primaryTuples = $scanner->getPrimaryRows();
-        $dataRecords   = $scanner->associateRecords($records);
+        $dataRecords   = iterator_to_array($scanner->associateRecords($records));
 
         $dmls = [];
 
@@ -463,10 +464,10 @@ class Transporter
 
         // INSERT if new only
         if (($dmltypes['insert'] ?? false) && $tuples = array_diff_key($dataRecords, $primaryTuples)) {
-            $dmls = array_merge($dmls, $scanner->getInsertSql($tuples, $this->bulksize));
+            $dmls = array_merge($dmls, iterator_to_array($scanner->getInsertSql($tuples, $this->bulksize)));
         }
 
-        return $dmls;
+        return yield from $dmls;
     }
 
     public function refresh()

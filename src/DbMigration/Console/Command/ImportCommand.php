@@ -28,6 +28,7 @@ class ImportCommand extends AbstractCommand
                 'inline',
                 'indent',
                 'delimiter',
+                'yield',
                 'format',
                 'omit',
                 'event',
@@ -85,6 +86,7 @@ class ImportCommand extends AbstractCommand
             'inline'    => $this->input->getOption('inline'),
             'indent'    => $this->input->getOption('indent'),
             'delimiter' => $this->input->getOption('delimiter'),
+            'yield'     => $this->input->getOption('yield'),
         ]);
 
         // importDDL

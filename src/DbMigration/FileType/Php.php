@@ -24,9 +24,9 @@ class Php extends AbstractFile
         return $contents;
     }
 
-    public function readRecords(): array
+    public function readRecords(): Generator
     {
-        return $this->read();
+        yield from $this->read();
     }
 
     public function writeRecords(iterable $rows): Generator

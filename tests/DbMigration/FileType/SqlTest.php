@@ -15,17 +15,44 @@ class SqlTest extends AbstractFileTestCase
         ]);
     }
 
+    function test_yield()
+    {
+        $file = new Sql(self::$tmpdir . '/dummy.sql', [
+            'yield' => true,
+        ]);
+
+        file_put_contents($file->pathinfo()['fullname'], <<<DATA
+        INSERT INSERT t_table(id) VALUES(1);
+        INSERT INSERT t_table SET
+          id = 1
+        ;
+        INSERT INSERT t_table(name) VALUES
+          (";"),
+          (';'),
+          (`;`)
+        DATA,);
+
+        $this->assertEquals([
+            'INSERT INSERT t_table(id) VALUES(1)',
+            'INSERT INSERT t_table SET
+  id = 1',
+            'INSERT INSERT t_table(name) VALUES
+  (";"),
+  (\';\'),
+  (`;`)',
+        ], iterator_to_array($file->readRecords()));
+    }
+
     public function test_delimiter()
     {
-        $file = new Sql(self::$tmpdir . '/dummy.sql', ['delimiter' => '///']);
-        file_put_contents($file->pathinfo()['fullname'], <<<SQL
+        $contents = <<<SQL
         CREATE TABLE ttt(
             id int comment '///'
         ) COMMENT "///"
         ///
         INSERT INTO ttt VALUES('///', "///")///
-        SQL,);
-        $this->assertEquals([
+        SQL;
+        $expected = [
             <<<SQL1
             CREATE TABLE ttt(
                 id int comment '///'
@@ -34,6 +61,14 @@ class SqlTest extends AbstractFileTestCase
             <<<SQL2
             INSERT INTO ttt VALUES('///', "///")
             SQL2,
-        ], $file->readMigration());
+        ];
+
+        $file = new Sql(self::$tmpdir . '/dummy.sql', ['delimiter' => '///', 'yield' => true]);
+        file_put_contents($file->pathinfo()['fullname'], $contents);
+        $this->assertEquals($expected, $file->readMigration());
+
+        $file = new Sql(self::$tmpdir . '/dummy.sql', ['delimiter' => '///', 'yield' => false]);
+        file_put_contents($file->pathinfo()['fullname'], $contents);
+        $this->assertEquals($expected, $file->readMigration());
     }
 }

@@ -6,12 +6,13 @@ use Generator;
 use ryunosuke\DbMigration\FileType\Tool\Exportion;
 use function ryunosuke\DbMigration\file_set_contents;
 use function ryunosuke\DbMigration\is_hasharray;
+use function ryunosuke\DbMigration\strpos_quoted;
 
 class Json extends AbstractFile
 {
     public function readSchema(): array
     {
-        return $this->read();
+        return iterator_to_array($this->read());
     }
 
     public function writeSchema(array $schemaArray): string
@@ -23,9 +24,9 @@ class Json extends AbstractFile
         return $contents;
     }
 
-    public function readRecords(): array
+    public function readRecords(): Generator
     {
-        return $this->read();
+        yield from $this->read();
     }
 
     public function writeRecords(iterable $rows): Generator
@@ -47,7 +48,7 @@ class Json extends AbstractFile
 
     public function readMigration(): array
     {
-        return $this->read();
+        return iterator_to_array($this->read());
     }
 
     protected function encode($data, $options, $nest = 0)
@@ -95,16 +96,42 @@ class Json extends AbstractFile
         return json_decode($data, true);
     }
 
-    protected function read(): array
+    protected function read(): Generator
     {
-        $result = $this->decode((string) $this);
+        if (!($this->options['yield'] ?? true)) {
+            $result = $this->decode((string) $this);
 
-        array_walk_recursive($result, function (&$value) {
-            if (preg_match('#^!include: (.*)#', $value, $m)) {
-                $value = $this->decode(file_get_contents("{$this->pathinfo['dirname']}/{$m[1]}"));
+            array_walk_recursive($result, function (&$value) {
+                if (preg_match('#^!include: (.*)#', $value, $m)) {
+                    $value = $this->decode(file_get_contents("{$this->pathinfo['dirname']}/{$m[1]}"));
+                }
+            });
+
+            return yield from $result;
+        }
+
+        // this code is experiment
+        $first  = true;
+        $buffer = '';
+        foreach ($this->stream('r') as $line) {
+            if ($first) {
+                $p = strpos_quoted($line, '[', 0, '"');
+                if ($p !== false) {
+                    $first = false;
+                    $line  = substr($line, $p + 1);
+                }
             }
-        });
 
-        return $result;
+            $buffer .= $line;
+            $p      = strpos_quoted($buffer, [',', ']'], 0, ['"' => '"', '{' => '}']);
+            if ($p !== false) {
+                yield $this->decode(substr($buffer, 0, $p));
+                $buffer = substr($buffer, $p + 1);
+            }
+        }
+        if (strlen(trim($buffer))) {
+            $p = strpos_quoted($buffer, [',', ']'], 0, ['"' => '"', '{' => '}']);
+            yield $this->decode(substr($buffer, 0, $p));
+        }
     }
 }

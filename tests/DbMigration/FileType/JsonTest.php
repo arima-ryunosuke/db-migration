@@ -102,4 +102,61 @@ class JsonTest extends AbstractFileTestCase
         
         EXPECTED, $actual);
     }
+
+    function test_yield()
+    {
+        $file = new Json(self::$tmpdir . '/dummy.json', [
+            'yield' => true,
+        ]);
+
+        file_put_contents($file->pathinfo()['fullname'], <<<DATA
+        [{"a":"line1A","b":"line1B"},{"a":"line2A","b":"line2B"},
+            {"a":"sameA","b":"sameB"},
+            {
+                "a":"flowA",
+                "b":"flowB"
+            },
+            {
+                "a": "styleA",
+                 "b":"styleB"
+            },
+            {"a":"misc{,}","b":"misc[,]"},
+        {"a":"last1A","b":"last1B"},{"a":"last2A","b":"last2B"},]
+        DATA,);
+
+        $this->assertEquals([
+            [
+                'a' => 'line1A',
+                'b' => 'line1B',
+            ],
+            [
+                'a' => 'line2A',
+                'b' => 'line2B',
+            ],
+            [
+                'a' => 'sameA',
+                'b' => 'sameB',
+            ],
+            [
+                'a' => 'flowA',
+                'b' => 'flowB',
+            ],
+            [
+                'a' => 'styleA',
+                'b' => 'styleB',
+            ],
+            [
+                'a' => 'misc{,}',
+                'b' => 'misc[,]',
+            ],
+            [
+                'a' => 'last1A',
+                'b' => 'last1B',
+            ],
+            [
+                'a' => 'last2A',
+                'b' => 'last2B',
+            ],
+        ], iterator_to_array($file->readRecords()));
+    }
 }

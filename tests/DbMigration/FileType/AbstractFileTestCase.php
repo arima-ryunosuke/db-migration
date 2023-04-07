@@ -27,10 +27,10 @@ abstract class AbstractFileTestCase extends AbstractTestCase
         $this->assertEquals('UTF-8', mb_detect_encoding(file_get_contents($file->pathinfo()['fullname']), ['sjis', 'utf8']));
 
         if ($file->sqlable()) {
-            $this->assertContainsString('あいうえお', $file->readRecords());
+            $this->assertContainsString('あいうえお', iterator_to_array($file->readRecords()));
         }
         else {
-            $this->assertEquals($records, $file->readRecords());
+            $this->assertEquals($records, iterator_to_array($file->readRecords()));
         }
     }
 
@@ -48,10 +48,10 @@ abstract class AbstractFileTestCase extends AbstractTestCase
         $this->assertEquals('SJIS', mb_detect_encoding(file_get_contents($file->pathinfo()['fullname']), ['utf8', 'sjis']));
 
         if ($file->sqlable()) {
-            $this->assertContainsString('あいうえお', $file->readRecords());
+            $this->assertContainsString('あいうえお', iterator_to_array($file->readRecords()));
         }
         else {
-            $this->assertEquals($records, $file->readRecords());
+            $this->assertEquals($records, iterator_to_array($file->readRecords()));
         }
     }
 
@@ -62,7 +62,7 @@ abstract class AbstractFileTestCase extends AbstractTestCase
 
             public function writeSchema(array $schemaArray): string { return ''; }
 
-            public function readRecords(): array { return []; }
+            public function readRecords(): Generator { yield from []; }
 
             public function writeRecords(iterable $rows): Generator { yield null; }
 

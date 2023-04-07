@@ -90,6 +90,11 @@ abstract class AbstractCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Specify sql/csv delimiter.',
             ],
+            'yield'   => [
+                null,
+                InputOption::VALUE_NONE,
+                'Specify sql/json/yaml generator mode.',
+            ],
             'disable'     => [
                 'D',
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,

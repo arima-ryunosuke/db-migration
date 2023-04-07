@@ -22,7 +22,7 @@ class PhpTest extends AbstractFileTestCase
         ]);
         $this->assertContainsString('closure file', iterator_to_array($phpFile->writeRecords([])));
         $this->assertStringEqualsFile($file, $contents);
-        $this->assertEquals(['hoge'], $phpFile->readRecords());
+        $this->assertEquals(['hoge'], iterator_to_array($phpFile->readRecords()));
     }
 
     function test_options()

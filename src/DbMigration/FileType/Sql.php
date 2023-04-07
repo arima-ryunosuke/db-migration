@@ -5,6 +5,7 @@ namespace ryunosuke\DbMigration\FileType;
 use Generator;
 use function ryunosuke\DbMigration\file_set_contents;
 use function ryunosuke\DbMigration\quoteexplode;
+use function ryunosuke\DbMigration\strpos_quoted;
 
 class Sql extends AbstractFile
 {
@@ -15,7 +16,7 @@ class Sql extends AbstractFile
 
     public function readSchema(): array
     {
-        return $this->read();
+        return iterator_to_array($this->read());
     }
 
     public function writeSchema(array $schemaArray): string
@@ -37,9 +38,9 @@ class Sql extends AbstractFile
         return $contents;
     }
 
-    public function readRecords(): array
+    public function readRecords(): Generator
     {
-        return $this->read();
+        yield from $this->read();
     }
 
     public function writeRecords(iterable $rows): Generator
@@ -59,17 +60,36 @@ class Sql extends AbstractFile
 
     public function readMigration(): array
     {
-        return $this->read();
+        return iterator_to_array($this->readRecords());
     }
 
-    protected function read(): array
+    protected function read(): Generator
     {
         $delimiter = $this->options['delimiter'] ?? ';';
-        if ($delimiter === ';') {
-            return [(string) $this];
+
+        if (!($this->options['yield'] ?? true)) {
+            if ($delimiter === ';') {
+                yield (string) $this;
+            }
+            else {
+                yield from array_filter(array_map('trim', quoteexplode($delimiter, (string) $this, null, "\"'`")), 'strlen');
+            }
+            return;
         }
-        else {
-            return array_filter(array_map('trim', quoteexplode($delimiter, (string) $this, null, "\"'`")), 'strlen');
+
+        $buffer = '';
+        foreach ($this->stream('r') as $line) {
+            $p = strpos_quoted($line, $delimiter, 0, "\"'`");
+            if ($p !== false) {
+                yield trim($buffer . substr($line, 0, $p));
+                $buffer = substr($line, $p + strlen($delimiter));
+            }
+            else {
+                $buffer .= $line;
+            }
+        }
+        if (strlen(trim($buffer))) {
+            yield trim($buffer);
         }
     }
 }

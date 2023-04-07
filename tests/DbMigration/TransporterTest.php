@@ -342,12 +342,12 @@ class TransporterTest extends AbstractTestCase
             iterator_to_array($this->transporter->exportDML(self::$tmpdir . "/fuga.$ext"));
         }
         foreach ($supported as $ext) {
-            $dmls = $this->transporter->importDML(self::$tmpdir . "/fuga.$ext");
+            $dmls = iterator_to_array($this->transporter->importDML(self::$tmpdir . "/fuga.$ext"));
             $this->assertEquals(10, substr_count(implode(";", $dmls), 'INSERT INTO'));
         }
 
         $this->assertException(new \DomainException("is not supported"), function () {
-            $this->transporter->importDML(self::$tmpdir . '/fuga.ext');
+            iterator_to_array($this->transporter->importDML(self::$tmpdir . '/fuga.ext'));
         });
     }
 
@@ -374,7 +374,7 @@ class TransporterTest extends AbstractTestCase
             ],
         ]);
 
-        $dmls = $this->transporter->importDML($fn);
+        $dmls = iterator_to_array($this->transporter->importDML($fn));
         $this->assertEquals(3, substr_count(implode(";", $dmls), 'INSERT INTO'));
     }
 
@@ -402,15 +402,15 @@ class TransporterTest extends AbstractTestCase
         ]);
 
         $this->transporter->setBulkSize(0);
-        $dmls = $this->transporter->importDML($fn);
+        $dmls = iterator_to_array($this->transporter->importDML($fn));
         $this->assertCount(3, $dmls);
 
         $this->transporter->setBulkSize(2);
-        $dmls = $this->transporter->importDML($fn);
+        $dmls = iterator_to_array($this->transporter->importDML($fn));
         $this->assertCount(2, $dmls);
 
         $this->transporter->setBulkSize(999);
-        $dmls = $this->transporter->importDML($fn);
+        $dmls = iterator_to_array($this->transporter->importDML($fn));
         $this->assertCount(1, $dmls);
     }
 
@@ -478,14 +478,14 @@ class TransporterTest extends AbstractTestCase
             ['id' => 6, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
             ['id' => 99, 'c_int' => 2, 'c_float' => 1.4, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
         ]);
-        $dmls = $this->transporter->migrateDML($fn, ['insert' => true, 'update' => true, 'delete' => true]);
+        $dmls = iterator_to_array($this->transporter->migrateDML($fn, ['insert' => true, 'update' => true, 'delete' => true]));
         $this->assertCount(11, $dmls);
 
         foreach ($dmls as $sql) {
             $this->connection->executeStatement($sql);
         }
 
-        $dmls = $this->transporter->migrateDML($fn, ['insert' => true, 'update' => true, 'delete' => true]);
+        $dmls = iterator_to_array($this->transporter->migrateDML($fn, ['insert' => true, 'update' => true, 'delete' => true]));
         $this->assertCount(0, $dmls);
     }
 
@@ -497,7 +497,7 @@ class TransporterTest extends AbstractTestCase
         file_put_contents(self::$tmpdir . "/foo.sql", '
             INSERT INTO foo VALUES (-3, 1, 1, "text1", "text2", NOW())
         ');
-        $dmls = $this->transporter->migrateDML(self::$tmpdir . "/foo.sql");
+        $dmls = iterator_to_array($this->transporter->migrateDML(self::$tmpdir . "/foo.sql"));
         $this->assertCount(1, $dmls);
 
         foreach ($dmls as $sql) {
@@ -517,17 +517,17 @@ class TransporterTest extends AbstractTestCase
             ['id' => 999, 'c_int' => 1, 'c_float' => 1.2, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
         ]);
 
-        $dmls = $this->transporter->migrateDML($fn, ['insert' => true, 'update' => false, 'delete' => false]);
+        $dmls = iterator_to_array($this->transporter->migrateDML($fn, ['insert' => true, 'update' => false, 'delete' => false]));
         $this->assertContainsString('INSERT', implode("\n", $dmls));
         $this->assertNotContainsString('UPDATE', implode("\n", $dmls));
         $this->assertNotContainsString('DELETE', implode("\n", $dmls));
 
-        $dmls = $this->transporter->migrateDML($fn, ['insert' => false, 'update' => true, 'delete' => false]);
+        $dmls = iterator_to_array($this->transporter->migrateDML($fn, ['insert' => false, 'update' => true, 'delete' => false]));
         $this->assertNotContainsString('INSERT', implode("\n", $dmls));
         $this->assertContainsString('UPDATE', implode("\n", $dmls));
         $this->assertNotContainsString('DELETE', implode("\n", $dmls));
 
-        $dmls = $this->transporter->migrateDML($fn, ['insert' => false, 'update' => false, 'delete' => true]);
+        $dmls = iterator_to_array($this->transporter->migrateDML($fn, ['insert' => false, 'update' => false, 'delete' => true]));
         $this->assertNotContainsString('INSERT', implode("\n", $dmls));
         $this->assertNotContainsString('UPDATE', implode("\n", $dmls));
         $this->assertContainsString('DELETE', implode("\n", $dmls));
@@ -729,7 +729,7 @@ TSV
         iterator_to_array($this->transporter->exportDML(self::$tmpdir . "/hoge.sjis-win.$ext"));
         $this->assertStringEqualsFile(self::$tmpdir . "/hoge.sjis-win.$ext", "$content\n");
 
-        $dmls = $this->transporter->importDML(self::$tmpdir . "/hoge.sjis-win.$ext");
+        $dmls = iterator_to_array($this->transporter->importDML(self::$tmpdir . "/hoge.sjis-win.$ext"));
         $this->assertContainsString('あいうえお', $dmls);
         $this->assertContainsString('かきくけこ', $dmls);
     }

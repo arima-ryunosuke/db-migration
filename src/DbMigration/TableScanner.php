@@ -6,7 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Table;
-use IteratorIterator;
+use Generator;
 use PDO;
 use ryunosuke\DbMigration\Exception\MigrationException;
 use Traversable;
@@ -103,26 +103,28 @@ class TableScanner
         return $sqls;
     }
 
-    public function getInsertSql(array $newrows, int $bulksize): array
+    public function getInsertSql(iterable $newrows, int $bulksize): Generator
     {
-        $sqls = [];
-
         if ($bulksize) {
-            $columns = array_keys(reset($newrows));
-            $values  = [];
-            $n = 0;
-            foreach ($newrows as $newrow) {
-                $value = [];
-                foreach ($columns as $column) {
-                    $value[] = Utility::quote($this->conn, $newrow[$column]);
-                }
-                $values[floor($n++ / $bulksize)][] = '(' . implode(',', $value) . ')';
-            }
-            foreach ($values as $value) {
-                $sqls[] = "INSERT INTO $this->quotedName (" . implode(',', $columns) . ") VALUES \n" . implode(",\n", $value);
+            [$first, $newrows] = iterator_split($newrows, [1]);
+            if (!$first) {
+                return yield from [];
             }
 
-            return $sqls;
+            $columns = array_keys($first[0]);
+            foreach (iterator_chunk(iterator_join([$first, $newrows]), $bulksize) as $chunk) {
+                $values = [];
+                foreach ($chunk as $newrow) {
+                    $value = [];
+                    foreach ($columns as $column) {
+                        $value[] = Utility::quote($this->conn, $newrow[$column]);
+                    }
+                    $values[] = '(' . implode(',', $value) . ')';
+                }
+                yield "INSERT INTO $this->quotedName (" . implode(',', $columns) . ") VALUES \n" . implode(",\n", $values);
+            }
+
+            return;
         }
 
         $isMysql      = $this->conn->getDatabasePlatform() instanceof MySqlPlatform;
@@ -133,18 +135,16 @@ class TableScanner
                 $valueString = implode(', ', $this->joinKeyValue($newrow));
 
                 // to SQL
-                $sqls[] = "INSERT INTO $this->quotedName SET $valueString";
+                yield "INSERT INTO $this->quotedName SET $valueString";
             }
             else {
                 // to VALUES string
                 $valueString = implode(', ', Utility::quote($this->conn, $newrow));
 
                 // to SQL
-                $sqls[] = "INSERT INTO $this->quotedName ($columnString) VALUES ($valueString)";
+                yield "INSERT INTO $this->quotedName ($columnString) VALUES ($valueString)";
             }
         }
-
-        return $sqls;
     }
 
     public function getUpdateSql(array $pkvals, array $newrows): array
@@ -198,7 +198,7 @@ class TableScanner
         return $result;
     }
 
-    public function getAllRows(): Traversable
+    public function getAllRows(): Generator
     {
         // fetch records values
         $columnString = implode(', ', Utility::quoteIdentifier($this->conn, array_keys(array_diff_key($this->columns, $this->ignoreColumns))));
@@ -209,25 +209,13 @@ class TableScanner
             ORDER BY {$this->primaryKeyString}
         ";
 
-        return new class($this->conn->executeQuery($sql)->iterateAssociative(), [$this, 'fillDefaultValue']) extends IteratorIterator {
-            private $callback;
-
-            public function __construct($iterator, callable $callback)
-            {
-                parent::__construct($iterator);
-                $this->callback = $callback;
-            }
-
-            public function current()
-            {
-                return ($this->callback)(parent::current());
-            }
-        };
+        foreach ($this->conn->executeQuery($sql)->iterateAssociative() as $row) {
+            yield $this->fillDefaultValue($row);
+        }
     }
 
-    public function associateRecords(array $rows): array
+    public function associateRecords(iterable $rows): Generator
     {
-        $assoc = [];
         foreach ($rows as $row) {
             $id = implode("\t", array_intersect_key($row, $this->flippedPrimaryKeys));
             foreach ($this->ignoreColumns as $ignoreColumn => $dummy) {
@@ -235,9 +223,8 @@ class TableScanner
                     $row[$ignoreColumn] = '';
                 }
             }
-            $assoc[$id] = $row;
+            yield $id => $row;
         }
-        return $assoc;
     }
 
     public function fillDefaultValue(array $row): array

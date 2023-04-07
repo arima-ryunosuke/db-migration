@@ -13,7 +13,7 @@ class Yaml extends AbstractFile
 {
     public function readSchema(): array
     {
-        return $this->read();
+        return iterator_to_array($this->read());
     }
 
     public function writeSchema(array $schemaArray): string
@@ -25,9 +25,9 @@ class Yaml extends AbstractFile
         return $contents;
     }
 
-    public function readRecords(): array
+    public function readRecords(): Generator
     {
-        return $this->read();
+        yield from $this->read();
     }
 
     public function writeRecords(iterable $rows): Generator
@@ -64,7 +64,7 @@ class Yaml extends AbstractFile
 
     public function readMigration(): array
     {
-        return $this->read();
+        return iterator_to_array($this->read());
     }
 
     protected function encode($data, $options, $nest = 0)
@@ -147,20 +147,42 @@ class Yaml extends AbstractFile
         return SymfonyYaml::parse($data, SymfonyYaml::PARSE_CUSTOM_TAGS);
     }
 
-    protected function read(): array
+    protected function read(): Generator
     {
-        $result = $this->decode((string) $this);
+        if (!($this->options['yield'] ?? true)) {
+            $result = $this->decode((string) $this);
 
-        array_walk_recursive($result, function (&$value) {
-            if ($value instanceof TaggedValue) {
-                switch ($value->getTag()) {
-                    case 'include':
-                        $value = $this->decode(file_get_contents("{$this->pathinfo['dirname']}/{$value->getValue()}"));
-                        break;
+            array_walk_recursive($result, function (&$value) {
+                if ($value instanceof TaggedValue) {
+                    switch ($value->getTag()) {
+                        case 'include':
+                            $value = $this->decode(file_get_contents("{$this->pathinfo['dirname']}/{$value->getValue()}"));
+                            break;
+                    }
+                }
+            });
+
+            return yield from $result;
+        }
+
+        // this code is experiment
+        $buffer = '';
+        foreach ($this->stream('r') as $line) {
+            if (substr($line, 0, 1) === '-') {
+                if (strlen($buffer)) {
+                    yield $this->decode("-$buffer")[0];
+                    $buffer = substr($line, 1);
+                }
+                else {
+                    $buffer .= substr($line, 1);
                 }
             }
-        });
-
-        return $result;
+            else {
+                $buffer .= $line;
+            }
+        }
+        if (strlen(trim($buffer))) {
+            yield $this->decode("-$buffer")[0];
+        }
     }
 }

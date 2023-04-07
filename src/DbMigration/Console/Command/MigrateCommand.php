@@ -8,9 +8,12 @@ use Doctrine\DBAL\Event\ConnectionEventArgs;
 use ryunosuke\DbMigration\FileType\AbstractFile;
 use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Transporter;
+use ryunosuke\DbMigration\Utility;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use function ryunosuke\DbMigration\iterator_join;
+use function ryunosuke\DbMigration\iterator_split;
 
 class MigrateCommand extends AbstractCommand
 {
@@ -38,6 +41,7 @@ class MigrateCommand extends AbstractCommand
                 'delimiter',
                 'check',
                 'force',
+                'yield', // It's a bit meaningless
                 'format',
                 'omit',
                 'event',
@@ -162,21 +166,22 @@ class MigrateCommand extends AbstractCommand
         $dmlflag = false;
         foreach ($files as $filename) {
             $sqls = $this->transporter->migrateDML($filename, $dmltypes, $ignores);
-            if (!$sqls) {
+
+            // display sql(max 1000)
+            [$show_sqls, $rest_sqls] = iterator_split($sqls, [1000]);
+            if (!$show_sqls) {
                 $this->logger->info("-- $filename is skipped by no diff.");
                 continue;
             }
 
             $this->logger->log("-- $filename has diff:");
 
-            // display sql(max 1000)
-            $show_sqls = array_slice($sqls, 0, 1000);
-            $rest_sqls = array_slice($sqls, 1000);
             foreach ($show_sqls as $sql) {
                 $this->logger->log([$this, 'formatSql'], $sql);
             }
-            if ($rest_sqls && $this->confirm('display more? (total query count is ' . count($sqls) . ')', true)) {
+            if ($rest_sqls->valid() && $this->confirm('display more?', true)) {
                 foreach ($rest_sqls as $sql) {
+                    $show_sqls[] = $sql;
                     $this->logger->log([$this, 'formatSql'], $sql);
                 }
             }
@@ -187,7 +192,7 @@ class MigrateCommand extends AbstractCommand
                 $conn->beginTransaction();
 
                 try {
-                    foreach ($sqls as $sql) {
+                    foreach (iterator_join([$show_sqls, $rest_sqls]) as $sql) {
                         $conn->executeStatement($sql);
                     }
                     $conn->commit();

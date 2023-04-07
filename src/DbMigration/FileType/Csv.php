@@ -4,6 +4,8 @@ namespace ryunosuke\DbMigration\FileType;
 
 use DomainException;
 use Generator;
+use ryunosuke\DbMigration\Utility;
+use function ryunosuke\DbMigration\iterator_split;
 
 class Csv extends AbstractFile
 {
@@ -19,9 +21,9 @@ class Csv extends AbstractFile
         throw $this->newUnsupported(__FUNCTION__);
     }
 
-    public function readRecords(): array
+    public function readRecords(): Generator
     {
-        return $this->read();
+        yield from $this->read();
     }
 
     public function writeRecords(iterable $rows): Generator
@@ -73,34 +75,27 @@ class Csv extends AbstractFile
         return $table_records;
     }
 
-    protected function read(): array
+    protected function read(): Generator
     {
         $delimiter = $this->options['delimiter'] ?? ',';
 
-        $result = [];
-        $header = [];
         $stream = $this->stream('r');
         $stream->setFlags($stream::READ_CSV);
         $stream->setCsvControl($delimiter);
+
+        [$header, $stream] = iterator_split($stream, [1]);
+        $header    = $header[0];
+        $header[0] = preg_replace("#^" . self::BOM . "#u", '', $header[0]);
         foreach ($stream as $fields) {
             if ($fields === [null]) {
                 continue;
             }
-            // first row is used as CSV header
-            if (!$header) {
-                $header    = $fields;
-                $header[0] = preg_replace("#^" . self::BOM . "#u", '', $header[0]);
-            }
-            else {
-                foreach ($fields as $c => $v) {
-                    if ($v === self::NULL) {
-                        $fields[$c] = null;
-                    }
+            foreach ($fields as $c => $v) {
+                if ($v === self::NULL) {
+                    $fields[$c] = null;
                 }
-                $result[] = array_combine($header, $fields);
             }
+            yield array_combine($header, $fields);
         }
-
-        return $result;
     }
 }
