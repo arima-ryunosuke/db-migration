@@ -65,6 +65,14 @@ class CsvTest extends AbstractFileTestCase
         $this->assertException(new DomainException('specified table name'), fn() => $file->readMigration());
     }
 
+    public function test_null()
+    {
+        $file = new Csv(self::$tmpdir . '/dummy.csv', []);
+
+        iterator_to_array($file->writeRecords([['id' => 1, 'name' => null]]));
+        $this->assertSame([['id' => '1', 'name' => null]], iterator_to_array($file->readRecords()));
+    }
+
     public function test_schema()
     {
         $file = new Csv('dummy.csv', []);

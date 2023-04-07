@@ -7,6 +7,8 @@ use Generator;
 
 class Csv extends AbstractFile
 {
+    private const NULL = "\\N";
+
     public function readSchema(): array
     {
         throw $this->newUnsupported(__FUNCTION__);
@@ -30,6 +32,12 @@ class Csv extends AbstractFile
         foreach ($rows as $i => $row) {
             if ($i === 0) {
                 $stream->fputcsv(array_keys($row), $delimiter);
+            }
+
+            foreach ($row as $c => $v) {
+                if ($v === null) {
+                    $row[$c] = self::NULL;
+                }
             }
 
             $stream->fputcsv($row, $delimiter);
@@ -80,6 +88,11 @@ class Csv extends AbstractFile
                 $header = $fields;
             }
             else {
+                foreach ($fields as $c => $v) {
+                    if ($v === self::NULL) {
+                        $fields[$c] = null;
+                    }
+                }
                 $result[] = array_combine($header, $fields);
             }
         }
