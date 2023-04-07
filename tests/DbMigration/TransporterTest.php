@@ -588,7 +588,7 @@ class TransporterTest extends AbstractTestCase
         $table->addOption('collation', 'utf8_bin');
 
         $definitation = $this->transporter->getDefinition();
-        $tablearray = $definitation['table']['array']($table);
+        $tablearray   = $definitation['table']['array']($table);
         $this->assertEquals(['id1', 'id2', 'id3'], array_keys($tablearray['column']));
         $this->assertEquals(['primary', 'idx_xxx', 'idx_yyy', 'idx_zzz'], array_keys($tablearray['index']));
         $this->assertEquals(['fk_xxx', 'fk_yyy', 'fk_zzz'], array_keys($tablearray['foreign']));

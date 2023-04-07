@@ -71,11 +71,8 @@ class TableScanner
 
     public function switchBufferedQuery(?bool $flag): ?bool
     {
-        $pdo = $this->conn;
-        while (!$pdo instanceof PDO) {
-            $pdo = $pdo->getNativeConnection();
-        }
-        $bufferedSupport = isset($pdo) && $this->conn->getDatabasePlatform() instanceof MySqlPlatform;
+        $pdo             = $this->conn->getNativeConnection();
+        $bufferedSupport = $pdo instanceof PDO && $this->conn->getDatabasePlatform() instanceof MySqlPlatform;
         $return          = null;
 
         if ($bufferedSupport) {

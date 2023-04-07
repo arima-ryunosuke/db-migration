@@ -7,7 +7,6 @@ use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\AbstractAsset;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Event;
-use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Routine;
 use Doctrine\DBAL\Schema\Schema;
@@ -132,7 +131,7 @@ class Transporter
                 'get'        => fn(Schema $schema) => $sortAssets($schema->getTables()),
                 'add'        => fn(Schema $schema, Table $table) => $schema->addTable($table),
                 'drop'       => fn(Schema $schema, Table $table) => $schema->dropTable($table->getName()),
-                'array'      => function (Table $table) use($sortAssets) {
+                'array'      => function (Table $table) use ($sortAssets) {
                     // charset
                     $options = $table->getOptions();
                     if (!isset($options['charset']) && isset($options['collation'])) {
