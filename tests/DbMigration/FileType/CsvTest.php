@@ -73,6 +73,23 @@ class CsvTest extends AbstractFileTestCase
         $this->assertSame([['id' => '1', 'name' => null]], iterator_to_array($file->readRecords()));
     }
 
+    public function test_bom()
+    {
+        $bomfile = new Csv(self::$tmpdir . '/dummy.utf8.csv', []);
+
+        iterator_to_array($bomfile->writeRecords([['id' => 1]]));
+        $this->assertEquals([['id' => 1]], iterator_to_array($bomfile->readRecords()));
+        $this->assertEquals("id\n1\n", (string) $bomfile);
+        $this->assertFileContains("\xEF\xBB\xBF", $bomfile->pathinfo()['fullname']);
+
+        $nobomfile = new Csv(self::$tmpdir . '/dummy.utf8n.csv', []);
+
+        iterator_to_array($nobomfile->writeRecords([['id' => 1]]));
+        $this->assertEquals([['id' => 1]], iterator_to_array($nobomfile->readRecords()));
+        $this->assertEquals("id\n1\n", (string) $nobomfile);
+        $this->assertFileNotContains("\xEF\xBB\xBF", $nobomfile->pathinfo()['fullname']);
+    }
+
     public function test_schema()
     {
         $file = new Csv('dummy.csv', []);

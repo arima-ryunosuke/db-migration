@@ -12,6 +12,9 @@ use SplFileObject;
 
 abstract class AbstractFile
 {
+    protected const BOM = "\xEF\xBB\xBF";
+
+    protected bool   $bom;
     protected string $internal_encoding;
     protected array  $pathinfo;
     protected array  $options;
@@ -53,7 +56,13 @@ abstract class AbstractFile
 
         $pathinfo  = pathinfo($filename);
         $pathinfo2 = pathinfo($pathinfo['filename']);
-        $encoding  = $pathinfo2['extension'] ?? '';
+        $encoding  = $pathinfo2['extension'] ?? $this->internal_encoding;
+
+        $this->bom = false;
+        if (preg_match('#^(utf-?8.*?)(n?)$#i', $encoding, $matches, PREG_UNMATCHED_AS_NULL)) {
+            $encoding  = $matches[1];
+            $this->bom = !$matches[2];
+        }
 
         $this->pathinfo = [
             'fullname'  => $filename,
@@ -61,7 +70,7 @@ abstract class AbstractFile
             'basename'  => $pathinfo['basename'],
             'filename'  => $pathinfo2['filename'],
             'extension' => $pathinfo['extension'] ?? '',
-            'encoding'  => strlen($encoding) ? $encoding : $this->internal_encoding,
+            'encoding'  => $encoding,
         ];
         $this->options  = $options;
     }
@@ -70,9 +79,15 @@ abstract class AbstractFile
     {
         $stream = $this->stream('r');
 
+        $first    = true;
         $contents = '';
         while (!$stream->eof()) {
-            $contents .= $stream->fread(4096);
+            $buffer = $stream->fread(4096);
+            if ($first) {
+                $first  = false;
+                $buffer = preg_replace("#^" . self::BOM . "#u", '', $buffer);
+            }
+            $contents .= $buffer;
         }
         return $contents;
     }

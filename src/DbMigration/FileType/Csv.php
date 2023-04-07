@@ -29,6 +29,9 @@ class Csv extends AbstractFile
         $delimiter = $this->options['delimiter'] ?? ',';
 
         $stream = $this->stream('w');
+        if ($this->bom) {
+            $stream->fwrite(self::BOM);
+        }
         foreach ($rows as $i => $row) {
             if ($i === 0) {
                 $stream->fputcsv(array_keys($row), $delimiter);
@@ -85,7 +88,8 @@ class Csv extends AbstractFile
             }
             // first row is used as CSV header
             if (!$header) {
-                $header = $fields;
+                $header    = $fields;
+                $header[0] = preg_replace("#^" . self::BOM . "#u", '', $header[0]);
             }
             else {
                 foreach ($fields as $c => $v) {
