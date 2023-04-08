@@ -96,6 +96,8 @@ class Transporter
         $this->platform      = $connection->getDatabasePlatform();
         $this->schemaManager = $connection->createSchemaManager();
         $this->schema        = $this->schemaManager->introspectSchema();
+
+        $this->platform->enableDiffComment(true);
     }
 
     public function setDisabled(array $disableds)
