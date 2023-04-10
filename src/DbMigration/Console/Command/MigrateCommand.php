@@ -5,6 +5,7 @@ namespace ryunosuke\DbMigration\Console\Command;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Event\ConnectionEventArgs;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use ryunosuke\DbMigration\FileType\AbstractFile;
 use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Transporter;
@@ -69,6 +70,13 @@ class MigrateCommand extends AbstractCommand
         // get target Connection
         $conn = DriverManager::getConnection($this->parseDsn($this->input->getArgument('dsn')));
 
+        if ($conn->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+            if (!$conn->executeQuery('SELECT GET_LOCK(?, 0)', ["migrating." . $conn->getDatabase()])->fetchOne()) {
+                $this->logger->log("-- <comment>migration did not execute. because executing by other connection</comment>");
+                return 1;
+            }
+        }
+
         $this->event($conn);
 
         $transporter = new Transporter($conn);
@@ -100,6 +108,7 @@ class MigrateCommand extends AbstractCommand
         finally {
             // post migration
             $conn->getEventManager()->dispatchEvent('post-migration', new ConnectionEventArgs($conn));
+            $conn->close();
         }
 
         return 0;

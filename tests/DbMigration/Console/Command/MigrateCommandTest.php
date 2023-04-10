@@ -2,6 +2,7 @@
 
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
+use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Logging\DebugStack;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Table;
@@ -83,6 +84,24 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertStringContainsString('INSERT INTO `migtable`', $result);
         $this->assertStringContainsString('UPDATE `migtable` SET', $result);
         $this->assertStringNotContainsString('`sametable`', $result);
+    }
+
+    /**
+     * @test
+     */
+    function run_lock()
+    {
+        $tmpcon = DriverManager::getConnection($this->connection->getParams());
+        $tmpcon->executeQuery("SELECT GET_LOCK(?, 0)", ['migrating.' . $tmpcon->getDatabase()]);
+
+        $result = $this->runApp([
+            'files' => [
+                $this->getFile('table.php'),
+            ],
+        ]);
+        $this->assertStringContainsString('migration did not execute', $result);
+
+        $tmpcon->close();
     }
 
     /**
