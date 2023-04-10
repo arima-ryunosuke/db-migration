@@ -21,6 +21,21 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.0
+
+- [feature][Command] mysqli も使用できるように暫定対応
+- [feature][Command] disable-constraint を追加（mysql のみ）
+- [feature][Command] グローバルロック機構を導入（mysql のみ）
+- [feature][Command] ddl ファイルのスキップ対応
+- [feature][Command] transaction オプションを追加
+- [feature][Command] glob パターンでテーブルを漁る機能
+- [*feature][all] DML の取得の Generator 対応
+- [*feature][Csv] BOM 対応
+- [*feature][Csv] NULL 対応
+- [feature][TableScanner] bulk の chunk size を指定可能に変更
+- [feature][Transporter] view の スキーマ修飾を取り除く機能
+- [feature][Transporter] 差分コメントを有効化
+
 ## 3.0.0
 
 - ストアド/イベントに対応

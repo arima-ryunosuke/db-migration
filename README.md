@@ -70,6 +70,17 @@ DML はファイル名とテーブル名が対応します（hoge.sql で hoge �
 - .yml5, .yaml5: フロースタイルの yaml 形式で入出力します
 - 上記以外: すべて例外
 
+export コマンドのときは glob パターンを渡すと存在するテーブルからファイル名部分で glob するような挙動になります。
+この glob 処理は、先頭に `!` を付けると否定になる特殊処理が為されます。
+例えば
+
+- `t_*_user.json`: `t_admin_user`, `t_end_user` などのみ
+- `!t_*log.json`: `t_login_log`, `t_access_log` など以外
+- `t_*log.json !t_blog.json`: `t_login_log`, `t_access_log` などだが `t_blog` は除外
+
+となります。
+なお、 glob の関係上、テーブルを漁る場合は `"t_*_user.json"` のようにクォートした方が無難です。
+
 sql は DDL の差分には対応していません。
 `スキーマ => sql`, `sql => スキーマ` は dotrine の機能で簡単に実現できますが、 `sql <=> スキーマ` で差分を取るのは多くの場合不可能で、一時スキーマが必要になります。
 前バージョンまでは一時スキーマを作って対応していましたが、あまり対象 DB 以外に接続したくないため、非対応としています。
@@ -78,7 +89,11 @@ sql は DDL の差分には対応していません。
 エンコーディング指定はファイル名とはみなされず、テーブル名に含まれません。
 
 - hoge.sjis.csv: SJIS の csv として扱います
-- hoge.utf8.yaml: UTF8 の yaml として扱います
+- hoge.utf8.csv: BOM 付き UTF8 の csv として扱います
+- hoge.utf8n.csv: BOM 無し UTF8 の csv として扱います
+
+`utf8` で BOM がつくのは CSV だけです。
+他の json や yaml などでは `utf8`, `utf8n` の違いはありません。
 
 #### --directory (-d)
 
@@ -153,6 +168,20 @@ export,import 時の指定は大きな意味はありません。
 
 export 時は `exclude` と同じに意味になります（マイグレーションテーブルも出力されてしまうため）。
 import 時は初期化時に当てた扱いにする程度のことしか行いません。
+
+#### --transaction (-T)
+
+各種操作時のトランザクションを指定します。
+
+- 0: トランザクションを開きません
+- 1: 各操作開始時のトランザクションを開きます
+- 2: 各操作のテーブル毎にトランザクションを開きます
+
+export のときは 1 を指定すると全体の読み取り一貫性が維持できます。
+import, migrate のときに 1 を指定すると一度でも失敗したときにすべてがなかったことになります。
+2 を指定するとそのテーブルは巻き戻されますが、それまでの操作は確定されます。
+
+なお、 DDL はトランザクションが効かず、変更の巻き戻しができないことに注意してください。
 
 #### --inline, --indent, --multiline, --align, --delimiter, --format
 
@@ -281,30 +310,31 @@ Usage:
   export [options] [--] <dsn> <files>...
 
 Arguments:
-  dsn                          Specify target DSN.
-  files                        Specify database files. First argument is meaned schema
+  dsn                              Specify target DSN.
+  files                            Specify database files. First argument is meaned schema
 
 Options:
-  -d, --directory[=DIRECTORY]  Specify separative directory name.
-  -m, --migration[=MIGRATION]  Specify migration directory.
-  -D, --disable[=DISABLE]      Specify disabled schema object (enable comma separated value. e.g. --disable view,trigger) (multiple values allowed)
-  -i, --include[=INCLUDE]      Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
-  -e, --exclude[=EXCLUDE]      Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
-  -w, --where[=WHERE]          Where condition. (multiple values allowed)
-  -g, --ignore[=IGNORE]        Ignore column. (multiple values allowed)
-      --inline[=INLINE]        Specify php/json/yaml inline nest level. [default: 4]
-      --indent[=INDENT]        Specify php/json/yaml indent size. [default: 4]
-      --multiline              Specify php/yaml literal multiline.
-      --align                  Specify php/json/yaml align key value.
-      --delimiter=DELIMITER    Specify sql/csv delimiter.
-  -E, --event[=EVENT]          Specify Event filepath
-  -C, --config[=CONFIG]        Specify Configuration filepath
-  -h, --help                   Display help for the given command. When no command is given display help for the list command
-  -q, --quiet                  Do not output any message
-  -V, --version                Display this application version
-      --ansi|--no-ansi         Force (or disable --no-ansi) ANSI output
-  -n, --no-interaction         Do not ask any interactive question
-  -v|vv|vvv, --verbose         Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+  -d, --directory[=DIRECTORY]      Specify separative directory name.
+  -m, --migration[=MIGRATION]      Specify migration directory.
+  -T, --transaction[=TRANSACTION]  Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
+  -D, --disable[=DISABLE]          Specify disabled schema object (enable comma separated value. e.g. --disable view,trigger) (multiple values allowed)
+  -i, --include[=INCLUDE]          Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
+  -e, --exclude[=EXCLUDE]          Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
+  -w, --where[=WHERE]              Where condition. (multiple values allowed)
+  -g, --ignore[=IGNORE]            Ignore column. (multiple values allowed)
+      --inline[=INLINE]            Specify php/json/yaml inline nest level. [default: 4]
+      --indent[=INDENT]            Specify php/json/yaml indent size. [default: 4]
+      --multiline                  Specify php/yaml literal multiline.
+      --align                      Specify php/json/yaml align key value.
+      --delimiter=DELIMITER        Specify sql/csv delimiter.
+  -E, --event[=EVENT]              Specify Event filepath
+  -C, --config[=CONFIG]            Specify Configuration filepath
+  -h, --help                       Display help for the given command. When no command is given display help for the list command
+  -q, --quiet                      Do not output any message
+  -V, --version                    Display this application version
+      --ansi|--no-ansi             Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction             Do not ask any interactive question
+  -v|vv|vvv, --verbose             Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
 
 Help:
   Export to DDL,DML files based on extension.
@@ -368,35 +398,57 @@ Usage:
   import [options] [--] <dsn> <files>...
 
 Arguments:
-  dsn                          Specify target DSN (if not exists create database).
-  files                        Specify database files. First argument is meaned schema.
+  dsn                              Specify target DSN (if not exists create database).
+  files                            Specify database files. First argument is meaned schema.
 
 Options:
-  -d, --directory[=DIRECTORY]  Specify separative directory name.
-  -m, --migration[=MIGRATION]  Specify migration directory.
-      --bulk-insert            Enable bulk insert
-      --inline[=INLINE]        Specify php/json/yaml inline nest level. [default: 4]
-      --indent[=INDENT]        Specify php/json/yaml indent size. [default: 4]
-      --delimiter=DELIMITER    Specify sql/csv delimiter.
-      --format[=FORMAT]        Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
-  -o, --omit=OMIT              Omit size for long SQL
-  -E, --event[=EVENT]          Specify Event filepath
-  -C, --config[=CONFIG]        Specify Configuration filepath
-  -h, --help                   Display help for the given command. When no command is given display help for the list command
-  -q, --quiet                  Do not output any message
-  -V, --version                Display this application version
-      --ansi|--no-ansi         Force (or disable --no-ansi) ANSI output
-  -n, --no-interaction         Do not ask any interactive question
-  -v|vv|vvv, --verbose         Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+      --disable-constraint         Disable constraint (e.g. foreign key, unique, etc)
+  -d, --directory[=DIRECTORY]      Specify separative directory name.
+  -m, --migration[=MIGRATION]      Specify migration directory.
+  -T, --transaction[=TRANSACTION]  Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
+      --bulk-insert[=BULK-INSERT]  Specify bulk insert chunk size
+      --inline[=INLINE]            Specify php/json/yaml inline nest level. [default: 4]
+      --indent[=INDENT]            Specify php/json/yaml indent size. [default: 4]
+      --delimiter=DELIMITER        Specify sql/csv delimiter.
+      --yield                      Specify sql/json/yaml generator mode.
+      --format[=FORMAT]            Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
+  -o, --omit=OMIT                  Omit size for long SQL
+  -E, --event[=EVENT]              Specify Event filepath
+  -C, --config[=CONFIG]            Specify Configuration filepath
+  -h, --help                       Display help for the given command. When no command is given display help for the list command
+  -q, --quiet                      Do not output any message
+  -V, --version                    Display this application version
+      --ansi|--no-ansi             Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction             Do not ask any interactive question
+  -v|vv|vvv, --verbose             Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
 
 Help:
   Import from DDL,DML files based on extension.
    e.g. `dbmigration import mysql://user:pass@localhost/dbname schema.yml table1.yml table2.yml`
 ```
 
+#### --disable-constraint
+
+取り込み中、外部キー等の制約を無視します。
+
 #### --bulk-insert
 
 実行される INSERT 文を バルクにするオプションです。
+
+指定しないとすべての INSERT 文は個別に実行されます。
+`--bulk-insert` とすると同じテーブルの INSERT は bulk で実行されます。
+`--bulk-insert 100` とすると同じテーブルの INSERT は 100 行ごとに bulk で実行されます。
+
+#### --yield
+
+ファイルを一括で読むのではなく、逐次読み込みでレコードを処理します。
+データが巨大な場合に、メモリ不足に陥らずに処理できます。
+
+csv だけは指定しなくても遅延読み込みです。
+php は include した瞬間すべてがメモリに載ってしまうため完全に非対応です。
+
+この機能は作者が必要に迫られて実装したもので実験的です。
+いわゆる json/yaml stream であり、素朴な実装になっているため、速度も遅く、エラーも出やすいです。
 
 ### migrate
 
@@ -414,36 +466,43 @@ Usage:
   migrate [options] [--] <dsn> [<files>...]
 
 Arguments:
-  dsn                          Specify target DSN.
-  files                        Specify database files. First argument is meaned schema.
+  dsn                              Specify target DSN.
+  files                            Specify database files. First argument is meaned schema.
 
 Options:
-  -d, --directory[=DIRECTORY]  Specify separative directory name.
-  -m, --migration[=MIGRATION]  Specify migration directory.
-  -t, --type[=TYPE]            Migration SQL type (ddl, dml. default both)
-      --dml-type[=DML-TYPE]    Specify dml type (enable comma separated value. e.g. --dml-type insert,update) [default: ["insert","update","delete"]] (multiple values allowed)
-  -g, --ignore[=IGNORE]        Ignore column. (multiple values allowed)
-      --bulk-insert            Enable bulk insert
-      --inline[=INLINE]        Specify php/json/yaml inline nest level. [default: 4]
-      --indent[=INDENT]        Specify php/json/yaml indent size. [default: 4]
-      --delimiter=DELIMITER    Specify sql/csv delimiter.
-  -c, --check                  Check only (Dry run. force no-interaction)
-  -f, --force                  Force continue, ignore errors
-      --format[=FORMAT]        Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
-  -o, --omit=OMIT              Omit size for long SQL
-  -E, --event[=EVENT]          Specify Event filepath
-  -C, --config[=CONFIG]        Specify Configuration filepath
-  -h, --help                   Display help for the given command. When no command is given display help for the list command
-  -q, --quiet                  Do not output any message
-  -V, --version                Display this application version
-      --ansi|--no-ansi         Force (or disable --no-ansi) ANSI output
-  -n, --no-interaction         Do not ask any interactive question
-  -v|vv|vvv, --verbose         Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+      --disable-constraint         Disable constraint (e.g. foreign key, unique, etc)
+  -d, --directory[=DIRECTORY]      Specify separative directory name.
+  -m, --migration[=MIGRATION]      Specify migration directory.
+  -T, --transaction[=TRANSACTION]  Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
+  -t, --type[=TYPE]                Migration SQL type (ddl, dml. default both)
+      --dml-type[=DML-TYPE]        Specify dml type (enable comma separated value. e.g. --dml-type insert,update) [default: ["insert","update","delete"]] (multiple values allowed)
+  -g, --ignore[=IGNORE]            Ignore column. (multiple values allowed)
+      --bulk-insert[=BULK-INSERT]  Specify bulk insert chunk size
+      --inline[=INLINE]            Specify php/json/yaml inline nest level. [default: 4]
+      --indent[=INDENT]            Specify php/json/yaml indent size. [default: 4]
+      --delimiter=DELIMITER        Specify sql/csv delimiter.
+  -c, --check                      Check only (Dry run. force no-interaction)
+  -f, --force                      Force continue, ignore errors
+      --yield                      Specify sql/json/yaml generator mode.
+      --format[=FORMAT]            Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
+  -o, --omit=OMIT                  Omit size for long SQL
+  -E, --event[=EVENT]              Specify Event filepath
+  -C, --config[=CONFIG]            Specify Configuration filepath
+  -h, --help                       Display help for the given command. When no command is given display help for the list command
+  -q, --quiet                      Do not output any message
+  -V, --version                    Display this application version
+      --ansi|--no-ansi             Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction             Do not ask any interactive question
+  -v|vv|vvv, --verbose             Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
 
 Help:
   Migrate dsn from files.
    e.g. `dbmigration migrate mysql://srchost/dbname table1.yml data.yml`
 ```
+
+#### --disable-constraint
+
+import と同じです。
 
 #### --type (-t)
 
@@ -484,6 +543,12 @@ import と同じです。
 
 エラー専用の `--no-interaction` のようなもので、エラーが出ても確認を出さずに突き進みます。
 流れる SQL に次第では危険なオプションです。
+
+#### --yield
+
+import と同じです。
+同じですが、存在するレコードとの主キー比較のために一旦配列に直されるため、実質的に意味はありません。
+このオプションは親和性のために用意されています。
 
 ## Licence
 
