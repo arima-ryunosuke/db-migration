@@ -56,9 +56,10 @@ class MigrateCommandTest extends AbstractTestCase
         $this->app->add(new MigrateCommand());
 
         $this->defaultArgs = [
-            '--format' => 'none',
-            '-n'       => true,
-            'dsn'      => $GLOBALS['db'],
+            '--format'             => 'none',
+            '--disable-constraint' => true,
+            '-n'                   => true,
+            'dsn'                  => $GLOBALS['db'],
         ];
     }
 
@@ -102,6 +103,32 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertStringContainsString('migration did not execute', $result);
 
         $tmpcon->close();
+    }
+
+    /**
+     * @test
+     */
+    function run_constraint()
+    {
+        $this->assertExceptionMessage("Cannot add or update", $this->runApp, [
+            '--disable-constraint' => false,
+            'files'                => [
+                $this->getFile('table.php'),
+                $this->getFile('data/childtable.php'),
+                $this->getFile('data/parenttable.php'),
+            ],
+        ]);
+
+        $result = $this->runApp([
+            '--disable-constraint' => true,
+            'files'                => [
+                $this->getFile('table.php'),
+                $this->getFile('data/childtable.php'),
+                $this->getFile('data/parenttable.php'),
+            ],
+        ]);
+
+        $this->assertStringNotContainsString("Cannot add or update", $result);
     }
 
     /**

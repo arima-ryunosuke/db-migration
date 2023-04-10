@@ -31,6 +31,7 @@ class MigrateCommand extends AbstractCommand
             new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN.'),
             new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
             ...$this->getCommonOptions([
+                'disable-constraint',
                 'directory',
                 'migration',
                 'transaction',
@@ -76,6 +77,8 @@ class MigrateCommand extends AbstractCommand
                 return 1;
             }
         }
+
+        $this->disableConstraint($conn);
 
         $this->event($conn);
 

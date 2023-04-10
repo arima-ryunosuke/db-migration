@@ -22,6 +22,7 @@ class ImportCommand extends AbstractCommand
             new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN (if not exists create database).'),
             new InputArgument('files', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
             ...$this->getCommonOptions([
+                'disable-constraint',
                 'directory',
                 'migration',
                 'transaction',
@@ -77,6 +78,8 @@ class ImportCommand extends AbstractCommand
 
         $params['dbname'] = $dbname;
         $conn             = DriverManager::getConnection($params);
+
+        $this->disableConstraint($conn);
 
         $this->event($conn);
 

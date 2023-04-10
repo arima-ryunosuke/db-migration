@@ -315,6 +315,96 @@
                 'create_options' => [],
             ],
         ],
+        'parenttable' => [
+            'column'  => [
+                'id' => [
+                    'type'                => 'integer',
+                    'default'             => null,
+                    'notnull'             => true,
+                    'unsigned'            => false,
+                    'comment'             => null,
+                    'platformOptions'     => [],
+                    'customSchemaOptions' => [],
+                ],
+            ],
+            'index'   => [
+                'PRIMARY' => [
+                    'column'  => ['id'],
+                    'primary' => true,
+                    'unique'  => true,
+                    'option'  => [
+                        'lengths' => [null],
+                    ],
+                ],
+            ],
+            'foreign' => [],
+            'option'  => [
+                'engine'         => 'InnoDB',
+                'collation'      => 'utf8mb4_bin',
+                'charset'        => 'utf8mb4',
+                'comment'        => '',
+                'create_options' => [],
+            ],
+        ],
+        'childtable'  => [
+            'column'  => [
+                'id'        => [
+                    'type'                => 'integer',
+                    'default'             => null,
+                    'notnull'             => true,
+                    'unsigned'            => false,
+                    'comment'             => null,
+                    'platformOptions'     => [],
+                    'customSchemaOptions' => [],
+                ],
+                'parent_id' => [
+                    'type'                => 'integer',
+                    'default'             => null,
+                    'notnull'             => true,
+                    'unsigned'            => false,
+                    'comment'             => null,
+                    'platformOptions'     => [],
+                    'customSchemaOptions' => [],
+                ],
+            ],
+            'index'   => [
+                'PRIMARY'         => [
+                    'column'  => ['id'],
+                    'primary' => true,
+                    'unique'  => true,
+                    'option'  => [
+                        'lengths' => [null],
+                    ],
+                ],
+                'fk_child_parent' => [
+                    'column'  => ['parent_id'],
+                    'primary' => false,
+                    'unique'  => false,
+                    'option'  => [
+                        'lengths' => [null],
+                    ],
+                ],
+            ],
+            'foreign' => [
+                'fk_child_parent' => [
+                    'table'  => 'parenttable',
+                    'column' => [
+                        'parent_id' => 'id',
+                    ],
+                    'option' => [
+                        'onDelete' => 'NO ACTION',
+                        'onUpdate' => 'CASCADE',
+                    ],
+                ],
+            ],
+            'option'  => [
+                'engine'         => 'InnoDB',
+                'collation'      => 'utf8mb4_bin',
+                'charset'        => 'utf8mb4',
+                'comment'        => '',
+                'create_options' => [],
+            ],
+        ],
     ],
     'view'     => [],
     'trigger'  => [],

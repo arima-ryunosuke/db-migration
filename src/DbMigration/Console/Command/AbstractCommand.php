@@ -3,6 +3,7 @@
 namespace ryunosuke\DbMigration\Console\Command;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use ryunosuke\DbMigration\Console\Logger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -29,124 +30,129 @@ abstract class AbstractCommand extends Command
     protected function getCommonOptions($optnames)
     {
         $options = [
-            'type'        => [
+            'type'               => [
                 't',
                 InputOption::VALUE_OPTIONAL,
                 'Migration SQL type (ddl, dml. default both)',
             ],
-            'dml-type'    => [
+            'dml-type'           => [
                 null,
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
                 'Specify dml type (enable comma separated value. e.g. --dml-type insert,update)',
                 ['insert', 'update', 'delete'],
             ],
-            'check'       => [
+            'check'              => [
                 'c',
                 InputOption::VALUE_NONE,
                 'Check only (Dry run. force no-interaction)',
             ],
-            'force'       => [
+            'force'              => [
                 'f',
                 InputOption::VALUE_NONE,
                 'Force continue, ignore errors',
             ],
-            'transaction' => [
+            'disable-constraint' => [
+                null,
+                InputOption::VALUE_NONE,
+                'Disable constraint (e.g. foreign key, unique, etc)',
+            ],
+            'transaction'        => [
                 'T',
                 InputOption::VALUE_OPTIONAL,
                 'Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table)',
                 1,
             ],
-            'bulk-insert' => [
+            'bulk-insert'        => [
                 null,
                 InputOption::VALUE_OPTIONAL,
                 'Specify bulk insert chunk size',
                 null,
             ],
-            'where'       => [
+            'where'              => [
                 'w',
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
                 'Where condition.',
             ],
-            'ignore'      => [
+            'ignore'             => [
                 'g',
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
                 'Ignore column.',
             ],
-            'indent'      => [
+            'indent'             => [
                 null,
                 InputOption::VALUE_OPTIONAL,
                 'Specify php/json/yaml indent size.',
                 4,
             ],
-            'inline'      => [
+            'inline'             => [
                 null,
                 InputOption::VALUE_OPTIONAL,
                 'Specify php/json/yaml inline nest level.',
                 4,
             ],
-            'multiline'   => [
+            'multiline'          => [
                 null,
                 InputOption::VALUE_NONE,
                 'Specify php/yaml literal multiline.',
             ],
-            'align'       => [
+            'align'              => [
                 null,
                 InputOption::VALUE_NONE,
                 'Specify php/json/yaml align key value.',
             ],
-            'delimiter'   => [
+            'delimiter'          => [
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Specify sql/csv delimiter.',
             ],
-            'yield'   => [
+            'yield'              => [
                 null,
                 InputOption::VALUE_NONE,
                 'Specify sql/json/yaml generator mode.',
             ],
-            'disable'     => [
+            'disable'            => [
                 'D',
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
                 'Specify disabled schema object (enable comma separated value. e.g. --disable view,trigger)',
             ],
-            'migration'   => [
+            'migration'          => [
                 'm',
                 InputOption::VALUE_OPTIONAL,
                 'Specify migration directory.',
             ],
-            'include'     => [
+            'include'            => [
                 'i',
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
                 'Target tables pattern (enable comma separated value. e.g. --include table1,table2)',
             ],
-            'exclude'     => [
+            'exclude'            => [
                 'e',
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
                 'Except tables pattern (enable comma separated value. e.g. --exclude table1,table2)',
             ],
-            'directory'   => [
+            'directory'          => [
                 'd',
                 InputOption::VALUE_OPTIONAL,
                 'Specify separative directory name.',
                 null,
             ],
-            'format'      => [
+            'format'             => [
                 null,
                 InputOption::VALUE_OPTIONAL,
                 'Format output SQL (none, pretty, format. default pretty)',
                 'pretty',
             ],
-            'omit'        => [
+            'omit'               => [
                 'o',
                 InputOption::VALUE_REQUIRED,
                 'Omit size for long SQL',
             ],
-            'event'       => [
+            'event'              => [
                 'E',
                 InputOption::VALUE_OPTIONAL,
                 'Specify Event filepath',
             ],
-            'config'      => [
+            'config'             => [
                 'C',
                 InputOption::VALUE_OPTIONAL,
                 'Specify Configuration filepath',
@@ -340,6 +346,18 @@ abstract class AbstractCommand extends Command
             $result = array_merge($result, array_filter(array_map('trim', explode(',', $value)), 'strlen'));
         }
         return $result;
+    }
+
+    protected function disableConstraint(Connection $conn)
+    {
+        if (!$this->input->getOption('disable-constraint')) {
+            return;
+        }
+
+        if ($conn->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+            $conn->executeStatement('SET UNIQUE_CHECKS = 0');
+            $conn->executeStatement('SET FOREIGN_KEY_CHECKS = 0');
+        }
     }
 
     protected function transact(Connection $conn, callable $try, ?callable $catch = null)
