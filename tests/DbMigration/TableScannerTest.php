@@ -6,6 +6,7 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Tools\DsnParser;
 use Doctrine\DBAL\Types\Type;
 use ryunosuke\DbMigration\TableScanner;
 
@@ -171,6 +172,36 @@ class TableScannerTest extends AbstractTestCase
             $sqls = iterator_to_array($this->scanner->getInsertSql($provider(), 3));
             $this->assertCount(0, $sqls);
         }
+    }
+
+    /**
+     * @test
+     */
+    function getAllRows_unbuffered()
+    {
+        $parser = new DsnParser();
+
+        $table = new Table('t_many');
+        $table->addColumn('id', 'integer');
+        $table->setPrimaryKey(['id']);
+
+        $conn = DriverManager::getConnection($parser->parse('pdo-sqlite://:memory:'));
+        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
+        $scanner = new TableScanner($conn, $table, ['TRUE']);
+        $this->assertEquals([['id' => 1], ['id' => 2]], [...$scanner->getAllRows()]);
+
+        $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']));
+        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
+        $scanner = new TableScanner($conn, $table, ['TRUE']);
+        $this->assertEquals([['id' => 1], ['id' => 2]], [...$scanner->getAllRows()]);
+
+        $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']));
+        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
+        $scanner = new TableScanner($conn, $table, ['TRUE']);
+        $this->assertEquals([['id' => 1], ['id' => 2]], [...$scanner->getAllRows()]);
     }
 
     /**

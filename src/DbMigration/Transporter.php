@@ -397,13 +397,7 @@ class Transporter
         $table   = $this->schema->getTable($pathinfo['filename']);
         $scanner = new TableScanner($this->connection, $table, $filterCondition, $ignoreColumn);
 
-        // for too many records
-        $current = $scanner->switchBufferedQuery(false);
-
         yield from $file->writeRecords($scanner->getAllRows());
-
-        // restore
-        $scanner->switchBufferedQuery($current);
     }
 
     public function importDDL(string $filename): array

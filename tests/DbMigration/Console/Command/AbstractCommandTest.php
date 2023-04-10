@@ -176,7 +176,7 @@ class AbstractCommandTest extends AbstractTestCase
         $this->assertEquals([
             'driver'   => 'pdo_mysql',
             'host'     => 'hostname',
-            'port'     => '3306',
+            'port'     => 3306,
             'user'     => 'user',
             'password' => 'pass',
             'dbname'   => 'dbname',
@@ -184,7 +184,17 @@ class AbstractCommandTest extends AbstractTestCase
         ], $this->command->parseDsn('mysql://user:pass@hostname:3306/dbname?charset=utf8'));
 
         $this->assertEquals([
-            'driver' => 'pdo_sqlite',
+            'driver'   => 'mysqli',
+            'host'     => 'hostname',
+            'port'     => 3306,
+            'user'     => 'user',
+            'password' => 'pass',
+            'dbname'   => 'dbname',
+            'charset'  => 'utf8',
+        ], $this->command->parseDsn('mysqli://user:pass@hostname:3306/dbname?charset=utf8'));
+
+        $this->assertEquals([
+            'driver' => 'sqlite',
             'host'   => 'hostname',
             'user'   => (posix_getpwuid(posix_geteuid())['name']),
             'path'   => 'dbname',
@@ -192,7 +202,7 @@ class AbstractCommandTest extends AbstractTestCase
 
         $this->questionSetInputStream('this_is_password');
         $this->assertEquals([
-            'driver'   => 'pdo_sqlite',
+            'driver'   => 'sqlite',
             'host'     => 'hostname',
             'user'     => 'user',
             'password' => 'this_is_password',

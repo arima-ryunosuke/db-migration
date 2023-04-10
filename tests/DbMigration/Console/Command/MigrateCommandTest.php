@@ -59,7 +59,7 @@ class MigrateCommandTest extends AbstractTestCase
             '--format'             => 'none',
             '--disable-constraint' => true,
             '-n'                   => true,
-            'dsn'                  => $GLOBALS['db'],
+            'dsn'                  => AbstractTestCase::TEST_SCHEME . $GLOBALS['db'],
         ];
     }
 
@@ -199,6 +199,7 @@ class MigrateCommandTest extends AbstractTestCase
     {
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
+            '--yield'     => true,
             'files'       => [
                 $this->getFile('table.php'),
             ],

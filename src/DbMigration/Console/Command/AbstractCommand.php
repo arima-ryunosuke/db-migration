@@ -4,6 +4,7 @@ namespace ryunosuke\DbMigration\Console\Command;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Tools\DsnParser;
 use ryunosuke\DbMigration\Console\Logger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,6 +16,10 @@ use function ryunosuke\DbMigration\var_pretty;
 
 abstract class AbstractCommand extends Command
 {
+    public const SCHEME_DRIVERS = [
+        'mysql' => 'pdo_mysql', // for compatible
+    ];
+
     /** @var InputInterface */
     protected $input;
 
@@ -286,10 +291,8 @@ abstract class AbstractCommand extends Command
 
     protected function parseDsn($dsn)
     {
-        $parseDatabaseUrl = new \ReflectionMethod('\\Doctrine\\DBAL\\DriverManager', 'parseDatabaseUrl');
-        $parseDatabaseUrl->setAccessible(true);
-        $params = $parseDatabaseUrl->invoke(null, ['url' => $dsn]);
-        unset($params['url']);
+        $parser = new DsnParser(self::SCHEME_DRIVERS);
+        $params = $parser->parse($dsn);
 
         // for .my.cnf
         if (isset($_SERVER['HOME']) && stripos($params['driver'], 'mysql') !== false) {

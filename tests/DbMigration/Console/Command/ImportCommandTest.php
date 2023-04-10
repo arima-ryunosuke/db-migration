@@ -17,7 +17,7 @@ class ImportCommandTest extends AbstractTestCase
         $this->defaultArgs = [
             '--format' => 'none',
             '-n'       => true,
-            'dsn'      => $GLOBALS['db'],
+            'dsn'      => AbstractTestCase::TEST_SCHEME . $GLOBALS['db'],
         ];
     }
 
@@ -62,7 +62,7 @@ class ImportCommandTest extends AbstractTestCase
             'files' => [
                 $file,
             ],
-            'dsn'   => $GLOBALS['db'],
+            'dsn'   => AbstractTestCase::TEST_SCHEME . $GLOBALS['db'],
         ]);
         $this->assertStringContainsString("no drop database $dbname", $result);
         $this->assertStringContainsString("create database $dbname", $result);

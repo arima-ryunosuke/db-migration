@@ -22,7 +22,7 @@ class ExportCommandTest extends AbstractTestCase
         $this->app->add(new ExportCommand());
 
         $this->defaultArgs = [
-            'dsn' => $GLOBALS['db'],
+            'dsn' => AbstractTestCase::TEST_SCHEME . $GLOBALS['db'],
         ];
     }
 

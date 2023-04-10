@@ -69,20 +69,6 @@ class TableScanner
         }
     }
 
-    public function switchBufferedQuery(?bool $flag): ?bool
-    {
-        $pdo             = $this->conn->getNativeConnection();
-        $bufferedSupport = $pdo instanceof PDO && $this->conn->getDatabasePlatform() instanceof MySqlPlatform;
-        $return          = null;
-
-        if ($bufferedSupport) {
-            $return = $pdo->getAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY);
-            $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, $flag);
-        }
-
-        return $return;
-    }
-
     public function getDeleteSql(array $pkvals): array
     {
         $sqls = [];
@@ -209,7 +195,7 @@ class TableScanner
             ORDER BY {$this->primaryKeyString}
         ";
 
-        foreach ($this->conn->executeQuery($sql)->iterateAssociative() as $row) {
+        foreach ($this->queryUnbuffered($sql) as $row) {
             yield $this->fillDefaultValue($row);
         }
     }
@@ -248,6 +234,30 @@ class TableScanner
             }
         }
         return $row;
+    }
+
+    private function queryUnbuffered(string $sql): Generator
+    {
+        $platform   = $this->conn->getDatabasePlatform();
+        $connection = $this->conn->getNativeConnection();
+
+        if ($platform instanceof MySqlPlatform) {
+            if ($connection instanceof \PDO) {
+                $connection->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+                try {
+                    yield from $this->conn->executeQuery($sql)->iterateAssociative();
+                }
+                finally {
+                    $connection->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+                }
+            }
+            elseif ($connection instanceof \mysqli) {
+                yield from $connection->query($sql, MYSQLI_USE_RESULT);
+            }
+        }
+        else {
+            yield from $this->conn->executeQuery($sql)->iterateAssociative();
+        }
     }
 
     private function getRecordFromPrimaryKeys(array $tuples): Traversable

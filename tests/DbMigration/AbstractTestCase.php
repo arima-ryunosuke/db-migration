@@ -6,11 +6,15 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Tools\DsnParser;
 use Generator;
 use PHPUnit\Framework\Error\Error;
+use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 
 abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 {
+    public const TEST_SCHEME = 'mysql://';
+
     protected static $tmpdir;
 
     /**
@@ -73,7 +77,8 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
             return $array;
         };
 
-        $params = $this->parseDsn($GLOBALS['db']);
+        $parser = new DsnParser(AbstractCommand::SCHEME_DRIVERS);
+        $params = $parser->parse(AbstractTestCase::TEST_SCHEME . $GLOBALS['db']);
 
         // drop schema
         $c = DriverManager::getConnection($unset($params, 'dbname'));
@@ -82,6 +87,13 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 
         // get connection
         $this->connection = DriverManager::getConnection($params);
+        if ($c->getNativeConnection() instanceof \PDO) {
+            $this->connection->getNativeConnection()->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
+            $this->connection->getNativeConnection()->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, false);
+        }
+        if ($c->getNativeConnection() instanceof \mysqli) {
+            $this->connection->getNativeConnection()->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, true);
+        }
 
         // get schema
         $this->schema = $this->connection->createSchemaManager();
@@ -120,15 +132,6 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
     {
         parent::tearDown();
         $this->connection->close();
-    }
-
-    public function parseDsn($dsn)
-    {
-        $parseDatabaseUrl = new \ReflectionMethod('\\Doctrine\\DBAL\\DriverManager', 'parseDatabaseUrl');
-        $parseDatabaseUrl->setAccessible(true);
-        $params = $parseDatabaseUrl->invoke(null, ['url' => $dsn]);
-        unset($params['url']);
-        return $params;
     }
 
     public function readyDatabase(AbstractSchemaManager $schema_manager, $database)

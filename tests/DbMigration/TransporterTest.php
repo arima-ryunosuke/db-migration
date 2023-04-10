@@ -680,14 +680,14 @@ SQL
                 <<<PHP
 <?php return [
     [
-        'id'   => '1',
+        'id'   => 1,
         'name' => 'あいうえお',
-        'data' => '3.14',
+        'data' => 3.14,
     ],
     [
-        'id'   => '2',
+        'id'   => 2,
         'name' => 'かきくけこ',
-        'data' => '6.28',
+        'data' => 6.28,
     ],
 ];
 PHP
@@ -698,14 +698,14 @@ PHP
                 <<<JSON
 [
     {
-        "id": "1",
+        "id": 1,
         "name": "あいうえお",
-        "data": "3.14"
+        "data": 3.14
     },
     {
-        "id": "2",
+        "id": 2,
         "name": "かきくけこ",
-        "data": "6.28"
+        "data": 6.28
     }
 ]
 JSON
@@ -715,13 +715,13 @@ JSON
                 'yaml',
                 <<<YAML
 -
-    id: '1'
+    id: 1
     name: あいうえお
-    data: '3.14'
+    data: 3.14
 -
-    id: '2'
+    id: 2
     name: かきくけこ
-    data: '6.28'
+    data: 6.28
 YAML
                 ,
             ],
@@ -730,14 +730,14 @@ YAML
                 <<<YAML5
 [
     {
-        id: '1',
+        id: 1,
         name: あいうえお,
-        data: '3.14',
+        data: 3.14,
     },
     {
-        id: '2',
+        id: 2,
         name: かきくけこ,
-        data: '6.28',
+        data: 6.28,
     },
 ]
 YAML5
