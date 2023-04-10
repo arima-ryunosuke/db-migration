@@ -221,7 +221,7 @@ password = fuga
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
-        $this->assertEquals([__FILE__, 'hoge'], $this->command->normalizeFile([__FILE__, 'hoge']));
+        $this->assertEquals([__FILE__, 'hoge', ''], $this->command->normalizeFile([__FILE__, 'hoge', '']));
         $this->assertExceptionMessage('is directory', function () { $this->command->normalizeFile([__DIR__]); });
     }
 

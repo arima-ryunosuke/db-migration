@@ -226,6 +226,8 @@ class TransporterTest extends AbstractTestCase
         $this->assertArrayHasKey('trigger', $php);
         $this->assertArrayHasKey('trg1', $php['trigger']);
 
+        $this->assertEquals('', $this->transporter->exportDDL(''));
+
         $this->assertException(new \DomainException("is not supported"), function () {
             $this->transporter->exportDDL(self::$tmpdir . '/table.ext');
         });
@@ -377,6 +379,8 @@ class TransporterTest extends AbstractTestCase
             $this->assertContainsString('CREATE VIEW vvview', $ddls);
         }
 
+        $this->assertEquals([], $this->transporter->importDDL(''));
+
         $this->assertException(new \DomainException("is not supported"), function () {
             $this->transporter->importDDL(self::$tmpdir . '/table.ext');
         });
@@ -491,6 +495,8 @@ class TransporterTest extends AbstractTestCase
 
         $this->assertContainsString('CREATE TABLE fugata', $ddls);
         $this->assertContainsString('DROP TABLE hogera', $ddls);
+
+        $this->assertEquals([], $this->transporter->migrateDDL(''));
 
         $this->assertException(new \DomainException('does not support migrateDDL'), fn() => $this->transporter->migrateDDL("ddl.sql"));
     }

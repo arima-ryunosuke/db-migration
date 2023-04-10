@@ -343,6 +343,10 @@ class Transporter
 
     public function exportDDL(string $filename, array $includes = [], array $excludes = []): string
     {
+        if (!strlen($filename)) {
+            return '';
+        }
+
         $file       = $this->getFileByFilename($filename);
         $pathinfo   = $file->pathinfo();
         $definition = $this->getDefinition();
@@ -404,6 +408,10 @@ class Transporter
 
     public function importDDL(string $filename): array
     {
+        if (!strlen($filename)) {
+            return [];
+        }
+
         $file = $this->getFileByFilename($filename);
 
         $schemaArray = $file->readSchema();
@@ -440,6 +448,10 @@ class Transporter
 
     public function migrateDDL(string $filename, array $excludes = []): array
     {
+        if (!strlen($filename)) {
+            return [];
+        }
+
         $file = $this->getFileByFilename($filename);
 
         if ($file->sqlable()) {

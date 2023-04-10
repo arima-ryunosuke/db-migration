@@ -318,7 +318,7 @@ abstract class AbstractCommand extends Command
     {
         $result = [];
         foreach ($files as $file) {
-            $filePath = realpath($file);
+            $filePath = strlen($file) ? realpath($file) : $file;
 
             if (false === $filePath) {
                 $filePath = $file;
