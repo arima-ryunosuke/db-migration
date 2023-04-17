@@ -4,7 +4,6 @@ namespace ryunosuke\DbMigration\FileType;
 
 use DomainException;
 use Generator;
-use ryunosuke\DbMigration\Utility;
 use function ryunosuke\DbMigration\iterator_split;
 
 class Csv extends AbstractFile

@@ -2,8 +2,8 @@
 
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
-use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -174,39 +174,43 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->setInputOutput($input, $output);
 
         $this->assertEquals([
-            'driver'   => 'pdo_mysql',
-            'host'     => 'hostname',
-            'port'     => 3306,
-            'user'     => 'user',
-            'password' => 'pass',
-            'dbname'   => 'dbname',
-            'charset'  => 'utf8',
+            'driver'       => 'pdo_mysql',
+            'host'         => 'hostname',
+            'port'         => 3306,
+            'user'         => 'user',
+            'password'     => 'pass',
+            'dbname'       => 'dbname',
+            'charset'      => 'utf8',
+            'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('mysql://user:pass@hostname:3306/dbname?charset=utf8'));
 
         $this->assertEquals([
-            'driver'   => 'mysqli',
-            'host'     => 'hostname',
-            'port'     => 3306,
-            'user'     => 'user',
-            'password' => 'pass',
-            'dbname'   => 'dbname',
-            'charset'  => 'utf8',
+            'driver'       => 'mysqli',
+            'host'         => 'hostname',
+            'port'         => 3306,
+            'user'         => 'user',
+            'password'     => 'pass',
+            'dbname'       => 'dbname',
+            'charset'      => 'utf8',
+            'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('mysqli://user:pass@hostname:3306/dbname?charset=utf8'));
 
         $this->assertEquals([
-            'driver' => 'sqlite',
-            'host'   => 'hostname',
-            'user'   => (posix_getpwuid(posix_geteuid())['name']),
-            'path'   => 'dbname',
+            'driver'       => 'sqlite',
+            'host'         => 'hostname',
+            'user'         => (posix_getpwuid(posix_geteuid())['name']),
+            'path'         => 'dbname',
+            'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('sqlite://hostname/dbname'));
 
         $this->questionSetInputStream('this_is_password');
         $this->assertEquals([
-            'driver'   => 'sqlite',
-            'host'     => 'hostname',
-            'user'     => 'user',
-            'password' => 'this_is_password',
-            'path'     => 'dbname',
+            'driver'       => 'sqlite',
+            'host'         => 'hostname',
+            'user'         => 'user',
+            'password'     => 'this_is_password',
+            'path'         => 'dbname',
+            'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('sqlite://user:@hostname/dbname'));
 
         $home            = $_SERVER['HOME'] ?? null;
@@ -216,11 +220,12 @@ user = hoge
 password = fuga
 ');
         $this->assertEquals([
-            'driver'   => 'pdo_mysql',
-            'host'     => 'hostname',
-            'user'     => 'hoge',
-            'password' => 'fuga',
-            'dbname'   => 'dbname',
+            'driver'       => 'pdo_mysql',
+            'host'         => 'hostname',
+            'user'         => 'hoge',
+            'password'     => 'fuga',
+            'dbname'       => 'dbname',
+            'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('mysql://hostname/dbname'));
         $_SERVER['HOME'] = $home;
     }
@@ -244,8 +249,9 @@ password = fuga
         $output->setVerbosity(BufferedOutput::VERBOSITY_VERBOSE);
 
         $connection = DriverManager::getConnection([
-            'driver' => 'pdo_sqlite',
-            'memory' => true,
+            'driver'       => 'pdo_sqlite',
+            'memory'       => true,
+            'wrapperClass' => Connection::class,
         ]);
 
         $input->setOption('transaction', 0);

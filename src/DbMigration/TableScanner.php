@@ -2,7 +2,6 @@
 
 namespace ryunosuke\DbMigration;
 
-use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Table;
@@ -48,7 +47,7 @@ class TableScanner
         $this->quotedName         = $conn->quoteIdentifier($this->table->getName());
         $this->primaryKeys        = $this->table->getPrimaryKey()->getColumns();
         $this->flippedPrimaryKeys = array_flip($this->primaryKeys);
-        $this->primaryKeyString   = implode(', ', Utility::quoteIdentifier($this->conn, $this->primaryKeys));
+        $this->primaryKeyString   = implode(', ', $this->conn->quoteIdentifier($this->primaryKeys));
 
         // column to array(ColumnNanme => Column)
         $this->columns = $table->getColumns();
@@ -103,7 +102,7 @@ class TableScanner
                 foreach ($chunk as $newrow) {
                     $value = [];
                     foreach ($columns as $column) {
-                        $value[] = Utility::quote($this->conn, $newrow[$column]);
+                        $value[] = $this->conn->quote($newrow[$column]);
                     }
                     $values[] = '(' . implode(',', $value) . ')';
                 }
@@ -114,7 +113,7 @@ class TableScanner
         }
 
         $isMysql      = $this->conn->getDatabasePlatform() instanceof MySqlPlatform;
-        $columnString = implode(', ', Utility::quoteIdentifier($this->conn, array_keys($this->columns)));
+        $columnString = implode(', ', $this->conn->quoteIdentifier(array_keys($this->columns)));
         foreach ($newrows as $newrow) {
             if ($isMysql) {
                 // to VALUES string
@@ -125,7 +124,7 @@ class TableScanner
             }
             else {
                 // to VALUES string
-                $valueString = implode(', ', Utility::quote($this->conn, $newrow));
+                $valueString = implode(', ', $this->conn->quote($newrow));
 
                 // to SQL
                 yield "INSERT INTO $this->quotedName ($columnString) VALUES ($valueString)";
@@ -187,7 +186,7 @@ class TableScanner
     public function getAllRows(): Generator
     {
         // fetch records values
-        $columnString = implode(', ', Utility::quoteIdentifier($this->conn, array_keys(array_diff_key($this->columns, $this->ignoreColumns))));
+        $columnString = implode(', ', $this->conn->quoteIdentifier(array_keys(array_diff_key($this->columns, $this->ignoreColumns))));
         $sql          = "
             SELECT   {$columnString}
             FROM     {$this->quotedName}
@@ -264,7 +263,7 @@ class TableScanner
     {
         // prepare sql of primary key record
         $columns      = array_diff_key($this->columns, $this->ignoreColumns);
-        $columnString = implode(', ', Utility::quoteIdentifier($this->conn, array_keys($columns)));
+        $columnString = implode(', ', $this->conn->quoteIdentifier(array_keys($columns)));
         $tuplesString = $this->buildWhere($tuples);
         $sql          = "
             SELECT   {$columnString}
@@ -329,8 +328,8 @@ class TableScanner
 
     private function joinKeyValue(array $array, string $separator = ' = '): array
     {
-        $keys = Utility::quoteIdentifier($this->conn, array_keys($array));
-        $vals = Utility::quote($this->conn, array_values($array));
+        $keys = $this->conn->quoteIdentifier(array_keys($array));
+        $vals = $this->conn->quote(array_values($array));
 
         $maxlen = max(array_map('strlen', $keys));
 

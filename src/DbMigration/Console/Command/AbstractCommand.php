@@ -2,9 +2,8 @@
 
 namespace ryunosuke\DbMigration\Console\Command;
 
-use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Tools\DsnParser;
+use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\Console\Logger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -28,9 +27,6 @@ abstract class AbstractCommand extends Command
 
     /** @var Logger */
     protected $logger;
-
-    /** @var int */
-    protected $transactionLevel = 0;
 
     protected function getCommonOptions($optnames)
     {
@@ -320,7 +316,7 @@ abstract class AbstractCommand extends Command
             $params['password'] = $this->getHelper('question')->ask($this->input, $this->output, $question);
         }
 
-        return $params;
+        return $params + ['wrapperClass' => Connection::class];
     }
 
     protected function normalizeFile($files)
@@ -351,47 +347,29 @@ abstract class AbstractCommand extends Command
         return $result;
     }
 
-    protected function disableConstraint(Connection $conn)
-    {
-        if (!$this->input->getOption('disable-constraint')) {
-            return;
-        }
-
-        if ($conn->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
-            $conn->executeStatement('SET UNIQUE_CHECKS = 0');
-            $conn->executeStatement('SET FOREIGN_KEY_CHECKS = 0');
-        }
-    }
-
     protected function transact(Connection $conn, callable $try, ?callable $catch = null)
     {
-        $currentLevel = ++$this->transactionLevel;
-        $targetLevel  = (int) $this->input->getOption('transaction');
+        $targetLevel = (int) $this->input->getOption('transaction');
 
         $catch ??= function ($t) { throw $t; };
 
-        if ($currentLevel === $targetLevel) {
-            $conn->beginTransaction();
+        if ($conn->beginTransaction($targetLevel)) {
             $this->logger->info("-- <info>begin transaction</info>");
         }
         try {
             $return = $try();
-            if ($currentLevel === $targetLevel) {
-                $conn->commit();
+            if ($conn->commit($targetLevel)) {
                 $this->logger->info("-- <info>commit transaction</info>");
             }
             return $return;
         }
         catch (\Throwable $t) {
-            if ($currentLevel === $targetLevel) {
-                $conn->rollBack();
+            if ($conn->rollBack($targetLevel)) {
                 $this->logger->info("-- <info>rollback transaction</info>");
             }
+
             $catch($t);
             $this->logger->debug("-- uncatch exception: ", $t);
-        }
-        finally {
-            $this->transactionLevel--;
         }
     }
 

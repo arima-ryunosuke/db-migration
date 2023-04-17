@@ -3,6 +3,7 @@
 namespace ryunosuke\DbMigration\Console\Command;
 
 use Doctrine\DBAL\DriverManager;
+use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\Exception\CancelException;
 use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Transporter;
@@ -76,10 +77,11 @@ class ImportCommand extends AbstractCommand
         $smanager->createDatabase($dbname);
         $this->logger->info("-- <info>create database</info> $dbname");
 
+        /** @var Connection $conn */
         $params['dbname'] = $dbname;
         $conn             = DriverManager::getConnection($params);
 
-        $this->disableConstraint($conn);
+        $conn->disableConstraint($this->input->getOption('disable-constraint'));
 
         $this->event($conn);
 

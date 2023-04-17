@@ -7,7 +7,6 @@ use DomainException;
 use Generator;
 use RuntimeException;
 use ryunosuke\DbMigration\FileType\Tool\MbstringFilter;
-use ryunosuke\DbMigration\Utility;
 use SplFileObject;
 use function ryunosuke\DbMigration\concat;
 
@@ -24,8 +23,8 @@ abstract class AbstractFile
     public static function create(string $filename, array $options): AbstractFile
     {
         if (($options['connection'] ?? null) instanceof Connection) {
-            $options['quoteIdentifier'] = fn($value) => Utility::quoteIdentifier($options['connection'], $value);
-            $options['quoteValue']      = fn($value) => Utility::quote($options['connection'], $value);
+            $options['quoteIdentifier'] = fn($value) => $options['connection']->quoteIdentifier($value);
+            $options['quoteValue']      = fn($value) => $options['connection']->quote($value);
         }
 
         $ext = pathinfo($filename, PATHINFO_EXTENSION);

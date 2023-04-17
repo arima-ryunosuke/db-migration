@@ -2,14 +2,12 @@
 
 namespace ryunosuke\DbMigration\Console\Command;
 
-use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Event\ConnectionEventArgs;
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\FileType\AbstractFile;
 use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Transporter;
-use ryunosuke\DbMigration\Utility;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -69,16 +67,14 @@ class MigrateCommand extends AbstractCommand
         $this->logger->trace(fn($v) => $this->dump($v), $this->input->getOptions(), true);
 
         // get target Connection
+        /** @var Connection $conn */
         $conn = DriverManager::getConnection($this->parseDsn($this->input->getArgument('dsn')));
 
-        if ($conn->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
-            if (!$conn->executeQuery('SELECT GET_LOCK(?, 0)', ["migrating." . $conn->getDatabase()])->fetchOne()) {
-                $this->logger->log("-- <comment>migration did not execute. because executing by other connection</comment>");
-                return 1;
-            }
+        if (!$conn->lockGlobal("migrating." . $conn->getDatabase(), 0)) {
+            $this->logger->log("-- <comment>migration did not execute. because executing by other connection</comment>");
         }
 
-        $this->disableConstraint($conn);
+        $conn->disableConstraint($this->input->getOption('disable-constraint'));
 
         $this->event($conn);
 

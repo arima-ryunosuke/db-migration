@@ -2,7 +2,6 @@
 
 namespace ryunosuke\DbMigration;
 
-use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Index;

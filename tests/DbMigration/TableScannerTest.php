@@ -8,6 +8,7 @@ use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Tools\DsnParser;
 use Doctrine\DBAL\Types\Type;
+use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\TableScanner;
 
 class TableScannerTest extends AbstractTestCase
@@ -185,19 +186,19 @@ class TableScannerTest extends AbstractTestCase
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
 
-        $conn = DriverManager::getConnection($parser->parse('pdo-sqlite://:memory:'));
+        $conn = DriverManager::getConnection($parser->parse('pdo-sqlite://:memory:') + ['wrapperClass' => Connection::class]);
         $this->readyTable($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $scanner = new TableScanner($conn, $table, ['TRUE']);
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$scanner->getAllRows()]);
 
-        $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']));
+        $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
         $this->readyTable($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $scanner = new TableScanner($conn, $table, ['TRUE']);
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$scanner->getAllRows()]);
 
-        $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']));
+        $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
         $this->readyTable($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $scanner = new TableScanner($conn, $table, ['TRUE']);
@@ -301,7 +302,7 @@ class TableScannerTest extends AbstractTestCase
      */
     function fillDefaultValue()
     {
-        $con = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:')]);
+        $con = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:'), 'wrapperClass' => Connection::class]);
 
         $table = new Table('deftable',
             [
@@ -329,8 +330,8 @@ class TableScannerTest extends AbstractTestCase
      */
     function getInsertSql_no_mysql()
     {
-        $old = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:')]);
-        $new = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:')]);
+        $old = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:'), 'wrapperClass' => Connection::class]);
+        $new = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'pdo' => new \PDO('sqlite::memory:'), 'wrapperClass' => Connection::class]);
 
         $table = new Table('hogetable',
             [new Column('id', Type::getType('integer'))],

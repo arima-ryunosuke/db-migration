@@ -2,13 +2,13 @@
 
 namespace ryunosuke\Test\DbMigration;
 
-use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Tools\DsnParser;
 use Generator;
 use PHPUnit\Framework\Error\Error;
+use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 
 abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
@@ -86,7 +86,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         $c->close();
 
         // get connection
-        $this->connection = DriverManager::getConnection($params);
+        $this->connection = DriverManager::getConnection($params + ['wrapperClass' => Connection::class]);
         if ($c->getNativeConnection() instanceof \PDO) {
             $this->connection->getNativeConnection()->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
             $this->connection->getNativeConnection()->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, false);

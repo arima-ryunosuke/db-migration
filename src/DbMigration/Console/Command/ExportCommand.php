@@ -3,6 +3,7 @@
 namespace ryunosuke\DbMigration\Console\Command;
 
 use Doctrine\DBAL\DriverManager;
+use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\Transporter;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -64,6 +65,7 @@ class ExportCommand extends AbstractCommand
         }
 
         // get target Connection
+        /** @var Connection $conn */
         $params = $this->parseDsn($this->input->getArgument('dsn'));
         $conn   = DriverManager::getConnection($params);
 

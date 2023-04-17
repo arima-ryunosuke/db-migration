@@ -2,7 +2,6 @@
 
 namespace ryunosuke\DbMigration;
 
-use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\AbstractAsset;
@@ -170,7 +169,7 @@ class Transporter
                             unset($array['unsigned']);
                         }
 
-                        $entry['column'][$column->getName()] = Utility::array_diff_exists($array, $this->defaultColumnAttributes);
+                        $entry['column'][$column->getName()] = array_udiff_assoc($array, $this->defaultColumnAttributes, fn($a, $b) => $a <=> $b);
                     }
 
                     // add indexes
@@ -185,7 +184,7 @@ class Transporter
                             'option'  => $index->getOptions(),
                         ];
 
-                        $entry['index'][$index->getName()] = Utility::array_diff_exists($array, $this->defaultIndexAttributes);
+                        $entry['index'][$index->getName()] = array_udiff_assoc($array, $this->defaultIndexAttributes, fn($a, $b) => $a <=> $b);
                     }
 
                     // add foreign keys
@@ -359,7 +358,7 @@ class Transporter
             foreach ($setting['get']($this->schema) as $object) {
                 $name = $object->getName();
 
-                if (Utility::filterTable($name, $includes, $excludes) > 0) {
+                if ($this->filterTable($name, $includes, $excludes) > 0) {
                     continue;
                 }
 
@@ -460,12 +459,12 @@ class Transporter
         $definition = $this->getDefinition();
         foreach ($definition as $setting) {
             foreach ($setting['get']($oldSchema) as $object) {
-                if (Utility::filterTable($object->getName(), [], $excludes) > 0) {
+                if ($this->filterTable($object->getName(), [], $excludes) > 0) {
                     $setting['drop']($oldSchema, $object);
                 }
             }
             foreach ($setting['get']($newSchema) as $object) {
-                if (Utility::filterTable($object->getName(), [], $excludes) > 0) {
+                if ($this->filterTable($object->getName(), [], $excludes) > 0) {
                     $setting['drop']($newSchema, $object);
                 }
             }
@@ -627,5 +626,29 @@ class Transporter
         }
 
         return $sql;
+    }
+
+    private function filterTable(string $tablename, array $includes, array $excludes): int
+    {
+        // filter from includes
+        $flag = count($includes) > 0;
+        foreach ($includes as $include) {
+            if (preg_match("@$include@i", $tablename)) {
+                $flag = false;
+                break;
+            }
+        }
+        if ($flag) {
+            return 1;
+        }
+
+        // filter from excludes
+        foreach ($excludes as $exclude) {
+            if (preg_match("@$exclude@i", $tablename)) {
+                return 2;
+            }
+        }
+
+        return 0;
     }
 }
