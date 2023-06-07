@@ -109,6 +109,15 @@ DDL のオブジェクトの入出力ディレクトリを指定します。
 
 このオプションを用いて export したファイルは同様にこのオプションを用いて import,migrate する必要があります。
 
+#### --maintain-type (--no-maintain)
+
+型をできるだけ維持するようにします。
+
+export の時、 DB の int や float はそのまま yaml や json の値になります。
+
+import の時、 yaml や json の型を見て bool や int はそのまま SQL 化されます（quote されないということです）。
+csv の場合は型がないので注意です。
+
 #### --migration (-m)
 
 マイグレーションテーブル名（ディレクトリ）を指定します。
@@ -307,34 +316,35 @@ Description:
   Export to DDL,DML files.
 
 Usage:
-  export [options] [--] <dsn> <files>...
+  export [options] [--] [<dsn> [<files>...]]
 
 Arguments:
-  dsn                              Specify target DSN.
-  files                            Specify database files. First argument is meaned schema
+  dsn                                     Specify target DSN.
+  files                                   Specify database files. First argument is meaned schema
 
 Options:
-  -d, --directory[=DIRECTORY]      Specify separative directory name.
-  -m, --migration[=MIGRATION]      Specify migration directory.
-  -T, --transaction[=TRANSACTION]  Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
-  -D, --disable[=DISABLE]          Specify disabled schema object (enable comma separated value. e.g. --disable view,trigger) (multiple values allowed)
-  -i, --include[=INCLUDE]          Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
-  -e, --exclude[=EXCLUDE]          Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
-  -w, --where[=WHERE]              Where condition. (multiple values allowed)
-  -g, --ignore[=IGNORE]            Ignore column. (multiple values allowed)
-      --inline[=INLINE]            Specify php/json/yaml inline nest level. [default: 4]
-      --indent[=INDENT]            Specify php/json/yaml indent size. [default: 4]
-      --multiline                  Specify php/yaml literal multiline.
-      --align                      Specify php/json/yaml align key value.
-      --delimiter=DELIMITER        Specify sql/csv delimiter.
-  -E, --event[=EVENT]              Specify Event filepath
-  -C, --config[=CONFIG]            Specify Configuration filepath
-  -h, --help                       Display help for the given command. When no command is given display help for the list command
-  -q, --quiet                      Do not output any message
-  -V, --version                    Display this application version
-      --ansi|--no-ansi             Force (or disable --no-ansi) ANSI output
-  -n, --no-interaction             Do not ask any interactive question
-  -v|vv|vvv, --verbose             Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+      --maintain-type|--no-maintain-type  Maintain type as much as possible.
+  -d, --directory[=DIRECTORY]             Specify separative directory name.
+  -m, --migration[=MIGRATION]             Specify migration directory.
+  -T, --transaction[=TRANSACTION]         Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
+  -D, --disable[=DISABLE]                 Specify disabled schema object (enable comma separated value. e.g. --disable view,trigger) (multiple values allowed)
+  -i, --include[=INCLUDE]                 Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
+  -e, --exclude[=EXCLUDE]                 Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
+  -w, --where[=WHERE]                     Where condition. (multiple values allowed)
+  -g, --ignore[=IGNORE]                   Ignore column. (multiple values allowed)
+      --inline[=INLINE]                   Specify php/json/yaml inline nest level. [default: 4]
+      --indent[=INDENT]                   Specify php/json/yaml indent size. [default: 4]
+      --multiline                         Specify php/yaml literal multiline.
+      --align                             Specify php/json/yaml align key value.
+      --delimiter=DELIMITER               Specify sql/csv delimiter.
+  -E, --event[=EVENT]                     Specify Event filepath
+  -C, --config[=CONFIG]                   Specify Configuration filepath
+  -h, --help                              Display help for the given command. When no command is given display help for the list command
+  -q, --quiet                             Do not output any message
+  -V, --version                           Display this application version
+      --ansi|--no-ansi                    Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction                    Do not ask any interactive question
+  -v|vv|vvv, --verbose                    Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
 
 Help:
   Export to DDL,DML files based on extension.
@@ -395,32 +405,33 @@ Description:
   Import from DDL,DML files.
 
 Usage:
-  import [options] [--] <dsn> <files>...
+  import [options] [--] [<dsn> [<files>...]]
 
 Arguments:
-  dsn                              Specify target DSN (if not exists create database).
-  files                            Specify database files. First argument is meaned schema.
+  dsn                                     Specify target DSN (if not exists create database).
+  files                                   Specify database files. First argument is meaned schema.
 
 Options:
-      --disable-constraint         Disable constraint (e.g. foreign key, unique, etc)
-  -d, --directory[=DIRECTORY]      Specify separative directory name.
-  -m, --migration[=MIGRATION]      Specify migration directory.
-  -T, --transaction[=TRANSACTION]  Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
-      --bulk-insert[=BULK-INSERT]  Specify bulk insert chunk size
-      --inline[=INLINE]            Specify php/json/yaml inline nest level. [default: 4]
-      --indent[=INDENT]            Specify php/json/yaml indent size. [default: 4]
-      --delimiter=DELIMITER        Specify sql/csv delimiter.
-      --yield                      Specify sql/json/yaml generator mode.
-      --format[=FORMAT]            Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
-  -o, --omit=OMIT                  Omit size for long SQL
-  -E, --event[=EVENT]              Specify Event filepath
-  -C, --config[=CONFIG]            Specify Configuration filepath
-  -h, --help                       Display help for the given command. When no command is given display help for the list command
-  -q, --quiet                      Do not output any message
-  -V, --version                    Display this application version
-      --ansi|--no-ansi             Force (or disable --no-ansi) ANSI output
-  -n, --no-interaction             Do not ask any interactive question
-  -v|vv|vvv, --verbose             Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+      --disable-constraint                Disable constraint (e.g. foreign key, unique, etc)
+      --maintain-type|--no-maintain-type  Maintain type as much as possible.
+  -d, --directory[=DIRECTORY]             Specify separative directory name.
+  -m, --migration[=MIGRATION]             Specify migration directory.
+  -T, --transaction[=TRANSACTION]         Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
+      --bulk-insert[=BULK-INSERT]         Specify bulk insert chunk size
+      --inline[=INLINE]                   Specify php/json/yaml inline nest level. [default: 4]
+      --indent[=INDENT]                   Specify php/json/yaml indent size. [default: 4]
+      --delimiter=DELIMITER               Specify sql/csv delimiter.
+      --yield                             Specify sql/json/yaml generator mode.
+      --format[=FORMAT]                   Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
+  -o, --omit=OMIT                         Omit size for long SQL
+  -E, --event[=EVENT]                     Specify Event filepath
+  -C, --config[=CONFIG]                   Specify Configuration filepath
+  -h, --help                              Display help for the given command. When no command is given display help for the list command
+  -q, --quiet                             Do not output any message
+  -V, --version                           Display this application version
+      --ansi|--no-ansi                    Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction                    Do not ask any interactive question
+  -v|vv|vvv, --verbose                    Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
 
 Help:
   Import from DDL,DML files based on extension.
@@ -463,37 +474,38 @@ Description:
   Migrate DDL,DML from files.
 
 Usage:
-  migrate [options] [--] <dsn> [<files>...]
+  migrate [options] [--] [<dsn> [<files>...]]
 
 Arguments:
-  dsn                              Specify target DSN.
-  files                            Specify database files. First argument is meaned schema.
+  dsn                                     Specify target DSN.
+  files                                   Specify database files. First argument is meaned schema.
 
 Options:
-      --disable-constraint         Disable constraint (e.g. foreign key, unique, etc)
-  -d, --directory[=DIRECTORY]      Specify separative directory name.
-  -m, --migration[=MIGRATION]      Specify migration directory.
-  -T, --transaction[=TRANSACTION]  Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
-  -t, --type[=TYPE]                Migration SQL type (ddl, dml. default both)
-      --dml-type[=DML-TYPE]        Specify dml type (enable comma separated value. e.g. --dml-type insert,update) [default: ["insert","update","delete"]] (multiple values allowed)
-  -g, --ignore[=IGNORE]            Ignore column. (multiple values allowed)
-      --bulk-insert[=BULK-INSERT]  Specify bulk insert chunk size
-      --inline[=INLINE]            Specify php/json/yaml inline nest level. [default: 4]
-      --indent[=INDENT]            Specify php/json/yaml indent size. [default: 4]
-      --delimiter=DELIMITER        Specify sql/csv delimiter.
-  -c, --check                      Check only (Dry run. force no-interaction)
-  -f, --force                      Force continue, ignore errors
-      --yield                      Specify sql/json/yaml generator mode.
-      --format[=FORMAT]            Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
-  -o, --omit=OMIT                  Omit size for long SQL
-  -E, --event[=EVENT]              Specify Event filepath
-  -C, --config[=CONFIG]            Specify Configuration filepath
-  -h, --help                       Display help for the given command. When no command is given display help for the list command
-  -q, --quiet                      Do not output any message
-  -V, --version                    Display this application version
-      --ansi|--no-ansi             Force (or disable --no-ansi) ANSI output
-  -n, --no-interaction             Do not ask any interactive question
-  -v|vv|vvv, --verbose             Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+      --disable-constraint                Disable constraint (e.g. foreign key, unique, etc)
+      --maintain-type|--no-maintain-type  Maintain type as much as possible.
+  -d, --directory[=DIRECTORY]             Specify separative directory name.
+  -m, --migration[=MIGRATION]             Specify migration directory.
+  -T, --transaction[=TRANSACTION]         Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
+  -t, --type[=TYPE]                       Migration SQL type (ddl, dml. default both)
+      --dml-type[=DML-TYPE]               Specify dml type (enable comma separated value. e.g. --dml-type insert,update) [default: ["insert","update","delete"]] (multiple values allowed)
+  -g, --ignore[=IGNORE]                   Ignore column. (multiple values allowed)
+      --bulk-insert[=BULK-INSERT]         Specify bulk insert chunk size
+      --inline[=INLINE]                   Specify php/json/yaml inline nest level. [default: 4]
+      --indent[=INDENT]                   Specify php/json/yaml indent size. [default: 4]
+      --delimiter=DELIMITER               Specify sql/csv delimiter.
+  -c, --check                             Check only (Dry run. force no-interaction)
+  -f, --force                             Force continue, ignore errors
+      --yield                             Specify sql/json/yaml generator mode.
+      --format[=FORMAT]                   Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
+  -o, --omit=OMIT                         Omit size for long SQL
+  -E, --event[=EVENT]                     Specify Event filepath
+  -C, --config[=CONFIG]                   Specify Configuration filepath
+  -h, --help                              Display help for the given command. When no command is given display help for the list command
+  -q, --quiet                             Do not output any message
+  -V, --version                           Display this application version
+      --ansi|--no-ansi                    Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction                    Do not ask any interactive question
+  -v|vv|vvv, --verbose                    Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
 
 Help:
   Migrate dsn from files.

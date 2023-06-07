@@ -21,6 +21,11 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.1
+
+- [feature] 型を維持させる maintain-type を追加
+- [fixbug] config オプションで引数の指定が効いていない不具合を修正
+
 ## 3.1.0
 
 - [feature][Command] mysqli も使用できるように暫定対応
