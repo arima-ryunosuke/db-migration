@@ -20,8 +20,8 @@ class ImportCommand extends AbstractCommand
     {
         $this->setName('import')->setDescription('Import from DDL,DML files.');
         $this->setDefinition([
-            new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN (if not exists create database).'),
-            new InputArgument('files', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
+            new InputArgument('dsn', InputArgument::OPTIONAL, 'Specify target DSN (if not exists create database).'),
+            new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
             ...$this->getCommonOptions([
                 'disable-constraint',
                 'directory',

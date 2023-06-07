@@ -63,7 +63,7 @@ class AbstractCommandTest extends AbstractTestCase
         $this->assertEquals([], $input->getOption('opts'));
 
         $input->setOption('config', __DIR__ . '/_files/config.php');
-        $this->command->config();
+        $this->command->config($input, $output);
 
         $this->assertEquals('xarg1', $input->getArgument('arg1'));
         $this->assertEquals(['xarg2', 'xarg3', 'xarg4'], $input->getArgument('argN'));
@@ -79,9 +79,7 @@ class AbstractCommandTest extends AbstractTestCase
         $this->assertEquals(['opt3'], $input->getOption('opts'));
 
         $input->setOption('config', __DIR__ . '/notfound.php');
-        $this->assertException(new \InvalidArgumentException('is not exists'), function () {
-            $this->command->config();
-        });
+        $this->assertException(new \InvalidArgumentException('is not exists'), fn() => $this->command->config($input, $output));
     }
 
     function test_choice()
@@ -376,9 +374,9 @@ class ConcreteCommand extends AbstractCommand
         return parent::event($conn);
     }
 
-    public function config()
+    public function config($input, $output)
     {
-        return parent::config();
+        return parent::config($input, $output);
     }
 
     public function choice($message, $choices = [], $default = 0)

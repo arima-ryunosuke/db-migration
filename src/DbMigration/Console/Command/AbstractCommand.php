@@ -162,13 +162,18 @@ abstract class AbstractCommand extends Command
         return array_map(fn($name) => new InputOption($name, ...$options[$name]), $optnames);
     }
 
+    protected function initialize(InputInterface $input, OutputInterface $output)
+    {
+        parent::initialize($input, $output);
+
+        $this->config($input, $output);
+    }
+
     protected function setInputOutput(InputInterface $input, OutputInterface $output)
     {
         $this->input  = $input;
         $this->output = $output;
         $this->logger = new Logger($input, $output);
-
-        $this->config();
     }
 
     protected function event(Connection $conn)
@@ -209,9 +214,9 @@ abstract class AbstractCommand extends Command
         }
     }
 
-    protected function config()
+    protected function config(InputInterface $input, OutputInterface $output)
     {
-        $configFile = $this->input->getOption('config');
+        $configFile = $input->getOption('config');
         if (!strlen($configFile)) {
             return;
         }
@@ -223,15 +228,12 @@ abstract class AbstractCommand extends Command
         $config    = ($allConfig[$this->getName()] ?? []) + ($allConfig['default'] ?? []);
         foreach ($config as $name => $value) {
             $definition = $this->getDefinition();
-            if (ctype_digit("$name")) {
-                if ($definition->hasArgument($name = (int) $name)) {
-                    $definition->getArgument($name)->setDefault($value);
-                }
+            $name = ctype_digit("$name") ? (int) $name : $name;
+            if ($definition->hasArgument($name)) {
+                $definition->getArgument($name)->setDefault($value);
             }
-            else {
-                if ($definition->hasOption($name)) {
-                    $definition->getOption($name)->setDefault($value);
-                }
+            elseif ($definition->hasOption($name)) {
+                $definition->getOption($name)->setDefault($value);
             }
         }
     }

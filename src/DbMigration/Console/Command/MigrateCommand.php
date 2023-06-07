@@ -26,7 +26,7 @@ class MigrateCommand extends AbstractCommand
     {
         $this->setName('migrate')->setDescription('Migrate DDL,DML from files.');
         $this->setDefinition([
-            new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN.'),
+            new InputArgument('dsn', InputArgument::OPTIONAL, 'Specify target DSN.'),
             new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
             ...$this->getCommonOptions([
                 'disable-constraint',

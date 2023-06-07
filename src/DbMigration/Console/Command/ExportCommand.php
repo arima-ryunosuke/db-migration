@@ -18,8 +18,8 @@ class ExportCommand extends AbstractCommand
     {
         $this->setName('export')->setDescription('Export to DDL,DML files.');
         $this->setDefinition([
-            new InputArgument('dsn', InputArgument::REQUIRED, 'Specify target DSN.'),
-            new InputArgument('files', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema'),
+            new InputArgument('dsn', InputArgument::OPTIONAL, 'Specify target DSN.'),
+            new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema'),
             ...$this->getCommonOptions([
                 'directory',
                 'migration',
