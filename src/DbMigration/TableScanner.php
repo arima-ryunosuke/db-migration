@@ -6,7 +6,6 @@ use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Table;
 use Generator;
-use PDO;
 use ryunosuke\DbMigration\Exception\MigrationException;
 use Traversable;
 
@@ -194,7 +193,7 @@ class TableScanner
             ORDER BY {$this->primaryKeyString}
         ";
 
-        foreach ($this->queryUnbuffered($sql) as $row) {
+        foreach ($this->conn->queryUnbuffered($sql) as $row) {
             yield $this->fillDefaultValue($row);
         }
     }
@@ -233,30 +232,6 @@ class TableScanner
             }
         }
         return $row;
-    }
-
-    private function queryUnbuffered(string $sql): Generator
-    {
-        $platform   = $this->conn->getDatabasePlatform();
-        $connection = $this->conn->getNativeConnection();
-
-        if ($platform instanceof MySqlPlatform) {
-            if ($connection instanceof \PDO) {
-                $connection->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
-                try {
-                    yield from $this->conn->executeQuery($sql)->iterateAssociative();
-                }
-                finally {
-                    $connection->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
-                }
-            }
-            elseif ($connection instanceof \mysqli) {
-                yield from $connection->query($sql, MYSQLI_USE_RESULT);
-            }
-        }
-        else {
-            yield from $this->conn->executeQuery($sql)->iterateAssociative();
-        }
     }
 
     private function getRecordFromPrimaryKeys(array $tuples): Traversable

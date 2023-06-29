@@ -87,13 +87,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 
         // get connection
         $this->connection = DriverManager::getConnection($params + ['wrapperClass' => Connection::class]);
-        if ($c->getNativeConnection() instanceof \PDO) {
-            $this->connection->getNativeConnection()->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
-            $this->connection->getNativeConnection()->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, false);
-        }
-        if ($c->getNativeConnection() instanceof \mysqli) {
-            $this->connection->getNativeConnection()->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, true);
-        }
+        $this->connection->maintainType(true);
 
         // get schema
         $this->schema = $this->connection->createSchemaManager();

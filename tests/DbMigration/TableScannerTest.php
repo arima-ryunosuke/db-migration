@@ -155,11 +155,11 @@ class TableScannerTest extends AbstractTestCase
 
             $sqls = iterator_to_array($this->scanner->getInsertSql($provider(), 3));
             $this->assertCount(2, $sqls);
-            $this->assertStringContainsString("('1')", $sqls[0]);
-            $this->assertStringContainsString("('2')", $sqls[0]);
-            $this->assertStringContainsString("('3')", $sqls[0]);
-            $this->assertStringContainsString("('4')", $sqls[1]);
-            $this->assertStringContainsString("('5')", $sqls[1]);
+            $this->assertStringContainsString("(1)", $sqls[0]);
+            $this->assertStringContainsString("(2)", $sqls[0]);
+            $this->assertStringContainsString("(3)", $sqls[0]);
+            $this->assertStringContainsString("(4)", $sqls[1]);
+            $this->assertStringContainsString("(5)", $sqls[1]);
         }
 
         $providers = [
@@ -173,36 +173,6 @@ class TableScannerTest extends AbstractTestCase
             $sqls = iterator_to_array($this->scanner->getInsertSql($provider(), 3));
             $this->assertCount(0, $sqls);
         }
-    }
-
-    /**
-     * @test
-     */
-    function getAllRows_unbuffered()
-    {
-        $parser = new DsnParser();
-
-        $table = new Table('t_many');
-        $table->addColumn('id', 'integer');
-        $table->setPrimaryKey(['id']);
-
-        $conn = DriverManager::getConnection($parser->parse('pdo-sqlite://:memory:') + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
-        $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
-        $scanner = new TableScanner($conn, $table, ['TRUE']);
-        $this->assertEquals([['id' => 1], ['id' => 2]], [...$scanner->getAllRows()]);
-
-        $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
-        $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
-        $scanner = new TableScanner($conn, $table, ['TRUE']);
-        $this->assertEquals([['id' => 1], ['id' => 2]], [...$scanner->getAllRows()]);
-
-        $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
-        $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
-        $scanner = new TableScanner($conn, $table, ['TRUE']);
-        $this->assertEquals([['id' => 1], ['id' => 2]], [...$scanner->getAllRows()]);
     }
 
     /**
@@ -284,13 +254,13 @@ class TableScannerTest extends AbstractTestCase
     {
         $method = 'buildWhere';
 
-        $expected = "((`id`    = '1' AND `subid` = '1') OR (`id`    = '1' AND `subid` = '2'))";
+        $expected = "((`id`    = 1 AND `subid` = 1) OR (`id`    = 1 AND `subid` = 2))";
         $this->assertEquals($expected, $this->invoke($method, [
             ['id' => 1, 'subid' => 1],
             ['id' => 1, 'subid' => 2],
         ]));
 
-        $expected = "(`id` IN ('1','2'))";
+        $expected = "(`id` IN (1,2))";
         $this->assertEquals($expected, $this->invoke($method, [
             ['id' => 1],
             ['id' => 2],

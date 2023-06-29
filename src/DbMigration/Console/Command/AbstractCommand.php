@@ -57,6 +57,11 @@ abstract class AbstractCommand extends Command
                 InputOption::VALUE_NONE,
                 'Disable constraint (e.g. foreign key, unique, etc)',
             ],
+            'maintain-type'      => [
+                null,
+                InputOption::VALUE_NEGATABLE,
+                'Maintain type as much as possible.',
+            ],
             'transaction'        => [
                 'T',
                 InputOption::VALUE_OPTIONAL,

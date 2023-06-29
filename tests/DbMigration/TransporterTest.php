@@ -283,7 +283,7 @@ class TransporterTest extends AbstractTestCase
     function exportDML()
     {
         iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.sql'));
-        $this->assertFileContains("INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'name-1', '1.5')", self::$tmpdir . '/hoge.sql');
+        $this->assertFileContains("INSERT INTO `hoge` (`id`, `name`, `data`) VALUES (1, 'name-1', 1.5)", self::$tmpdir . '/hoge.sql');
 
         iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.php'));
         iterator_to_array($this->transporter->exportDML(self::$tmpdir . '/hoge.json'));
@@ -670,8 +670,8 @@ class TransporterTest extends AbstractTestCase
             [
                 'sql',
                 <<<SQL
-INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('1', 'あいうえお', '3.14');
-INSERT INTO `hoge` (`id`, `name`, `data`) VALUES ('2', 'かきくけこ', '6.28');
+INSERT INTO `hoge` (`id`, `name`, `data`) VALUES (1, 'あいうえお', 3.14);
+INSERT INTO `hoge` (`id`, `name`, `data`) VALUES (2, 'かきくけこ', 6.28);
 SQL
                 ,
             ],

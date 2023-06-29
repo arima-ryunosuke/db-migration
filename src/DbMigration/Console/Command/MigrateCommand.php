@@ -30,6 +30,7 @@ class MigrateCommand extends AbstractCommand
             new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
             ...$this->getCommonOptions([
                 'disable-constraint',
+                'maintain-type',
                 'directory',
                 'migration',
                 'transaction',
@@ -75,6 +76,7 @@ class MigrateCommand extends AbstractCommand
         }
 
         $conn->disableConstraint($this->input->getOption('disable-constraint'));
+        $conn->maintainType($this->input->getOption('maintain-type') ?? false); // set default true or delete in future scope
 
         $this->event($conn);
 
