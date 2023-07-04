@@ -3,18 +3,17 @@
 namespace ryunosuke\Test\DbMigration\FileType;
 
 use ryunosuke\DbMigration\FileType\AbstractFile;
-use ryunosuke\DbMigration\FileType\Json;
 
 class JsonTest extends AbstractFileTestCase
 {
     function getFile($encoding = 'utf8'): AbstractFile
     {
-        return new Json(self::$tmpdir . "/dummy.$encoding.json", []);
+        return AbstractFile::create(self::$tmpdir . "/dummy.$encoding.json", []);
     }
 
     function test_options()
     {
-        $file = new Json(self::$tmpdir . '/dummy.json', [
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.json', [
             'indent' => 2,
             'inline' => 2,
         ]);
@@ -105,7 +104,7 @@ class JsonTest extends AbstractFileTestCase
 
     function test_yield()
     {
-        $file = new Json(self::$tmpdir . '/dummy.json', [
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.json', [
             'yield' => true,
         ]);
 

@@ -3,13 +3,12 @@
 namespace ryunosuke\Test\DbMigration\FileType;
 
 use ryunosuke\DbMigration\FileType\AbstractFile;
-use ryunosuke\DbMigration\FileType\Sql;
 
 class SqlTest extends AbstractFileTestCase
 {
     function getFile($encoding = 'utf8'): AbstractFile
     {
-        return new Sql(self::$tmpdir . "/dummy.$encoding.sql", [
+        return AbstractFile::create(self::$tmpdir . "/dummy.$encoding.sql", [
             'quoteIdentifier' => fn($v) => $v,
             'quoteValue'      => fn($v) => $v,
         ]);
@@ -17,7 +16,7 @@ class SqlTest extends AbstractFileTestCase
 
     function test_yield()
     {
-        $file = new Sql(self::$tmpdir . '/dummy.sql', [
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.sql', [
             'yield' => true,
         ]);
 
@@ -63,11 +62,11 @@ class SqlTest extends AbstractFileTestCase
             SQL2,
         ];
 
-        $file = new Sql(self::$tmpdir . '/dummy.sql', ['delimiter' => '///', 'yield' => true]);
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.sql', ['delimiter' => '///', 'yield' => true]);
         file_put_contents($file->pathinfo()['fullname'], $contents);
         $this->assertEquals($expected, $file->readMigration());
 
-        $file = new Sql(self::$tmpdir . '/dummy.sql', ['delimiter' => '///', 'yield' => false]);
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.sql', ['delimiter' => '///', 'yield' => false]);
         file_put_contents($file->pathinfo()['fullname'], $contents);
         $this->assertEquals($expected, $file->readMigration());
     }

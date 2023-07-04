@@ -3,18 +3,17 @@
 namespace ryunosuke\Test\DbMigration\FileType;
 
 use ryunosuke\DbMigration\FileType\AbstractFile;
-use ryunosuke\DbMigration\FileType\Yaml;
 
 class YamlTest extends AbstractFileTestCase
 {
     function getFile($encoding = 'utf8'): AbstractFile
     {
-        return new Yaml(self::$tmpdir . "/dummy.$encoding.yaml", []);
+        return AbstractFile::create(self::$tmpdir . "/dummy.$encoding.yaml", []);
     }
 
     function test_options()
     {
-        $file = new Yaml(self::$tmpdir . '/dummy.yaml', [
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.yaml', [
             'indent'    => 2,
             'inline'    => 2,
             'multiline' => true,
@@ -102,7 +101,7 @@ class YamlTest extends AbstractFileTestCase
 
     function test_yield()
     {
-        $file = new Yaml(self::$tmpdir . '/dummy.yaml', [
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.yaml', [
             'yield' => true,
         ]);
 
@@ -172,7 +171,7 @@ class YamlTest extends AbstractFileTestCase
 
     function test_yaml5()
     {
-        $file = new Yaml(self::$tmpdir . '/dummy.yaml5', [
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.yaml5', [
             'indent'    => 2,
             'inline'    => 2,
             'multiline' => true,

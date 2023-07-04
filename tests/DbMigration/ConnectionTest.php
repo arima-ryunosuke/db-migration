@@ -72,6 +72,7 @@ class ConnectionTest extends AbstractTestCase
         $conn->maintainType(true);
         $this->assertSame("NULL", $conn->quote(null));
         $this->assertSame("FALSE", $conn->quote(false));
+        $this->assertSame("TRUE", $conn->quote(true));
         $this->assertSame(123, $conn->quote(123));
         $this->assertSame(3.14, $conn->quote(3.14));
         $this->assertSame("'abc'", $conn->quote('abc'));
@@ -82,6 +83,7 @@ class ConnectionTest extends AbstractTestCase
         $conn->maintainType(false);
         $this->assertSame("NULL", $conn->quote(null));
         $this->assertSame("''", $conn->quote(false));
+        $this->assertSame("'1'", $conn->quote(true));
         $this->assertSame("'123'", $conn->quote(123));
         $this->assertSame("'3.14'", $conn->quote(3.14));
         $this->assertSame("'abc'", $conn->quote('abc'));

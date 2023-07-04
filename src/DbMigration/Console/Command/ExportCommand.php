@@ -84,6 +84,7 @@ class ExportCommand extends AbstractCommand
             'multiline' => $this->input->getOption('multiline'),
             'align'     => $this->input->getOption('align'),
             'delimiter' => $this->input->getOption('delimiter'),
+            'typed'     => $this->input->getOption('maintain-type') ?? false,
         ]);
 
         $ddl = $transporter->exportDDL(array_shift($files), $includes, $excludes);

@@ -10,6 +10,12 @@ class Csv extends AbstractFile
 {
     private const NULL = "\\N";
 
+    private const TYPE_MAP = [
+        'boolean' => 'bool',
+        'integer' => 'int',
+        'double'  => 'float',
+    ];
+
     public function readSchema(): array
     {
         throw $this->newUnsupported(__FUNCTION__);
@@ -28,12 +34,25 @@ class Csv extends AbstractFile
     public function writeRecords(iterable $rows): Generator
     {
         $delimiter = $this->options['delimiter'] ?? ',';
+        $typed     = $this->options['typed'] ?? false;
 
         $stream = $this->stream('w');
         if ($this->bom) {
             $stream->fwrite(self::BOM);
         }
         foreach ($rows as $i => $row) {
+            if ($typed) {
+                $newrow = [];
+                foreach ($row as $c => $v) {
+                    $type = gettype($v);
+                    if (isset(self::TYPE_MAP[$type])) {
+                        $c = "$c:" . self::TYPE_MAP[$type];
+                    }
+                    $newrow[$c] = $v;
+                }
+                $row = $newrow;
+            }
+
             if ($i === 0) {
                 $stream->fputcsv(array_keys($row), $delimiter);
             }
@@ -77,6 +96,7 @@ class Csv extends AbstractFile
     protected function read(): Generator
     {
         $delimiter = $this->options['delimiter'] ?? ',';
+        $typed     = $this->options['typed'] ?? false;
 
         $stream = $this->stream('r');
         $stream->setFlags($stream::READ_CSV);
@@ -85,6 +105,21 @@ class Csv extends AbstractFile
         [$header, $stream] = iterator_split($stream, [1]);
         $header    = $header[0];
         $header[0] = preg_replace("#^" . self::BOM . "#u", '', $header[0]);
+
+        if ($typed) {
+            $types     = [];
+            $newheader = [];
+            foreach ($header as $c => $v) {
+                $rpos = strrpos($v, ':');
+                if ($rpos !== false) {
+                    $types[$c] = substr($v, $rpos + 1);
+                    $v         = substr($v, 0, $rpos);
+                }
+                $newheader[$c] = $v;
+            }
+            $header = $newheader;
+        }
+
         foreach ($stream as $fields) {
             if ($fields === [null]) {
                 continue;
@@ -92,6 +127,9 @@ class Csv extends AbstractFile
             foreach ($fields as $c => $v) {
                 if ($v === self::NULL) {
                     $fields[$c] = null;
+                }
+                elseif (isset($types[$c])) {
+                    settype($fields[$c], $types[$c]);
                 }
             }
             yield array_combine($header, $fields);

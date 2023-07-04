@@ -3,13 +3,12 @@
 namespace ryunosuke\Test\DbMigration\FileType;
 
 use ryunosuke\DbMigration\FileType\AbstractFile;
-use ryunosuke\DbMigration\FileType\Php;
 
 class PhpTest extends AbstractFileTestCase
 {
     function getFile($encoding = 'utf8'): AbstractFile
     {
-        return new Php(self::$tmpdir . "/dummy.$encoding.php", []);
+        return AbstractFile::create(self::$tmpdir . "/dummy.$encoding.php", []);
     }
 
     function test_callback()
@@ -17,7 +16,7 @@ class PhpTest extends AbstractFileTestCase
         $file     = self::$tmpdir . '/callback.php';
         $contents = '<?php return function ($connection) {return [$connection];};';
         file_put_contents($file, $contents);
-        $phpFile = new Php($file, [
+        $phpFile = AbstractFile::create($file, [
             'connection' => 'hoge',
         ]);
         $this->assertContainsString('closure file', iterator_to_array($phpFile->writeRecords([])));
@@ -27,7 +26,7 @@ class PhpTest extends AbstractFileTestCase
 
     function test_options()
     {
-        $file = new Php(self::$tmpdir . '/dummy.json', [
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.php', [
             'indent'    => 2,
             'inline'    => 2,
             'multiline' => true,

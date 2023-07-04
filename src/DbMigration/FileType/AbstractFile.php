@@ -19,7 +19,6 @@ abstract class AbstractFile
     protected array  $pathinfo;
     protected array  $options;
 
-    /** @noinspection PhpMissingBreakStatementInspection */
     public static function create(string $filename, array $options): AbstractFile
     {
         if (($options['connection'] ?? null) instanceof Connection) {
@@ -33,8 +32,16 @@ abstract class AbstractFile
                 throw new DomainException("'{$ext}' is not supported.");
             case 'sql':
                 return new Sql($filename, $options);
+            case 'ttsv':
+                $options['delimiter'] = "\t";
+                $options['typed']     = true;
+                return new Csv($filename, $options);
+            case 'tcsv':
+                $options['typed'] = true;
+                return new Csv($filename, $options);
             case 'tsv':
                 $options['delimiter'] = "\t";
+                return new Csv($filename, $options);
             case 'csv':
                 return new Csv($filename, $options);
             case 'php':
@@ -45,6 +52,7 @@ abstract class AbstractFile
             case 'yaml5':
                 $options['flowstyle'] = true;
                 $options['yield']     = false;
+                return new Yaml($filename, $options);
             case 'yml':
             case 'yaml':
                 return new Yaml($filename, $options);

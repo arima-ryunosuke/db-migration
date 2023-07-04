@@ -87,6 +87,7 @@ class MigrateCommand extends AbstractCommand
             'inline'    => $this->input->getOption('inline'),
             'indent'    => $this->input->getOption('indent'),
             'delimiter' => $this->input->getOption('delimiter'),
+            'typed'     => $this->input->getOption('maintain-type') ?? false,
         ]);
         $this->transporter = $transporter;
 

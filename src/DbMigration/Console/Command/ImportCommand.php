@@ -95,6 +95,7 @@ class ImportCommand extends AbstractCommand
             'indent'    => $this->input->getOption('indent'),
             'delimiter' => $this->input->getOption('delimiter'),
             'yield'     => $this->input->getOption('yield'),
+            'typed'     => $this->input->getOption('maintain-type') ?? false,
         ]);
 
         // importDDL

@@ -761,6 +761,15 @@ id	name	data
 TSV
                 ,
             ],
+            [
+                'tcsv',
+                <<<TCSV
+id:int,name,data:float
+1,あいうえお,3.14
+2,かきくけこ,6.28
+TCSV
+                ,
+            ],
         ];
         array_walk_recursive($supported, function (&$v) {
             $v = mb_convert_encoding($v, 'SJIS-win', mb_internal_encoding());
