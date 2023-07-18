@@ -340,6 +340,28 @@ class Transporter
         return $result;
     }
 
+    public function checkForeignKeyConstraint(array $includes = [], array $excludes = []): array
+    {
+        $result = [];
+
+        foreach ($this->schema->getTables() as $table) {
+            $name = $table->getName();
+
+            if ($this->filterTable($name, $includes, $excludes) > 0) {
+                continue;
+            }
+
+            $scanner = new TableScanner($this->connection, $table, []);
+
+            $foreignKeys = $table->getForeignKeys();
+            foreach ($foreignKeys as $foreignKey) {
+                $result[$name][$foreignKey->getName()] = $scanner->getOrphanRows($foreignKey);
+            }
+        }
+
+        return $result;
+    }
+
     public function exportDDL(string $filename, array $includes = [], array $excludes = []): string
     {
         if (!strlen($filename)) {

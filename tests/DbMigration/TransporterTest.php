@@ -207,6 +207,17 @@ class TransporterTest extends AbstractTestCase
     /**
      * @test
      */
+    function checkForeignKeyConstraint()
+    {
+        // for coverage
+        $diff = $this->transporter->checkForeignKeyConstraint(['hoge'], ['fuga']);
+
+        $this->assertEquals([], $diff);
+    }
+
+    /**
+     * @test
+     */
     function exportDDL()
     {
         $this->transporter->exportDDL(self::$tmpdir . '/table.php');

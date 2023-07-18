@@ -12,6 +12,7 @@ if (!$files) {
 require_once reset($files);
 
 $application = new \Symfony\Component\Console\Application();
+$application->add(new \ryunosuke\DbMigration\Console\Command\CheckCommand());
 $application->add(new \ryunosuke\DbMigration\Console\Command\ExportCommand());
 $application->add(new \ryunosuke\DbMigration\Console\Command\ImportCommand());
 $application->add(new \ryunosuke\DbMigration\Console\Command\MigrateCommand());

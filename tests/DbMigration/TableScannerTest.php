@@ -4,9 +4,9 @@ namespace ryunosuke\Test\DbMigration;
 
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Column;
+use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Table;
-use Doctrine\DBAL\Tools\DsnParser;
 use Doctrine\DBAL\Types\Type;
 use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\TableScanner;
@@ -33,10 +33,15 @@ class TableScannerTest extends AbstractTestCase
         $table_fuga = new Table('fuga');
         $table_fuga->addColumn('id1', 'integer');
         $table_fuga->addColumn('id2', 'integer');
+        $table_fuga->addColumn('fid1', 'integer', ['Notnull' => false]);
+        $table_fuga->addColumn('fid2', 'integer', ['Notnull' => false]);
         $table_fuga->addColumn('data', 'string');
         $table_fuga->addColumn('ignored', 'string');
         $table_fuga->setPrimaryKey(['id1', 'id2']);
         $this->readyTable($this->schema, $table_fuga);
+
+        $this->schema->createForeignKey(new ForeignKeyConstraint(['fid1'], 'hoge', ['id'], 'fk_fuga_hoge1'), 'fuga');
+        $this->schema->createForeignKey(new ForeignKeyConstraint(['fid2'], 'hoge', ['id'], 'fk_fuga_hoge2'), 'fuga');
 
         $this->scanner  = new TableScanner($this->connection, $table_hoge, ['TRUE']);
         $this->refClass = new \ReflectionClass($this->scanner);
@@ -178,6 +183,43 @@ class TableScannerTest extends AbstractTestCase
     /**
      * @test
      */
+    function getOrphanRows()
+    {
+        $this->connection->disableConstraint(true);
+
+        $rows = array_map(function ($i) {
+            return [
+                'id' => $i,
+            ];
+        }, range(1, 6));
+        $this->insertMultiple($this->connection, 'hoge', $rows);
+
+        $rows = array_map(function ($i) {
+            return [
+                'id1'     => $i,
+                'id2'     => $i,
+                'fid1'    => $i,
+                'fid2'    => $i % 2 === 0 ? $i : null,
+                'data'    => $i,
+                'ignored' => $i,
+            ];
+        }, range(1, 10));
+        $this->insertMultiple($this->connection, 'fuga', $rows);
+
+        $this->connection->disableConstraint(false);
+
+        $rows = $this->scanner_fuga->getOrphanRows($this->schema->introspectTable('fuga')->getForeignKey('fk_fuga_hoge1'));
+        $this->assertCount(4, iterator_to_array($rows));
+
+        $rows = $this->scanner_fuga->getOrphanRows($this->schema->introspectTable('fuga')->getForeignKey('fk_fuga_hoge2'));
+        $this->assertCount(2, iterator_to_array($rows));
+
+        $this->connection->disableConstraint(false);
+    }
+
+    /**
+     * @test
+     */
     function getRecordFromPrimaryKeys_empty()
     {
         $rows = $this->invoke('getRecordFromPrimaryKeys', [], true);
@@ -192,8 +234,17 @@ class TableScannerTest extends AbstractTestCase
     {
         $rows = array_map(function ($i) {
             return [
+                'id' => $i,
+            ];
+        }, range(1, 10));
+        $this->insertMultiple($this->connection, 'hoge', $rows);
+
+        $rows = array_map(function ($i) {
+            return [
                 'id1'     => $i,
                 'id2'     => $i,
+                'fid1'    => null,
+                'fid2'    => null,
                 'data'    => $i,
                 'ignored' => $i,
             ];

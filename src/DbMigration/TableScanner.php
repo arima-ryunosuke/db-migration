@@ -4,6 +4,7 @@ namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Schema\Column;
+use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Table;
 use Generator;
 use ryunosuke\DbMigration\Exception\MigrationException;
@@ -192,6 +193,35 @@ class TableScanner
         foreach ($this->conn->queryUnbuffered($sql) as $row) {
             yield $this->fillDefaultValue($row);
         }
+    }
+
+    public function getOrphanRows(ForeignKeyConstraint $foreignKey): Generator
+    {
+        $implode = fn($glue, $array) => implode($glue, $array);
+        $quote   = fn($v) => $this->conn->quoteIdentifier($v);
+
+        $localTableName   = $this->quotedName;
+        $foreignTableName = $quote($foreignKey->getForeignTableName());
+
+        $columns        = [];
+        $onCondition    = [];
+        $whereCondition = [];
+
+        foreach (array_combine($foreignKey->getLocalColumns(), $foreignKey->getForeignColumns()) as $local => $foreign) {
+            $columns[]        = "{$localTableName}.{$quote($local)}";
+            $onCondition[]    = "{$foreignTableName}.{$quote($foreign)} = {$localTableName}.{$quote($local)}";
+            $whereCondition[] = "{$localTableName}.{$quote($local)} IS NOT NULL";
+            $whereCondition[] = "{$foreignTableName}.{$quote($foreign)} IS NULL";
+        }
+
+        $sql = "
+            SELECT    {$implode(',', $columns)}
+            FROM      {$this->quotedName}
+            LEFT JOIN {$foreignTableName} ON {$implode(' AND ', $onCondition)}
+            WHERE     {$implode(' AND ', $whereCondition)}
+        ";
+
+        return $this->conn->queryUnbuffered($sql);
     }
 
     public function associateRecords(iterable $rows): Generator
