@@ -7,7 +7,6 @@ use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Table;
 use Generator;
 use ryunosuke\DbMigration\Exception\MigrationException;
-use Traversable;
 
 class TableScanner
 {
@@ -163,7 +162,7 @@ class TableScanner
         return $sqls;
     }
 
-    public function getPrimaryRows(): array
+    public function getPrimaryRows(): Generator
     {
         // fetch primary values
         $sql = "
@@ -173,13 +172,10 @@ class TableScanner
             ORDER BY {$this->primaryKeyString}
         ";
 
-        $result = [];
-        foreach ($this->conn->fetchAllAssociative($sql) as $row) {
-            $id          = implode("\t", $row);
-            $result[$id] = $row;
+        foreach ($this->conn->queryUnbuffered($sql) as $row) {
+            $id = implode("\t", $row);
+            yield $id => $row;
         }
-
-        return $result;
     }
 
     public function getAllRows(): Generator
@@ -234,7 +230,7 @@ class TableScanner
         return $row;
     }
 
-    private function getRecordFromPrimaryKeys(array $tuples): Traversable
+    private function getRecordFromPrimaryKeys(array $tuples): Generator
     {
         // prepare sql of primary key record
         $columns      = array_diff_key($this->columns, $this->ignoreColumns);

@@ -494,7 +494,7 @@ class Transporter
         $scanner = new TableScanner($this->connection, $table, [], $ignoreColumn);
 
         // primary key tuples
-        $primaryTuples = $scanner->getPrimaryRows();
+        $primaryTuples = iterator_to_array($scanner->getPrimaryRows());
         $dataRecords   = iterator_to_array($scanner->associateRecords($records));
 
         $dmls = [];

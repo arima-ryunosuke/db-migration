@@ -200,7 +200,7 @@ class TableScannerTest extends AbstractTestCase
         }, range(1, 10));
         $this->insertMultiple($this->connection, 'fuga', $rows);
 
-        $tuples = $this->scanner_fuga->getPrimaryRows();
+        $tuples = iterator_to_array($this->scanner_fuga->getPrimaryRows());
 
         $refmethod = new \ReflectionMethod($this->scanner_fuga, 'getRecordFromPrimaryKeys');
         $refmethod->setAccessible(true);
