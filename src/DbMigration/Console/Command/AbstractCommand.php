@@ -217,6 +217,9 @@ abstract class AbstractCommand extends Command
                 $emanager->addEventListener($name, $event);
             }
         }
+
+        // force connect. postConnect is not completed in time because of automatic connection with getDatabasePlatformVersion.
+        $conn->connect();
     }
 
     protected function config(InputInterface $input, OutputInterface $output)

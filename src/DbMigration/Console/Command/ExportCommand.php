@@ -70,9 +70,9 @@ class ExportCommand extends AbstractCommand
         $params = $this->parseDsn($this->input->getArgument('dsn'));
         $conn   = DriverManager::getConnection($params);
 
-        $conn->maintainType($this->input->getOption('maintain-type') ?? false); // set default true or delete in future scope
-
         $this->event($conn);
+
+        $conn->maintainType($this->input->getOption('maintain-type') ?? false); // set default true or delete in future scope
 
         // export sql files from argument
         $transporter = new Transporter($conn);

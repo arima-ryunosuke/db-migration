@@ -72,14 +72,14 @@ class MigrateCommand extends AbstractCommand
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($this->parseDsn($this->input->getArgument('dsn')));
 
+        $this->event($conn);
+
         if (!$conn->lockGlobal("migrating." . $conn->getDatabase(), 0)) {
             $this->logger->log("-- <comment>migration did not execute. because executing by other connection</comment>");
         }
 
         $conn->disableConstraint($this->input->getOption('disable-constraint'));
         $conn->maintainType($this->input->getOption('maintain-type') ?? false); // set default true or delete in future scope
-
-        $this->event($conn);
 
         $transporter = new Transporter($conn);
         $transporter->setDirectory($this->input->getOption('directory'));

@@ -82,10 +82,10 @@ class ImportCommand extends AbstractCommand
         $params['dbname'] = $dbname;
         $conn             = DriverManager::getConnection($params);
 
+        $this->event($conn);
+
         $conn->disableConstraint($this->input->getOption('disable-constraint'));
         $conn->maintainType($this->input->getOption('maintain-type') ?? false); // set default true or delete in future scope
-
-        $this->event($conn);
 
         $transporter = new Transporter($conn);
         $transporter->setDirectory($this->input->getOption('directory'));
