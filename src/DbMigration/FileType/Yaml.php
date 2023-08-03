@@ -64,7 +64,7 @@ class Yaml extends AbstractFile
 
     public function readMigration(): array
     {
-        return iterator_to_array($this->read());
+        return $this->decode((string) $this);
     }
 
     protected function encode($data, $options, $nest = 0)
