@@ -37,6 +37,7 @@ class MigrateCommandTest extends AbstractTestCase
         $this->readyTable($this->schema, $this->createSimpleTable('sametable', 'integer', 'id'));
         $this->readyTable($this->schema, $this->createSimpleTable('drptable', 'integer', 'id'));
         $this->readyTable($this->schema, $this->createSimpleTable('eventtable', 'integer', 'id'));
+        $this->readyTable($this->schema, $this->createSimpleTable('excluded', 'integer', 'id'));
 
         $view = new View('simpleview', 'select 1');
         $this->schema->createView($view);
@@ -137,8 +138,8 @@ class MigrateCommandTest extends AbstractTestCase
     function run_type_ddl()
     {
         $result = $this->runApp([
-            '--type' => 'ddl',
-            'files'  => [
+            '--type'    => 'ddl',
+            'files'     => [
                 $this->getFile('table.php'),
                 $this->getFile('data/difftable.php'),
                 $this->getFile('data/longtable.php'),
@@ -146,17 +147,20 @@ class MigrateCommandTest extends AbstractTestCase
                 $this->getFile('data/notexist.php'),
                 $this->getFile('data/sametable.php'),
             ],
+            '--exclude' => ['^excluded$'],
         ]);
         $this->assertStringContainsString('ALTER TABLE igntable', $result);
         $this->assertStringNotContainsString('DELETE FROM `migtable`', $result);
         $this->assertStringNotContainsString('INSERT INTO `migtable`', $result);
         $this->assertStringNotContainsString('UPDATE `migtable` SET', $result);
+        $this->assertStringNotContainsString('DROP TABLE excluded', $result);
 
         $result = $this->runApp([
-            '--type' => 'ddl',
-            'files'  => [
+            '--type'    => 'ddl',
+            'files'     => [
                 $this->getFile('table.php'),
             ],
+            '--exclude' => ['^excluded$'],
         ]);
         $this->assertStringContainsString('no diff schema', $result);
     }

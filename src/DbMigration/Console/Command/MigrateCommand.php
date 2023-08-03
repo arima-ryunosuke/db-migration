@@ -36,6 +36,7 @@ class MigrateCommand extends AbstractCommand
                 'transaction',
                 'type',
                 'dml-type',
+                'exclude',
                 'ignore',
                 'bulk-insert',
                 'inline',
@@ -126,7 +127,10 @@ class MigrateCommand extends AbstractCommand
 
         $force = $this->input->getOption('force');
 
-        $excludes = $this->input->getOption('migration') ? ['^' . basename($this->input->getOption('migration')) . '$'] : [];
+        $excludes = $this->splitByComma($this->input->getOption('exclude'));
+        if ($this->input->getOption('migration')) {
+            $excludes[] = '^' . basename($this->input->getOption('migration')) . '$';
+        }
 
         // get ddl
         $sqls = $this->transporter->migrateDDL(array_shift($files), $excludes);
