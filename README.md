@@ -23,8 +23,8 @@ sh /path/to/clonedir/demo/run.sh
 コマンドラインツールが付属しています。また、 phar もあります。
 依存を避けるため phar の利用を推奨します。下記の記述例は phar が前提です。
 
-export, import, migrate の3つのサブコマンドで構成されます。
-役割は順に「出力・入力・マイグレーション」です。
+export, import, migrate, check の4つのサブコマンドで構成されます。
+役割は順に「出力・入力・マイグレーション・整合チェック」です。
 
 作者の想定するユースケースは下記のとおりです。
 
@@ -488,6 +488,7 @@ Options:
   -T, --transaction[=TRANSACTION]         Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
   -t, --type[=TYPE]                       Migration SQL type (ddl, dml. default both)
       --dml-type[=DML-TYPE]               Specify dml type (enable comma separated value. e.g. --dml-type insert,update) [default: ["insert","update","delete"]] (multiple values allowed)
+  -e, --exclude[=EXCLUDE]                 Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
   -g, --ignore[=IGNORE]                   Ignore column. (multiple values allowed)
       --bulk-insert[=BULK-INSERT]         Specify bulk insert chunk size
       --inline[=INLINE]                   Specify php/json/yaml inline nest level. [default: 4]
@@ -539,6 +540,15 @@ import と同じです。
 デフォルトはすべて指定されています。
 つまり上記の3タイプがすべて実行されます。
 
+#### --exclude (-e)
+
+export と同じですが、include はありません。
+include は単に files から定義を削ればいいからです。
+
+フレームワークやライブラリが自動でテーブルを作成することはよくあり、そういったものを除外しないと `DROP TABLE` が走ることがあります。
+管理下に居ないためです。
+このオプションで除外することで管理下から除くことができます。
+
 #### --ignore (-g)
 
 import と同じです。
@@ -561,6 +571,45 @@ import と同じです。
 import と同じです。
 同じですが、存在するレコードとの主キー比較のために一旦配列に直されるため、実質的に意味はありません。
 このオプションは親和性のために用意されています。
+
+### check
+
+第1引数の DSN で整合性に違反するようなレコードがないかチェックします。
+現在のところ外部キーのチェックのみが実装されています。
+
+- e.g. `php dbmigration.phar check mysql://127.0.0.1/dbname
+
+引数は下記。
+
+```
+Description:
+  Check constraint.
+
+Usage:
+  check [options] [--] [<dsn>]
+
+Arguments:
+  dsn                      Specify target DSN.
+
+Options:
+  -i, --include[=INCLUDE]  Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
+  -e, --exclude[=EXCLUDE]  Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
+      --indent[=INDENT]    Specify php/json/yaml indent size. [default: 4]
+  -E, --event[=EVENT]      Specify Event filepath
+  -C, --config[=CONFIG]    Specify Configuration filepath
+  -h, --help               Display help for the given command. When no command is given display help for the list command
+  -q, --quiet              Do not output any message
+  -V, --version            Display this application version
+      --ansi|--no-ansi     Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction     Do not ask any interactive question
+  -v|vv|vvv, --verbose     Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+
+Help:
+  Check constraint (e.g. foreign key).
+   e.g. `dbmigration check mysql://user:pass@localhost/dbname`
+```
+
+原則的にシンプルで引数やオプションも少ないため、説明は割愛します。
 
 ## Licence
 

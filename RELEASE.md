@@ -21,6 +21,15 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.2
+
+- [fixbug] json/yaml をマイグレーションデータとして使うときにエラーになる不具合を修正
+- [fixbug] Platform が異なるインスタンスになる不具合を修正
+- [feature] migrate コマンドに exclude オプションを追加
+- [feature] 整合性チェックコマンド check を追加
+- [feature] 型付 csv を追加
+- [refactor] TableScanner の返り値に統一感がなかったので Generator に統一
+
 ## 3.1.1
 
 - [feature] 型を維持させる maintain-type を追加
