@@ -112,6 +112,16 @@ class Connection extends \Doctrine\DBAL\Connection
         return false;
     }
 
+    public function insert($table, array $data, array $types = [])
+    {
+        if (count($data) === 0) {
+            return parent::insert($table, $data, $types);
+        }
+
+        $implode = fn($v) => implode(',', $v);
+        return $this->executeStatement("INSERT INTO $table ({$implode(array_keys($data))}) VALUES ({$implode($this->quote($data))})");
+    }
+
     /**
      * @param mixed $value
      */

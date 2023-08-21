@@ -63,6 +63,21 @@ class ConnectionTest extends AbstractTestCase
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$conn->queryUnbuffered('select * from t_many')]);
     }
 
+    function test_insert()
+    {
+        $conn = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);
+        $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
+        $table_hoge->getColumn('id')->setAutoincrement(true);
+        $this->readyTable($this->schema, $table_hoge);
+
+        $this->assertEquals(1, $conn->insert('hoge', []));
+        $this->assertEquals(1, $conn->insert('hoge', ['id' => 3]));
+        $this->assertEquals([
+            ['id' => 1],
+            ['id' => 3],
+        ], $conn->fetchAllAssociative('select * from hoge'));
+    }
+
     function test_quote()
     {
         $parser = new DsnParser();
