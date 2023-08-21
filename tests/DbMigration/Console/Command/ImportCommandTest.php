@@ -49,6 +49,47 @@ class ImportCommandTest extends AbstractTestCase
     /**
      * @test
      */
+    function run_migration()
+    {
+        unset($this->defaultArgs['-n']);
+        $this->questionSetInputStream('y', 'y', 'n', 'p', 'y', 'y');
+
+        $result = $this->runApp([
+            '-v'    => true,
+            '-m'    => $this->getFile('migs'),
+            'files' => [
+                $this->getFile('table.php'),
+                $this->getFile('data/difftable.php'),
+                $this->getFile('data/longtable.php'),
+                $this->getFile('data/migtable.php'),
+                $this->getFile('data/notexist.php'),
+                $this->getFile('data/sametable.php'),
+            ],
+        ]);
+        $this->assertStringContainsString("Attach: 1.sql", $result);
+        $this->assertStringNotContainsString("Attach: 2.tsv", $result);
+        $this->assertStringNotContainsString("Attach: 3.php", $result);
+        $this->assertStringContainsString("Attach: 4.json", $result);
+        $this->assertStringContainsString("Attach: 5.yaml", $result);
+        $this->assertEquals([
+            ['1.sql'],
+            ['3.php'], // "p" なので当たっている
+            ['4.json'],
+            ['5.yaml'],
+        ], $this->connection->fetchAllNumeric('select version from migs'));
+
+        $this->questionSetInputStream('y', 'y');
+        $this->assertExceptionMessage("'invalid query'", $this->runApp, [
+            '-m' => $this->getFile('migs_invalid'),
+            'files' => [
+                $this->getFile('table.php'),
+            ],
+        ]);
+    }
+
+    /**
+     * @test
+     */
     function run_nonedb()
     {
         $dbname = $this->dbparams['dbname'];

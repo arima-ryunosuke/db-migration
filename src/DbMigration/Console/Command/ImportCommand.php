@@ -32,6 +32,7 @@ class ImportCommand extends AbstractCommand
                 'inline',
                 'indent',
                 'delimiter',
+                'force',
                 'yield',
                 'format',
                 'omit',
@@ -139,7 +140,6 @@ class ImportCommand extends AbstractCommand
             }
         });
 
-
         // create migration table and attach all
         $migration = $this->input->getOption('migration');
         if ($migration) {
@@ -150,9 +150,27 @@ class ImportCommand extends AbstractCommand
             $migrationTable->create();
 
             $migfiles = $migrationTable->glob($migration);
-            foreach ($migfiles as $version => $sql) {
-                $this->logger->debug((string) $sql);
-                $migrationTable->attach($version);
+            foreach ($migfiles as $version => $migfile) {
+                $this->logger->log((string) $migfile);
+                $answer = $this->choice('exec this file?', ['y', 'n', 'p'], 2);
+                if ($answer === 2) {
+                    $migrationTable->attach($version);
+                    continue;
+                }
+                if ($answer === 1) {
+                    continue;
+                }
+                if ($answer === 0) {
+                    $this->transact($conn, function () use ($migrationTable, $version, $migfile) {
+                        $affected = $migrationTable->apply($version, $migfile->readMigration());
+                        $this->logger->log("-- <comment>Attach: $version, Affected rows: $affected</comment>");
+                    }, function (\Exception $ex) {
+                        $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
+                        if (!$this->input->getOption('force') && $this->confirm('exit?', true)) {
+                            throw $ex;
+                        }
+                    });
+                }
             }
         }
 

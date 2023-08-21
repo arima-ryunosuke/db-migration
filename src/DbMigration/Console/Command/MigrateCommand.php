@@ -274,7 +274,7 @@ class MigrateCommand extends AbstractCommand
                 if ($answer === 0) {
                     $this->transact($conn, function () use ($migrationTable, $version, $file) {
                         $affected = $migrationTable->apply($version, $file->readMigration());
-                        $this->logger->log("-- <comment>Affected rows: $affected</comment>");
+                        $this->logger->log("-- <comment>Attach: $version, Affected rows: $affected</comment>");
                     }, function (\Exception $ex) {
                         $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
                         if (!$this->input->getOption('force') && $this->confirm('exit?', true)) {
