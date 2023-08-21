@@ -173,10 +173,8 @@ return function ($connection) {
 このような変更は DDL, DML では管理しきれないため、差分適用後に何らかの SQL を実行する必要があります。
 そういった事象を救うためのオプションです。
 
-export,import 時の指定は大きな意味はありません。
-
-export 時は `exclude` と同じに意味になります（マイグレーションテーブルも出力されてしまうため）。
-import 時は初期化時に当てた扱いにする程度のことしか行いません。
+export 時の指定は大きな意味はありません。 `exclude` と同じに意味になります（マイグレーションテーブルも出力されてしまうため）。
+import 時は当てるか当てないかの選択肢が表示されます。初期化を想定したコマンドのため、デフォルトは "p"(当てた扱いにする) です。
 
 #### --transaction (-T)
 
@@ -421,6 +419,7 @@ Options:
       --inline[=INLINE]                   Specify php/json/yaml inline nest level. [default: 4]
       --indent[=INDENT]                   Specify php/json/yaml indent size. [default: 4]
       --delimiter=DELIMITER               Specify sql/csv delimiter.
+  -f, --force                             Force continue, ignore errors
       --yield                             Specify sql/json/yaml generator mode.
       --format[=FORMAT]                   Format output SQL (none, pretty, format. default pretty) [default: "pretty"]
   -o, --omit=OMIT                         Omit size for long SQL

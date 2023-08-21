@@ -21,6 +21,11 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.3
+
+- [feature] import コマンドの migration で当てる当てないを選択可能にした
+- [fixbug] migration で quote が使用されない不具合を修正
+
 ## 3.1.2
 
 - [fixbug] json/yaml をマイグレーションデータとして使うときにエラーになる不具合を修正
