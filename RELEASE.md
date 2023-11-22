@@ -21,6 +21,10 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.4
+
+- [fixbug] mysql の カラム順が維持されない不具合を修正
+
 ## 3.1.3
 
 - [feature] import コマンドの migration で当てる当てないを選択可能にした
