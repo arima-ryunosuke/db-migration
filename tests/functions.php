@@ -1994,14 +1994,11 @@ if (!function_exists('ryunosuke\\DbMigration\\array_grep_key')) {
      */
     function array_grep_key($array, $regex, $not = false)
     {
-        $result = [];
-        foreach ($array as $k => $v) {
-            $match = preg_match($regex, $k);
-            if ((!$not && $match) || ($not && !$match)) {
-                $result[$k] = $v;
-            }
-        }
-        return $result;
+        $array = is_array($array) ? $array : iterator_to_array($array);
+        $keys = array_keys($array);
+        $greped = preg_grep($regex, $keys, $not ? PREG_GREP_INVERT : 0);
+        $flipped = array_flip($greped);
+        return array_intersect_key($array, $flipped);
     }
 }
 
@@ -5116,13 +5113,12 @@ if (!function_exists('ryunosuke\\DbMigration\\kvsort')) {
             $tmp[$k] = [$n++, $k, $v];
         }
 
-        uasort($tmp, fn($a, $b) => $comparator($a[2], $b[2], $a[1], $b[1]) ?: ($a[0] - $b[0]));
+        uasort($tmp, function ($a, $b) use ($comparator) {
+            $com = $comparator($a[2], $b[2], $a[1], $b[1]);
+            return $com !== 0 ? $com : ($a[0] - $b[0]);
+        });
 
-        foreach ($tmp as $k => $v) {
-            $tmp[$k] = $v[2];
-        }
-
-        return $tmp;
+        return array_column($tmp, 2, 1);
     }
 }
 
@@ -6321,7 +6317,7 @@ if (!function_exists('ryunosuke\\DbMigration\\optional')) {
      *
      * @template T
      * @param T|null $object オブジェクト
-     * @param ?string $expected 期待するクラス名。指定した場合は is_a される
+     * @param null|string|T $expected 期待するクラス名。指定した場合は is_a される
      * @return T $object がオブジェクトならそのまま返し、違うなら NullObject を返す
      */
     function optional($object, $expected = null)
@@ -7934,21 +7930,23 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
      *
      * @package ryunosuke\Functions\Package\dataformat
      *
-     * @param array $csvarrays 連想配列の配列
+     * @param iterable $csvarrays 連想配列の配列
      * @param array $options オプション配列。fputcsv の第3引数以降もここで指定する
      * @return string|int CSV 的文字列。output オプションを渡した場合は書き込みバイト数
      */
     function csv_export($csvarrays, $options = [])
     {
         $options += [
-            'delimiter' => ',',
-            'enclosure' => '"',
-            'escape'    => '\\',
-            'encoding'  => mb_internal_encoding(),
-            'headers'   => null,
-            'structure' => false,
-            'callback'  => null, // map + filter 用コールバック（1行が参照で渡ってくるので書き換えられる&&false を返すと結果から除かれる）
-            'output'    => null,
+            'delimiter'       => ',',
+            'enclosure'       => '"',
+            'escape'          => '\\',
+            'encoding'        => mb_internal_encoding(),
+            'initial'         => '', // "\xEF\xBB\xBF"
+            'headers'         => null,
+            'structure'       => false,
+            'callback'        => null, // map + filter 用コールバック（1行が参照で渡ってくるので書き換えられる&&false を返すと結果から除かれる）
+            'callback_header' => false, // callback に header 行も渡ってくるか？（互換性のためであり将来的に削除される）
+            'output'          => null,
         ];
 
         $output = $options['output'];
@@ -7960,14 +7958,22 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
             $fp = fopen('php://temp', 'rw+');
         }
         try {
-            $size = call_safely(function ($fp, $csvarrays, $delimiter, $enclosure, $escape, $encoding, $headers, $structure, $callback) {
+            $size = call_safely(function ($fp, $csvarrays, $delimiter, $enclosure, $escape, $encoding, $initial, $headers, $structure, $callback, $callback_header) {
                 $size = 0;
                 $mb_internal_encoding = mb_internal_encoding();
+
+                if (!is_array($csvarrays)) {
+                    [$csvarrays, $csvarrays2] = iterator_split($csvarrays, [1], true);
+                }
+
                 if ($structure) {
                     foreach ($csvarrays as $n => $array) {
                         $query = strtr(http_build_query($array, ''), ['%5B' => '[', '%5D' => ']']);
                         $csvarrays[$n] = array_map('rawurldecode', str_array(explode('&', $query), '=', true));
                     }
+                }
+                if (strlen($initial)) {
+                    fwrite($fp, $initial);
                 }
                 if (!$headers) {
                     $tmp = [];
@@ -8007,6 +8013,12 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                     $headers = array_combine($headers, $headers);
                 }
                 else {
+                    if ($callback_header && $callback) {
+                        if ($callback($headers, null) === false) {
+                            goto BODY;
+                        }
+                    }
+
                     $headerline = $headers;
                     if ($encoding !== $mb_internal_encoding) {
                         mb_convert_variables($encoding, $mb_internal_encoding, $headerline);
@@ -8016,7 +8028,14 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                     }
                     $size += fputcsv($fp, $headerline, $delimiter, $enclosure, $escape);
                 }
+
+                BODY:
+
                 $default = array_fill_keys(array_keys($headers), '');
+
+                if (isset($csvarrays2)) {
+                    $csvarrays = iterator_join([$csvarrays, $csvarrays2]);
+                }
 
                 foreach ($csvarrays as $n => $array) {
                     if ($callback) {
@@ -8031,7 +8050,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                     $size += fputcsv($fp, $row, $delimiter, $enclosure, $escape);
                 }
                 return $size;
-            }, $fp, $csvarrays, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['headers'], $options['structure'], $options['callback']);
+            }, $fp, $csvarrays, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['initial'], $options['headers'], $options['structure'], $options['callback'], $options['callback_header']);
             if ($output) {
                 return $size;
             }
@@ -8174,7 +8193,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
                     if ($structure) {
                         $query = [];
                         foreach ($headers as $i => $header) {
-                            $query[] =  rawurlencode($header). "=" . rawurlencode($row[$i]);
+                            $query[] = rawurlencode($header) . "=" . rawurlencode($row[$i]);
                         }
                         $row = parse_query(implode('&', $query), '&', PHP_QUERY_RFC3986);
                         // csv の仕様上、空文字を置かざるを得ないが、数値配列の場合は空にしたいことがある
@@ -9930,6 +9949,28 @@ if (!function_exists('ryunosuke\\DbMigration\\date_convert')) {
      * マイクロ秒にも対応している。
      * かなり適当に和暦にも対応している。
      *
+     * 拡張書式は下記。
+     * - J: 日本元号
+     *   - e.g. 平成
+     *   - e.g. 令和
+     * - b: 日本元号略称
+     *   - e.g. H
+     *   - e.g. R
+     * - k: 日本元号年
+     *   - e.g. 平成7年
+     *   - e.g. 令和1年
+     * - K: 日本元号年（1年が元年）
+     *   - e.g. 平成7年
+     *   - e.g. 令和元年
+     * - x: 日本語曜日
+     *   - e.g. 日
+     *   - e.g. 月
+     * - Q: 月内週番号（商が第N、余が曜日）
+     *   - e.g. 6（7 * 0 + 6 第1土曜日）
+     *   - e.g. 15（7 * 2 + 1 第3月曜日）
+     *
+     * php8.2 から x,X が追加されたため上記はあくまで参考となる。
+     *
      * Example:
      * ```php
      * // 和暦を Y/m/d H:i:s に変換
@@ -9985,6 +10026,7 @@ if (!function_exists('ryunosuke\\DbMigration\\date_convert')) {
                 'k' => fn() => $era ? $era['year'] : throws(new \InvalidArgumentException("notfound JP_ERA '$datetimedata'")),
                 'K' => fn() => $era ? $era['gann'] : throws(new \InvalidArgumentException("notfound JP_ERA '$datetimedata'")),
                 'x' => fn() => ['日', '月', '火', '水', '木', '金', '土'][idate('w', (int) $timestamp)],
+                'Q' => fn() => idate('w', $timestamp) + intdiv(idate('j', $timestamp) - 1, 7) * 7,
             ], '\\');
         }
 
@@ -10340,6 +10382,218 @@ if (!function_exists('ryunosuke\\DbMigration\\date_interval_second')) {
         $difftime = $datetime->add($interval);
 
         return date_timestamp($difftime) - date_timestamp($datetime);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\date_match') || (new \ReflectionFunction('ryunosuke\\DbMigration\\date_match'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\date_match')) {
+    /**
+     * 日時と cron ライクな表記のマッチングを行う
+     *
+     * YYYY/MM/DD(W) hh:mm:ss のようなパターンを与える。
+     *
+     * - YYYY: 年を表す（1～9999）
+     * - MM: 月を表す（1～12）
+     * - DD: 日を表す（1～31, 99,L で末日を表す）
+     *   - e.g. 2/99 は 2/28,2/29 を表す（年に依存）
+     *   - e.g. 2/L も同様
+     * - W: 曜日を表す（0～6, #N で第Nを表す、#o,#e で隔週を表す）
+     *   - e.g. 3 は毎水曜日を表す
+     *   - e.g. 3#4 は第4水曜日を表す
+     *   - e.g. 5#L は最終水曜日を表す
+     *   - e.g. 4#o は隔週水曜日を表す（週番号奇数）
+     *   - e.g. 4#e は隔週水曜日を表す（週番号偶数）
+     * - hh: 時を表す（任意で 0～23）
+     * - mm: 分を表す（任意で 0～59）
+     * - ss: 秒を表す（任意で 0～59）
+     *
+     * DD と W は AND 判定される（cron は OR）。
+     * また `/`（毎）にあたる表記はない。
+     *
+     * 9,L は「最後」を意味し、文脈に応じた値に書き換わる。
+     *  「最終」が可変である日付と曜日のみ指定可能。
+     * 例えば `2012/02/99` は「2014/02/29」になるし、`2012/02/**(3#L)` は「2012/02の最終水曜」になる。
+     *
+     * 各区切り内の値は下記が許可される。
+     *
+     * - *: 任意の値を表す（桁合わせのためにいくつあってもよい）
+     * - 値: 特定の一つの数値を表す
+     * - 数字-数字: 範囲を表す
+     * - 数字,数字: いずれかを表す
+     *
+     * `*` 以外は複合できるので Example を参照。
+     *
+     * この関数は実験的なので互換性担保に含まれない。
+     *
+     * Example:
+     * ```php
+     * // 2014年の12月にマッチする
+     * that(date_match('2014/12/24 12:34:56', '2014/12/*'))->isTrue();
+     * that(date_match('2014/11/24 12:34:56', '2014/12/*'))->isFalse();
+     * that(date_match('2015/12/24 12:34:56', '2014/12/*'))->isFalse();
+     * // 2014年の12月20日～25日にマッチする
+     * that(date_match('2014/12/24 12:34:56', '2014/12/20-25'))->isTrue();
+     * that(date_match('2014/12/26 12:34:56', '2014/12/20-25'))->isFalse();
+     * that(date_match('2015/12/24 12:34:56', '2014/12/20-25'))->isFalse();
+     * // 2014年の12月10,20,30日にマッチする
+     * that(date_match('2014/12/20 12:34:56', '2014/12/10,20,30'))->isTrue();
+     * that(date_match('2014/12/24 12:34:56', '2014/12/10,20,30'))->isFalse();
+     * that(date_match('2015/12/30 12:34:56', '2014/12/10,20,30'))->isFalse();
+     * // 2014年の12月10,20~25,30日にマッチする
+     * that(date_match('2014/12/24 12:34:56', '2014/12/10,20-25,30'))->isTrue();
+     * that(date_match('2014/12/26 12:34:56', '2014/12/10,20-25,30'))->isFalse();
+     * that(date_match('2015/12/26 12:34:56', '2014/12/10,20-25,30'))->isFalse();
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\datetime
+     *
+     * @param mixed $datetime 日時を表す引数
+     * @param string $cronlike マッチパターン
+     * @return bool マッチしたら true
+     */
+    function date_match($datetime, $cronlike)
+    {
+        static $dayofweek = [
+            0 => ['日', '日曜', '日曜日', 'sun', 'sunday'],
+            1 => ['月', '月曜', '月曜日', 'mon', 'monday'],
+            2 => ['火', '火曜', '火曜日', 'tue', 'tuesday'],
+            3 => ['水', '水曜', '水曜日', 'wed', 'wednesday'],
+            4 => ['木', '木曜', '木曜日', 'thu', 'thursday'],
+            5 => ['金', '金曜', '金曜日', 'fri', 'friday'],
+            6 => ['土', '土曜', '土曜日', 'sat', 'saturday'],
+        ];
+
+        static $reverse_dayofweek = null;
+        $reverse_dayofweek ??= (function () use ($dayofweek) {
+            $result = [];
+            foreach ($dayofweek as $weekno => $texts) {
+                $result += array_fill_keys($texts, $weekno);
+            }
+            return $result;
+        })();
+
+        static $dayofweek_pattern = null;
+        $dayofweek_pattern ??= (function () use ($dayofweek) {
+            $result = [];
+            foreach ($dayofweek as $texts) {
+                $result = array_merge($result, $texts);
+            }
+            usort($result, fn($a, $b) => strlen($b) <=> strlen($a));
+            return implode('|', $result);
+        })();
+
+        $timestamp = date_timestamp($datetime);
+        if ($timestamp === null) {
+            throw new \InvalidArgumentException("failed to parse '$datetime'");
+        }
+
+        // よく使うので変数化しておく
+        $weekno = idate('W', $timestamp);
+        $firstdate = date('Y-m-1', $timestamp);
+        $lastday = idate('t', $timestamp);
+        $lastweekdays = []; // range($day, $lastday);
+        for ($day = 29; $day <= $lastday; $day++) {
+            $lastweekdays[] = $day;
+        }
+
+        // マッチング
+        $pattern = <<<REGEXP
+               (?<Y> \\*+ | (\\d{1,4}(-\\d{1,4})?)(,(\\d{1,4}(-\\d{1,4})?))* )
+            (/ (?<M> \\*+ | (\\d{1,2}(-\\d{1,2})?)(,(\\d{1,2}(-\\d{1,2})?))* ))?
+            (/ (?<D> \\*+ | ((\\d{1,2}|L)(-(\\d{1,2}|L))?)(,((\\d{1,2}|L)(-(\\d{1,2}|L))?))*))?
+            \\s*
+            (\((?<W> \\*+ | (([0-6]|$dayofweek_pattern)(\\#(\\d|L|E|O))?(-([0-6]|$dayofweek_pattern)(\\#(\\d|L|E|O))?)?)(,(([0-6]|$dayofweek_pattern)(\\#(\\d|L|E|O))?(-([0-6]|$dayofweek_pattern)(\\#(\\d|L|E|O))?)?))* ) \) )?
+            \\s*
+               (?<h> \\*+ | (\\d{1,2}(-\\d{1,2})?)(,(\\d{1,2}(-\\d{1,2})?))* )?
+            (: (?<m> \\*+ | (\\d{1,2}(-\\d{1,2})?)(,(\\d{1,2}(-\\d{1,2})?))* ))?
+            (: (?<s> \\*+ | (\\d{1,2}(-\\d{1,2})?)(,(\\d{1,2}(-\\d{1,2})?))* ))?
+            # dummy-comment
+        REGEXP;
+        if (!preg_match("!^$pattern$!ixu", trim($cronlike), $matches, PREG_UNMATCHED_AS_NULL)) {
+            throw new \InvalidArgumentException("failed to parse '$cronlike'");
+        }
+
+        $matches = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
+
+        // 週の特殊処理
+        $matches['W'] = preg_replace_callback("!$dayofweek_pattern!u", fn($m) => $reverse_dayofweek[$m[0]], $matches['W']);
+
+        foreach ($matches as $key => &$match) {
+            // 9, L 等の特殊処理
+            if ($key === 'D') {
+                $match = preg_replace('!(L+|9{2,})!', $lastday, $match);
+            }
+            else {
+                $match = preg_replace('!(L+|9+)!', 'LAST', $match);
+            }
+
+            // 1-4 などを 1,2,3,4 に展開
+            $match = preg_replace_callback('!(\d+)-(\d+)!u', fn($m) => implode(',', range($m[1], $m[2])), $match);
+        }
+
+        // 週の特殊処理
+        $matches['W'] = preg_replace_callback('!(\d{1,2})(#(\d|LAST|e|o))?!ui', function ($m) use ($weekno, $firstdate, $lastweekdays) {
+            $n = (int) $m[1];
+            $w = $m[3] ?? null;
+            if ($w === null || $w === '*') {
+                return implode(',', range($n, 34, 7));
+            }
+            if ($w === 'e') {
+                if ($weekno % 2 === 0) {
+                    return 'none';
+                }
+                return implode(',', range($n, 34, 7));
+            }
+            if ($w === 'o') {
+                if ($weekno % 2 === 1) {
+                    return 'none';
+                }
+                return implode(',', range($n, 34, 7));
+            }
+            if ($w === 'LAST') {
+                $w = date('w', strtotime($firstdate));
+                $lasts = array_map(fn($v) => ($v - 29 + $w) % 7, $lastweekdays);
+                return $n + (in_array($n, $lasts, true) ? 4 : 3) * 7;
+            }
+            return $n + ($w - 1) * 7;
+        }, $matches['W']);
+
+        // 1,2,3,4,7 などを連想配列に展開する（兼範囲チェック）
+        $parse = function ($pattern, $min, $max) {
+            $values = [];
+            foreach (explode(',', (string) $pattern) as $range) {
+                if (strlen(trim($range, '*'))) {
+                    $range = (int) $range;
+                    if (!($min <= $range && $range <= $max)) {
+                        throw new \InvalidArgumentException("$range($min~$max)");
+                    }
+                    $values[$range] = true;
+                }
+            }
+            return $values;
+        };
+
+        // 各要素ごとの処理
+        $Ymdwhis = [
+            'Y' => $parse($matches['Y'], 1, 9999),
+            'n' => $parse($matches['M'], 1, 12),
+            'j' => $parse($matches['D'], 1, 31),
+            'Q' => $parse($matches['W'], 0, 34),
+            'G' => $parse($matches['h'], 0, 24),
+            'i' => $parse($matches['m'], 0, 59),
+            's' => $parse($matches['s'], 0, 59),
+        ];
+
+        $datestring = date_convert(implode(',', array_keys($Ymdwhis)), $timestamp);
+        $dateparts = array_combine(array_keys($Ymdwhis), explode(',', $datestring));
+
+        foreach ($dateparts as $key => $value) {
+            if ($Ymdwhis[$key] && !isset($Ymdwhis[$key][$value])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
@@ -10797,6 +11051,80 @@ if (!function_exists('ryunosuke\\DbMigration\\error')) {
         flock($fp, LOCK_UN);
 
         return strlen($line);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\set_trace_logger') || (new \ReflectionFunction('ryunosuke\\DbMigration\\set_trace_logger'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\set_trace_logger')) {
+    /**
+     * メソッド呼び出しロガーを仕込む
+     *
+     * この関数はかなり実験的なもので、互換性を考慮しない。
+     *
+     * @package ryunosuke\Functions\Package\errorfunc
+     *
+     * @param resource|string $logfile 書き出すファイル名
+     * @param string $target 仕込むクラスの正規表現
+     * @return mixed
+     */
+    function set_trace_logger($logfile, $liner, string $target)
+    {
+        $logfile = is_string($logfile) ? fopen($logfile, 'a') : $logfile; // for testing
+        $liner ??= function ($values) {
+            $stringify = function ($value, &$total = 0) use (&$stringify) {
+                if (is_array($value)) {
+                    $result = [];
+                    $n = 0;
+                    foreach ($value as $k => $v) {
+                        if (++$total > 10) {
+                            $result[] = '...';
+                            break;
+                        }
+                        $v = $stringify($v, $total);
+                        if ($k === $n) {
+                            $result[] = $v;
+                        }
+                        else {
+                            $result[] = "$k:$v";
+                        }
+                        $n++;
+                    }
+                    return "[" . implode(",", $result) . "]";
+                }
+                if (is_object($value)) {
+                    return get_class($value) . "#" . spl_object_id($value);
+                }
+                if (is_resource($value)) {
+                    return (string) $value;
+                }
+                return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            };
+            $values['time'] = $values['time']->format('Y-m-d\TH:i:s.v');
+            $values['args'] = implode(', ', array_map($stringify, $values['args']));
+            return vsprintf("[%s] %s %s::%s(%s);%s:%d\n", $values);
+        };
+
+        $GLOBALS['___trace_log_internal'] = function (string $file, int $line, string $class, string $method) use ($logfile, $liner) {
+            fwrite($logfile, $liner([
+                'id'     => $_SERVER['UNIQUE_ID'] ?? str_pad($_SERVER['REQUEST_TIME_FLOAT'], 15, STR_PAD_RIGHT),
+                'time'   => new \DateTime(),
+                'class'  => $class,
+                'method' => $method,
+                'args'   => debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 2)[1]['args'] ?? [],
+                'file'   => $file,
+                'line'   => $line,
+            ]));
+        };
+
+        return register_autoload_function(function ($classname, $filename, $contents) use ($target) {
+            if (preg_match($target, $classname)) {
+                $contents ??= file_get_contents($filename);
+                $contents = preg_replace_callback('#((final|public|protected|private|static)\s+){0,3}function\s+[_0-9a-z]+?\([^{]+\{#usmi', function ($m) {
+                    return $m[0] . "(\$GLOBALS['___trace_log_internal'] ?? fn() => null)(__FILE__, __LINE__ - 1, __CLASS__, __FUNCTION__);";
+                }, $contents);
+                return $contents;
+            }
+        });
     }
 }
 
@@ -12732,6 +13060,153 @@ if (!function_exists('ryunosuke\\DbMigration\\mkdir_p')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\path_info') || (new \ReflectionFunction('ryunosuke\\DbMigration\\path_info'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\path_info')) {
+    /**
+     * pathinfo に追加情報を加えて返す
+     *
+     * 追加される情報は下記。
+     * - drive: Windows 環境におけるドライブ文字
+     * - root: 絶対パスの場合はルートパス
+     * - parents: 正規化したディレクトリ名の配列
+     * - dirnames: ディレクトリ名の配列（余計なことはしない）
+     * - localname: 複数拡張子を考慮した本当のファイル名部分
+     * - extensions: 複数拡張子の配列（余計なことはしない）
+     *
+     * 「余計なことはしない」とは空文字をフィルタしたりパスを正規化したりを指す。
+     * 結果のキーはバージョンアップで増えることがある（その場合は互換性破壊とはみなさない）。
+     *
+     * なお、いわゆる URL はサポートしない（スキーム付きを与えた場合の挙動は未定義）。
+     *
+     * Example:
+     * ```php
+     * // 色々混ぜたサンプル
+     * that(path_info('C:/dir1/.././dir2/file.sjis..min.js'))->is([
+     *     "dirname"    => "C:/dir1/.././dir2",
+     *     "basename"   => "file.sjis..min.js",
+     *     "extension"  => "js",
+     *     "filename"   => "file.sjis..min",
+     *     // ここまでオリジナルの pathinfo 結果
+     *     "drive"      => "C:",
+     *     "root"       => "/",                         // 環境依存しない元のルートパス
+     *     "parents"    => ["dir2"],                    // 正規化されたディレクトリ配列
+     *     "dirnames"   => ["dir1", "..", ".", "dir2"], // 余計なことをしていないディレクトリ配列
+     *     "localname"  => "file",
+     *     "extensions" => ["sjis", "", "min", "js"],   // 余計なことをしていない拡張子配列
+     * ]);
+     * // linux における絶対パス
+     * that(path_info('/dir1/dir2/file.sjis.min.js'))->is([
+     *     "dirname"    => "/dir1/dir2",
+     *     "basename"   => "file.sjis.min.js",
+     *     "extension"  => "js",
+     *     "filename"   => "file.sjis.min",
+     *     // ここまでオリジナルの pathinfo 結果
+     *     "drive"      => "",                    // 環境を問わず空
+     *     "root"       => "/",                   // 絶対パスなので "/"
+     *     "parents"    => ["dir1", "dir2"],      // ..等がないので dirnames と同じ
+     *     "dirnames"   => ["dir1", "dir2"],      // ディレクトリ配列
+     *     "localname"  => "file",
+     *     "extensions" => ["sjis", "min", "js"], // 余計なことをしていない拡張子配列
+     * ]);
+     * // linux における相対パス
+     * that(path_info('dir1/dir2/file.sjis.min.js'))->is([
+     *     "dirname"    => "dir1/dir2",
+     *     "basename"   => "file.sjis.min.js",
+     *     "extension"  => "js",
+     *     "filename"   => "file.sjis.min",
+     *     // ここまでオリジナルの pathinfo 結果
+     *     "drive"      => "",
+     *     "root"       => "",                    // 相対パスなので空（ここ以外は絶対パスと同じ）
+     *     "parents"    => ["dir1", "dir2"],
+     *     "dirnames"   => ["dir1", "dir2"],
+     *     "localname"  => "file",
+     *     "extensions" => ["sjis", "min", "js"],
+     * ]);
+     * // ディレクトリ無し
+     * that(path_info('file.sjis.min.js'))->is([
+     *     "dirname"    => ".",
+     *     "basename"   => "file.sjis.min.js",
+     *     "extension"  => "js",
+     *     "filename"   => "file.sjis.min",
+     *     // ここまでオリジナルの pathinfo 結果
+     *     "drive"      => "",
+     *     "root"       => "",
+     *     "parents"    => [], // オリジナルの pathinfo のようにドットが紛れ込んだりはしない
+     *     "dirnames"   => [], // オリジナルの pathinfo のようにドットが紛れ込んだりはしない
+     *     "localname"  => "file",
+     *     "extensions" => ["sjis", "min", "js"],
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\filesystem
+     *
+     * @param string $path パス
+     * @return array パス情報
+     */
+    function path_info($path)
+    {
+        $DS = DIRECTORY_SEPARATOR === '\\' ? '\\/' : '/';
+
+        // キーが存在しないことがあるので順番も含めて正規化する
+        $pathinfo = array_replace([
+            'dirname'   => '',
+            'basename'  => '',
+            'extension' => '',
+            'filename'  => '',
+        ], pathinfo($path));
+
+        $result = $pathinfo;
+
+        // pathinfo の直感的でない挙動を補正する（dirname が . を返したり C:/ の結果が曖昧だったり）
+        if ($pathinfo['dirname'] === '.') {
+            $pathinfo['dirname'] = '';
+        }
+        if (DIRECTORY_SEPARATOR === '\\' && strlen(rtrim($path, '\\')) === 2) {
+            $pathinfo['basename'] = '';
+            $pathinfo['extension'] = '';
+            $pathinfo['filename'] = '';
+        }
+        $dirnames = preg_split("#([" . preg_quote($DS) . "]+)#u", $pathinfo['dirname'], -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $basenames = explode('.', $pathinfo['basename']);
+
+        $result['drive'] = '';
+        if (isset($dirnames[0]) && preg_match('#^[a-z]:$#ui', $dirnames[0])) {
+            $result['drive'] = array_shift($dirnames);
+        }
+
+        $result['root'] = '';
+        if (isset($dirnames[0]) && strpbrk($dirnames[0], $DS) !== false) {
+            $result['root'] = array_shift($dirnames);
+        }
+
+        $result['parents'] = array_reduce($dirnames, function ($carry, $dirname) use ($DS) {
+            if (strpbrk($dirname, $DS) !== false || $dirname === '.') {
+                return $carry;
+            }
+            if ($dirname === '..') {
+                return array_slice($carry, 0, -1);
+            }
+            else {
+                return array_merge($carry, [$dirname]);
+            }
+        }, []);
+
+        $result['dirnames'] = array_reduce($dirnames, function ($carry, $dirname) use ($DS) {
+            if (strpbrk($dirname, $DS) === false) {
+                return array_merge($carry, [$dirname]);
+            }
+            else {
+                return array_merge($carry, array_pad([], strlen($dirname) - 1, ''));
+            }
+        }, []);
+
+        $result['localname'] = array_shift($basenames);
+        $result['extensions'] = $basenames;
+
+        return $result;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\path_is_absolute') || (new \ReflectionFunction('ryunosuke\\DbMigration\\path_is_absolute'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\path_is_absolute')) {
     /**
@@ -13473,7 +13948,8 @@ if (!function_exists('ryunosuke\\DbMigration\\chain')) {
     function chain($source = null)
     {
         if (function_configure('chain.version') === 2) {
-            return new class($source) implements \Countable, \ArrayAccess, \IteratorAggregate, \JsonSerializable {
+            $chain_object = new class($source) implements \Countable, \ArrayAccess, \IteratorAggregate, \JsonSerializable {
+                public static  $__CLASS__;
                 private static $metadata = [];
 
                 private $data;
@@ -13572,6 +14048,10 @@ if (!function_exists('ryunosuke\\DbMigration\\chain')) {
                         || (is_callable(__NAMESPACE__ . "\\$name", false, $fname))
                         || ($isiterable && is_callable(__NAMESPACE__ . "\\array_$name", false, $fname))
                         || ($isstringable && is_callable(__NAMESPACE__ . "\\str_$name", false, $fname))
+                        // for class
+                        || (is_callable([self::$__CLASS__, $name], false, $fname))
+                        || ($isiterable && is_callable([self::$__CLASS__, "array_$name"], false, $fname))
+                        || ($isstringable && is_callable([self::$__CLASS__, "str_$name"], false, $fname))
                     ) {
                         return $fname;
                     }
@@ -13657,6 +14137,8 @@ if (!function_exists('ryunosuke\\DbMigration\\chain')) {
                     return $callback(...$realargs);
                 }
             };
+            $chain_object::$__CLASS__ = __CLASS__;
+            return $chain_object;
         }
 
         // @codeCoverageIgnoreStart
@@ -20664,6 +21146,102 @@ if (!function_exists('ryunosuke\\DbMigration\\kvsprintf')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\mb_compatible_encoding') || (new \ReflectionFunction('ryunosuke\\DbMigration\\mb_compatible_encoding'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\mb_compatible_encoding')) {
+    /**
+     * 指定エンコーディング間に互換性があるかを返す
+     *
+     * ※ ユースケースとして多い utf8,sjis 以外はほぼ実装していないので注意（かなり適当なのでそれすらも怪しい）
+     *
+     * mb_convert_encoding/mb_convert_variables は実際に変換が行われなくても処理が走ってしまうので、それを避けるための関数。
+     * エンコーディングはただでさえカオスなのに utf8, UTF-8, sjis, sjis-win, cp932 などの表記揺れやエイリアスがあるので判定が結構しんどい。
+     *
+     * Example:
+     * ```php
+     * // ほぼ唯一のユースケース（互換性があるなら変換しない）
+     * if (!mb_compatible_encoding(mb_internal_encoding(), 'utf8')) {
+     *     mb_convert_encoding('utf8 string', 'utf8');
+     * }
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     *
+     * @param string $from 変換元エンコーディング
+     * @param string $to 変換先エンコーディング
+     * @return ?bool from が to に対して互換性があるなら true（8bit binary の時のみ例外的に null を返す）
+     */
+    function mb_compatible_encoding($from, $to)
+    {
+        static $encmap = [];
+        if (!$encmap) {
+            foreach (mb_list_encodings() as $encoding) {
+                $encmap[strtolower($encoding)] = [
+                    'aliases'  => array_flip(array_map('strtolower', mb_encoding_aliases($encoding))),
+                    'mimename' => strtolower((string) @mb_preferred_mime_name($encoding)),
+                ];
+            }
+        }
+
+        // php 世界のエンコーディング名に正規化
+        $normalize = function ($encoding) use ($encmap) {
+            $encoding = strtolower($encoding);
+
+            static $cache = [];
+
+            if (isset($cache[$encoding])) {
+                return $cache[$encoding];
+            }
+
+            if (isset($encmap[$encoding])) {
+                return $cache[$encoding] = $encoding;
+            }
+            foreach ($encmap as $encname => ['aliases' => $aliases]) {
+                if (isset($aliases[$encoding])) {
+                    return $cache[$encoding] = $encname;
+                }
+            }
+            foreach ($encmap as $encname => ['mimename' => $mimename]) {
+                if ($mimename === $encoding) {
+                    return $cache[$encoding] = $encname;
+                }
+            }
+
+            throw new \InvalidArgumentException("$encoding is not supported encoding");
+        };
+
+        $from = $normalize($from);
+        $to = $normalize($to);
+
+        // 他方が 8bit(binary) は全く互換性がない（互換性がないというか、そもそもテキストではない）
+        // false を返すべきだが呼び元で特殊な処理をしたいことがあると思うので null にする
+        if ($from === '8bit' xor $to === '8bit') {
+            return null;
+        }
+
+        // 同じなら完全互換だろう
+        if ($from === $to) {
+            return true;
+        }
+
+        // ucs 系以外は大抵は ASCII 互換
+        if ($from === 'ascii' && !preg_match('#^(ucs-2|ucs-4|utf-16|utf-32)#', $to)) {
+            return true;
+        }
+
+        // utf8 派生
+        if ($from === 'utf-8' && strpos($to, 'utf-8') === 0) {
+            return true;
+        }
+
+        // sjis 派生
+        if ($from === 'sjis' && (strpos($to, 'sjis') === 0 || $to === 'cp932')) {
+            return true;
+        }
+
+        return false;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\mb_ellipsis') || (new \ReflectionFunction('ryunosuke\\DbMigration\\mb_ellipsis'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\mb_ellipsis')) {
     /**
@@ -21112,17 +21690,19 @@ if (!function_exists('ryunosuke\\DbMigration\\pascal_case')) {
      * Example:
      * ```php
      * that(pascal_case('this_is_a_pen'))->isSame('ThisIsAPen');
+     * that(pascal_case('this_is-a-pen', '-_'))->isSame('ThisIsAPen');
      * ```
      *
      * @package ryunosuke\Functions\Package\strings
      *
      * @param string $string 対象文字列
-     * @param string $delimiter デリミタ
+     * @param string $delimiter デリミタ（複数可）
      * @return string 変換した文字列
      */
     function pascal_case($string, $delimiter = '_')
     {
-        return strtr(ucwords(strtr($string, [$delimiter => ' '])), [' ' => '']);
+        $replacemap = array_combine(str_split($delimiter), array_pad([], strlen($delimiter), ' '));
+        return strtr(ucwords(strtr($string, $replacemap)), [' ' => '']);
     }
 }
 
@@ -21392,17 +21972,21 @@ if (!function_exists('ryunosuke\\DbMigration\\snake_case')) {
      * Example:
      * ```php
      * that(snake_case('ThisIsAPen'))->isSame('this_is_a_pen');
+     * that(snake_case('URLEncode', '-'))->isSame('u-r-l-encode');     // デフォルトでは略語も分割される
+     * that(snake_case('URLEncode', '-', true))->isSame('url-encode'); // 第3引数 true で略語は維持される
      * ```
      *
      * @package ryunosuke\Functions\Package\strings
      *
      * @param string $string 対象文字列
      * @param string $delimiter デリミタ
+     * @param bool $keep_abbr すべて大文字の単語を1単語として扱うか
      * @return string 変換した文字列
      */
-    function snake_case($string, $delimiter = '_')
+    function snake_case($string, $delimiter = '_', $keep_abbr = false)
     {
-        return ltrim(strtolower(preg_replace('/[A-Z]/', $delimiter . '\0', $string)), $delimiter);
+        $pattern = $keep_abbr ? '/[A-Z]([A-Z](?![a-z]))*/' : '/[A-Z]/';
+        return ltrim(strtolower(preg_replace($pattern, $delimiter . '\0', $string)), $delimiter);
     }
 }
 
@@ -23984,8 +24568,135 @@ if (!function_exists('ryunosuke\\DbMigration\\build_uri')) {
         $uri .= concat(':', $parts['port']);
         $uri .= concat('/', $parts['path']);
         $uri .= concat('?', $parts['query']);
-        $uri .= concat('#', $parts['fragment']);
+        $uri .= concat('#', rawurlencode($parts['fragment']));
         return $uri;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\dataurl_decode') || (new \ReflectionFunction('ryunosuke\\DbMigration\\dataurl_decode'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\dataurl_decode')) {
+    /**
+     * DataURL をデコードする
+     *
+     * Example:
+     * ```php
+     * that(dataurl_decode("data:text/plain;charset=US-ASCII,hello%2C%20world"))->isSame('hello, world');
+     * that(dataurl_decode("data:text/plain;charset=US-ASCII;base64,aGVsbG8sIHdvcmxk", $metadata))->isSame('hello, world');
+     * that($metadata)->is([
+     *     "mimetype" => "text/plain",
+     *     "charset"  => "US-ASCII",
+     *     "base64"   => true,
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\url
+     *
+     * @param string $url DataURL
+     * @param array $metadata スキームのメタ情報が格納される
+     * @return ?string 元データ。失敗時は null
+     */
+    function dataurl_decode($url, &$metadata = [])
+    {
+        $pos = strpos($url, ',');
+        $head = substr($url, 0, $pos);
+        $body = substr($url, $pos + 1);
+
+        if (!preg_match('#^data:(?<mimetype>[^;]+?)?(;charset=(?<charset>[^;]+?))?(;(?<base64>[^;]+?))?$#iu', $head, $matches, PREG_UNMATCHED_AS_NULL)) {
+            return null;
+        }
+
+        $metadata = [
+            'mimetype' => $matches['mimetype'] ?? null,
+            'charset'  => $matches['charset'] ?? null,
+            'base64'   => isset($matches['base64']),
+        ];
+
+        $decoder = function ($data) use ($metadata) {
+            if ($metadata['base64']) {
+                return base64_decode($data, true);
+            }
+            else {
+                return rawurldecode($data);
+            }
+        };
+
+        $decoded = $decoder($body);
+        if ($decoded === false) {
+            return null;
+        }
+
+        if ($metadata['charset'] !== null) {
+            if (!(mb_compatible_encoding($metadata['charset'], mb_internal_encoding()) ?? true)) {
+                $decoded = mb_convert_encoding($decoded, mb_internal_encoding(), $metadata['charset']);
+            }
+        }
+
+        return $decoded;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\dataurl_encode') || (new \ReflectionFunction('ryunosuke\\DbMigration\\dataurl_encode'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\dataurl_encode')) {
+    /**
+     * DataURL をエンコードする
+     *
+     * $metadata で mimetype や エンコード等を指定できる。
+     * 指定されていない場合、自動検出して埋め込まれる。
+     *
+     * - mimetype(?string): 特筆無し
+     * - charset(?string): 自動検出は mime 名になる。明示指定はそのまま埋め込まれる
+     * - base64(?bool): true:base64encode, false:urlencode, null: raw
+     *   - null の raw はスキームとしては base64 となる。つまり既に base64 の文字列が手元にある場合（変換したくない場合）に指定する
+     *
+     * Example:
+     * ```php
+     * that(dataurl_encode("hello, world", ['base64' => false]))->isSame("data:text/plain;charset=US-ASCII,hello%2C%20world");
+     * that(dataurl_encode("hello, world", ['mimetype' => 'text/csv', 'charset' => 'hoge']))->isSame("data:text/csv;charset=hoge;base64,aGVsbG8sIHdvcmxk");
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\url
+     *
+     * @param string $data エンコードするデータ
+     * @param array $metadata エンコードオプション
+     * @return string DataURL
+     */
+    function dataurl_encode($data, $metadata = [])
+    {
+        if (!isset($metadata['mimetype'], $metadata['charset'])) {
+            try {
+                $finfo = finfo_open();
+                [$mimetype, $charset] = preg_split('#;\\s#', finfo_buffer($finfo, $data, FILEINFO_MIME), 2, PREG_SPLIT_NO_EMPTY);
+
+                $metadata['mimetype'] ??= $mimetype;
+                $metadata['charset'] ??= mb_preferred_mime_name(explode('=', $charset, 2)[1]);
+            }
+            finally {
+                finfo_close($finfo);
+            }
+        }
+
+        if (!array_key_exists('base64', $metadata)) {
+            $metadata['base64'] = true;
+        }
+
+        $encoder = function ($data) use ($metadata) {
+            if ($metadata['base64'] === null) {
+                return $data;
+            }
+
+            if ($metadata['base64']) {
+                return base64_encode($data);
+            }
+            else {
+                return rawurlencode($data);
+            }
+        };
+
+        return "data:"
+            . $metadata['mimetype']
+            . (strlen($metadata['charset']) ? ";charset=" . $metadata['charset'] : "")
+            . (($metadata['base64'] ?? true) ? ';base64' : '')
+            . "," . $encoder($data);
     }
 }
 
@@ -24033,7 +24744,10 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_query')) {
         $params = multiexplode(str_split($arg_separator), $query);
         $result = [];
         foreach ($params as $param) {
-            [$name, $value] = explode("=", $param, 2);
+            [$name, $value] = explode("=", trim($param), 2) + [1 => ''];
+            if ($name === '') {
+                continue;
+            }
             if ($encoding_type === PHP_QUERY_RFC1738) {
                 $name = urldecode($name);
                 $value = urldecode($value);
@@ -24050,6 +24764,9 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_query')) {
                 $receiver = &$result[$name];
                 foreach ($keys as $key) {
                     if (strlen($key) === 0) {
+                        if (!is_array($receiver)) {
+                            $receiver = [];
+                        }
                         $key = max(array_filter(array_keys($receiver ?? []), 'is_int') ?: [-1]) + 1;
                     }
                     $receiver = &$receiver[$key];
@@ -24151,10 +24868,12 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_uri')) {
         $parts = preg_capture("#^$regex\$#ix", $uri, $default + $default_default);
 
         // 諸々調整（認証エンコード、IPv6、パス / の正規化、クエリ配列化）
-        $parts['user'] = rawurldecode($parts['user']);
-        $parts['pass'] = rawurldecode($parts['pass']);
-        $parts['host'] = preg_splice('#^\\[(.+)]$#', '$1', $parts['host']);
-        $parts['path'] = concat('/', ltrim($parts['path'], '/'));
+        $parts['user'] = $parts['user'] === null ? null : rawurldecode($parts['user']);
+        $parts['pass'] = $parts['pass'] === null ? null : rawurldecode($parts['pass']);
+        $parts['host'] = $parts['host'] === null ? null : preg_splice('#^\\[(.+)]$#', '$1', $parts['host']);
+        $parts['path'] = $parts['path'] === null ? null : rawurldecode(concat('/', ltrim($parts['path'], '/')));
+        $parts['fragment'] = $parts['fragment'] === null ? null : rawurldecode($parts['fragment']);
+
         if (is_string($parts['query'])) {
             parse_str($parts['query'], $parts['query']);
         }
@@ -24241,51 +24960,56 @@ if (!function_exists('ryunosuke\\DbMigration\\benchmark')) {
         $diffs = [];
         foreach ($assertions as $name => $return) {
             $diffs[var_pretty($return, [
-                'context' => $context,
-                'limit'   => 1024,
-                'return'  => true,
+                'context'   => $context,
+                'limit'     => 1024,
+                'maxcolumn' => 80,
+                'return'    => true,
             ])][] = $name;
         }
         if (count($diffs) > 1) {
             $head = $body = [];
             foreach ($diffs as $return => $names) {
                 $head[] = count($names) === 1 ? $names[0] : '(' . implode(' | ', $names) . ')';
-                $body[implode("\n", $names)] = ['return' => $return];
+                $body[implode(" & ", $names)] = $return;
             }
             trigger_error(sprintf("Results of %s are different.\n", implode(' & ', $head)));
             if (error_reporting() & E_USER_NOTICE) {
                 // @codeCoverageIgnoreStart
-                echo markdown_table($body, [
-                    'context'  => $context,
-                    'keylabel' => 'name',
+                echo markdown_table([$body], [
+                    'context' => $context,
                 ]);
                 // @codeCoverageIgnoreEnd
             }
         }
 
         // ベンチ
-        $counts = [];
+        $stats = [];
         foreach ($benchset as $name => $caller) {
-            $end = microtime(true) + $millisec / 1000;
+            $microtime = microtime(true);
+            $stats[$name]['elapsed'] = $microtime;
+            $end = $microtime + $millisec / 1000;
             $args2 = $args;
-            for ($n = 0; microtime(true) <= $end; $n++) {
+            for ($n = 0; ($t = microtime(true)) <= $end; $n++) {
                 $caller(...$args2);
+                $stats[$name]['fastest'] = min($stats[$name]['fastest'] ?? PHP_FLOAT_MAX, microtime(true) - $t);
             }
-            $counts[$name] = $n;
+            $stats[$name]['count'] = $n;
+            $stats[$name]['elapsed'] = microtime(true) - $stats[$name]['elapsed'];
         }
 
         $restore();
 
         // 結果配列
         $result = [];
-        $maxcount = max($counts);
-        arsort($counts);
-        foreach ($counts as $name => $count) {
+        $maxcount = max(array_column($stats, 'count'));
+        uasort($stats, fn($a, $b) => $b['count'] <=> $a['count']);
+        foreach ($stats as $name => $stat) {
             $result[] = [
-                'name'   => $name,
-                'called' => $count,
-                'mills'  => $millisec / $count,
-                'ratio'  => $maxcount / $count,
+                'name'    => $name,
+                'called'  => $stat['count'],
+                'fastest' => $stat['fastest'],
+                'mills'   => $stat['elapsed'] / $stat['count'],
+                'ratio'   => $maxcount / $stat['count'],
             ];
         }
 
@@ -24294,10 +25018,11 @@ if (!function_exists('ryunosuke\\DbMigration\\benchmark')) {
             printf("Running %s cases (between %s ms):\n", count($benchset), number_format($millisec));
             echo markdown_table(array_map(function ($v) {
                 return [
-                    'name'       => $v['name'],
-                    'called'     => number_format($v['called'], 0),
-                    '1 call(ms)' => number_format($v['mills'], 6),
-                    'ratio'      => number_format($v['ratio'], 3),
+                    'name'        => $v['name'],
+                    'called'      => number_format($v['called'], 0),
+                    'fastest(ms)' => number_format($v['fastest'] * 1000, 6),
+                    '1 call(ms)'  => number_format($v['mills'] * 1000, 6),
+                    'ratio'       => number_format($v['ratio'], 3),
                 ];
             }, $result));
         }
@@ -26644,7 +27369,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
 })';
 
         if ($options['format'] === 'minify') {
-            $tmp = memory_path('var_export3.php');
+            $tmp = tempnam(sys_get_temp_dir(), 've3');
             file_put_contents($tmp, "<?php $result;");
             $result = substr(php_strip_whitespace($tmp), 6, -1);
         }
@@ -26851,13 +27576,14 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
             'trace'         => false, // スタックトレースの表示
             'callback'      => null,  // 値1つごとのコールバック（値と文字列表現（参照）が引数で渡ってくる）
             'debuginfo'     => true,  // debugInfo を利用してオブジェクトのプロパティを絞るか
-            'table'         => true,  // 連想配列の配列の場合にテーブル表示するか（現状はマークダウン風味固定）
+            'table'         => true,  // 連想配列の配列の場合にテーブル表示するか（コールバック。true はマークダウン風味固定）
             'maxcolumn'     => null,  // 1行あたりの文字数
             'maxcount'      => null,  // 複合型の要素の数
             'maxdepth'      => null,  // 複合型の深さ
             'maxlength'     => null,  // スカラー・非複合配列の文字数
             'maxlistcolumn' => 120,   // 通常配列を1行化する文字数
             'limit'         => null,  // 最終出力の文字数
+            'excludeclass'  => [],    // 除外するクラス名
         ];
 
         if ($options['context'] === null) {
@@ -27038,7 +27764,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                 }
             }
 
-            public function export($value, $nest, $parents, $callback)
+            public function export($value, $nest, $parents, $keys, $callback)
             {
                 $position = strlen($this->content);
 
@@ -27144,13 +27870,17 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         $this->plain('[]');
                     }
                     elseif ($tableofarray) {
-                        $markdown = markdown_table(array_map(fn($v) => $this->array($v), $value), [
-                            'keylabel' => "",
-                            'context'  => $this->options['context'],
-                        ]);
                         $this->plain($tableofarray, 'green');
                         $this->plain("\n");
-                        $this->plain(preg_replace('#^#um', $spacer1, $markdown));
+                        if ($this->options['table'] === true) {
+                            $this->plain(preg_replace('#^#um', $spacer1, markdown_table(array_map(fn($v) => $this->array($v), $value), [
+                                'keylabel' => "#",
+                                'context'  => $this->options['context'],
+                            ])));
+                        }
+                        else {
+                            $this->plain(($this->options['table'])(array_map(fn($v) => $this->array($v), $value), $nest));
+                        }
                         $this->plain($spacer2);
                     }
                     elseif ($assoc) {
@@ -27172,7 +27902,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                             if ($is_hasharray) {
                                 $this->index($k)->plain(': ');
                             }
-                            $this->export($v, $nest + 1, $parents, true);
+                            $this->export($v, $nest + 1, $parents, array_merge($keys, [$k]), true);
                             $this->plain(",\n");
                         }
                         if ($omitted > 0) {
@@ -27199,7 +27929,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                             if ($is_hasharray && $n !== $k) {
                                 $this->index($k)->plain(':');
                             }
-                            $this->export($v, $nest, $parents, true);
+                            $this->export($v, $nest, $parents, array_merge($keys, [$k]), true);
                             if ($k !== $lastkey) {
                                 $this->plain(', ');
                             }
@@ -27231,7 +27961,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                     }
                     $this->plain(') use ');
                     if ($properties) {
-                        $this->export($properties, $nest, $parents, false);
+                        $this->export($properties, $nest, $parents, $keys, false);
                     }
                     else {
                         $this->plain('{}');
@@ -27239,6 +27969,12 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                 }
                 elseif (is_object($value)) {
                     $this->value($value);
+
+                    foreach ((array) $this->options['excludeclass'] as $class) {
+                        if ($value instanceof $class) {
+                            goto FINALLY_;
+                        }
+                    }
 
                     if ($this->options['minify']) {
                         goto FINALLY_;
@@ -27248,7 +27984,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
 
                     $this->plain(" ");
                     if ($properties) {
-                        $this->export($properties, $nest, $parents, false);
+                        $this->export($properties, $nest, $parents, $keys, false);
                     }
                     else {
                         $this->plain('{}');
@@ -27261,7 +27997,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                 FINALLY_:
                 $content = substr($this->content, $position);
                 if ($callback && $this->options['callback']) {
-                    ($this->options['callback'])($content, $value, $nest);
+                    ($this->options['callback'])($content, $value, $nest, $keys);
                     $this->content = substr_replace($this->content, $content, $position);
                 }
                 return $content;
@@ -27269,14 +28005,14 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
         };
 
         try {
-            $content = $appender->export($value, 0, [], false);
+            $content = $appender->export($value, 0, [], [], false);
         }
         catch (\LengthException $ex) {
             $content = $ex->getMessage() . '(...omitted)';
         }
 
         if ($options['callback']) {
-            ($options['callback'])($content, $value, 0);
+            ($options['callback'])($content, $value, 0, []);
         }
 
         // 結果を返したり出力したり
