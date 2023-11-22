@@ -119,6 +119,9 @@ class TransporterTest extends AbstractTestCase
         // create migration table different type
         $this->readyTable($this->schema, $this->createSimpleTable('difftype', 'string', 'id'));
 
+        // create migration table different type
+        $this->readyTable($this->schema, $this->createSimpleTable('diffpos', 'integer', 'id', 'name', 'hoge', 'fuga'));
+
         // create migration table different record
         $table = $this->createSimpleTable('foo', 'integer', 'id');
         $table->addColumn('c_int', 'integer');
@@ -173,6 +176,7 @@ class TransporterTest extends AbstractTestCase
         $actual = $this->transporter->globTable(['/hoge/diff*.yml', '/hoge/!diffc*.yml', '/hoge/hoge.json']);
         $this->assertEquals([
             '/hoge/diffpkey.yml',
+            '/hoge/diffpos.yml',
             '/hoge/difftype.yml',
             '/hoge/hoge.json',
         ], $actual);
@@ -182,6 +186,7 @@ class TransporterTest extends AbstractTestCase
         $this->assertEquals([
             '/hoge/diffcolumn.yml',
             '/hoge/diffpkey.yml',
+            '/hoge/diffpos.yml',
             '/hoge/difftype.yml',
             '/hoge/hoge.json',
             '/hoge/hoge.yml',
@@ -492,10 +497,27 @@ class TransporterTest extends AbstractTestCase
     {
         $fn   = $this->readyPhpFile("ddl.php", [
             'table' => [
-                'fugata' => [
+                'fugata'  => [
                     'column' => [
                         'hoge_id' => [
                             'type' => 'smallint',
+                        ],
+                    ],
+                    'option' => [],
+                ],
+                'diffpos' => [
+                    'column' => [
+                        'id'   => [
+                            'type' => 'integer',
+                        ],
+                        'name' => [
+                            'type' => 'integer',
+                        ],
+                        'fuga' => [
+                            'type' => 'integer',
+                        ],
+                        'hoge' => [
+                            'type' => 'integer',
                         ],
                     ],
                     'option' => [],
@@ -506,6 +528,9 @@ class TransporterTest extends AbstractTestCase
 
         $this->assertContainsString('CREATE TABLE fugata', $ddls);
         $this->assertContainsString('DROP TABLE hogera', $ddls);
+        $this->assertContainsString('CHANGE hoge hoge INT NOT NULL AFTER fuga', $ddls);
+        $this->assertContainsString('CHANGE fuga fuga INT NOT NULL AFTER name', $ddls);
+        $this->assertNotContainsString('CHANGE name', $ddls);
 
         $this->assertEquals([], $this->transporter->migrateDDL(''));
 
@@ -827,6 +852,7 @@ TCSV
                                 'child'      => include 'object/table/child.php',
                                 'diffcolumn' => include 'object/table/diffcolumn.php',
                                 'diffpkey'   => include 'object/table/diffpkey.php',
+                                'diffpos'    => include 'object/table/diffpos.php',
                                 'difftype'   => include 'object/table/difftype.php',
                                 'foo'        => include 'object/table/foo.php',
                                 'fuga'       => include 'object/table/fuga.php',
@@ -860,6 +886,7 @@ TCSV
                         child:      !include object/table/child.yaml
                         diffcolumn: !include object/table/diffcolumn.yaml
                         diffpkey:   !include object/table/diffpkey.yaml
+                        diffpos:    !include object/table/diffpos.yaml
                         difftype:   !include object/table/difftype.yaml
                         foo:        !include object/table/foo.yaml
                         fuga:       !include object/table/fuga.yaml
@@ -888,6 +915,7 @@ TCSV
                                 child:      !include object/table/child.yaml5,
                                 diffcolumn: !include object/table/diffcolumn.yaml5,
                                 diffpkey:   !include object/table/diffpkey.yaml5,
+                                diffpos:    !include object/table/diffpos.yaml5,
                                 difftype:   !include object/table/difftype.yaml5,
                                 foo:        !include object/table/foo.yaml5,
                                 fuga:       !include object/table/fuga.yaml5,
@@ -922,6 +950,7 @@ TCSV
                                 "child":      "!include: object/table/child.json",
                                 "diffcolumn": "!include: object/table/diffcolumn.json",
                                 "diffpkey":   "!include: object/table/diffpkey.json",
+                                "diffpos":    "!include: object/table/diffpos.json",
                                 "difftype":   "!include: object/table/difftype.json",
                                 "foo":        "!include: object/table/foo.json",
                                 "fuga":       "!include: object/table/fuga.json",

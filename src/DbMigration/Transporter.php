@@ -204,11 +204,16 @@ class Transporter
                     $table = new Table($name, [], [], [], [], $array['option']);
 
                     // add columns
+                    $before = null;
                     foreach ($array['column'] ?? [] as $name => $column) {
                         $type = $column['type'];
                         unset($column['type']);
                         $column += $this->defaultColumnAttributes;
-                        $table->addColumn($name, $type, $column);
+                        $column = $table->addColumn($name, $type, $column);
+                        if ($before !== null) {
+                            $column->setPlatformOption('beforeColumn', $before->getName());
+                        }
+                        $before = $column;
                     }
 
                     // add indexes
