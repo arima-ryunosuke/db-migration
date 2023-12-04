@@ -489,16 +489,16 @@
         },
         {
             "name": "symfony/console",
-            "version": "v5.4.31",
+            "version": "v5.4.32",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "11ac5f154e0e5c4c77af83ad11ead9165280b92a"
+                "reference": "c70df1ffaf23a8d340bded3cfab1b86752ad6ed7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/11ac5f154e0e5c4c77af83ad11ead9165280b92a",
-                "reference": "11ac5f154e0e5c4c77af83ad11ead9165280b92a",
+                "url": "https://api.github.com/repos/symfony/console/zipball/c70df1ffaf23a8d340bded3cfab1b86752ad6ed7",
+                "reference": "c70df1ffaf23a8d340bded3cfab1b86752ad6ed7",
                 "shasum": ""
             },
             "require": {
@@ -568,7 +568,7 @@
                 "terminal"
             ],
             "support": {
-                "source": "https://github.com/symfony/console/tree/v5.4.31"
+                "source": "https://github.com/symfony/console/tree/v5.4.32"
             },
             "funding": [
                 {
@@ -584,7 +584,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-10-31T07:58:33+00:00"
+            "time": "2023-11-18T18:23:04+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
@@ -1230,16 +1230,16 @@
         },
         {
             "name": "symfony/string",
-            "version": "v5.4.31",
+            "version": "v5.4.32",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/string.git",
-                "reference": "2765096c03f39ddf54f6af532166e42aaa05b24b"
+                "reference": "91bf4453d65d8231688a04376c3a40efe0770f04"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/string/zipball/2765096c03f39ddf54f6af532166e42aaa05b24b",
-                "reference": "2765096c03f39ddf54f6af532166e42aaa05b24b",
+                "url": "https://api.github.com/repos/symfony/string/zipball/91bf4453d65d8231688a04376c3a40efe0770f04",
+                "reference": "91bf4453d65d8231688a04376c3a40efe0770f04",
                 "shasum": ""
             },
             "require": {
@@ -1296,7 +1296,7 @@
                 "utf8"
             ],
             "support": {
-                "source": "https://github.com/symfony/string/tree/v5.4.31"
+                "source": "https://github.com/symfony/string/tree/v5.4.32"
             },
             "funding": [
                 {
@@ -1312,7 +1312,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-11-09T08:19:44+00:00"
+            "time": "2023-11-26T13:43:46+00:00"
         },
         {
             "name": "symfony/yaml",
@@ -1930,16 +1930,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "8.5.34",
+            "version": "8.5.36",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "622d0186707f39a4ae71df3bcf42d759bb868854"
+                "reference": "9652df58e06a681429d8cfdaec3c43d6de581d5a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/622d0186707f39a4ae71df3bcf42d759bb868854",
-                "reference": "622d0186707f39a4ae71df3bcf42d759bb868854",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/9652df58e06a681429d8cfdaec3c43d6de581d5a",
+                "reference": "9652df58e06a681429d8cfdaec3c43d6de581d5a",
                 "shasum": ""
             },
             "require": {
@@ -2008,7 +2008,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/8.5.34"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/8.5.36"
             },
             "funding": [
                 {
@@ -2024,20 +2024,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-09-19T05:20:51+00:00"
+            "time": "2023-12-01T16:52:15+00:00"
         },
         {
             "name": "ryunosuke/functions",
-            "version": "v1.6.9",
+            "version": "v1.6.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/arima-ryunosuke/php-functions.git",
-                "reference": "c1655cc59d5b22ddf3a0f386519ef0e646556679"
+                "reference": "08a6b18e9642e7a5f4fb125c212868bca8bf6973"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/arima-ryunosuke/php-functions/zipball/c1655cc59d5b22ddf3a0f386519ef0e646556679",
-                "reference": "c1655cc59d5b22ddf3a0f386519ef0e646556679",
+                "url": "https://api.github.com/repos/arima-ryunosuke/php-functions/zipball/08a6b18e9642e7a5f4fb125c212868bca8bf6973",
+                "reference": "08a6b18e9642e7a5f4fb125c212868bca8bf6973",
                 "shasum": ""
             },
             "require": {
@@ -2071,9 +2071,9 @@
             "description": "Utility functions for PHP",
             "support": {
                 "issues": "https://github.com/arima-ryunosuke/php-functions/issues",
-                "source": "https://github.com/arima-ryunosuke/php-functions/tree/v1.6.9"
+                "source": "https://github.com/arima-ryunosuke/php-functions/tree/v1.6.11"
             },
-            "time": "2023-11-20T22:23:08+00:00"
+            "time": "2023-12-02T12:02:40+00:00"
         },
         {
             "name": "sebastian/code-unit-reverse-lookup",
