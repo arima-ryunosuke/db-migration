@@ -48,7 +48,7 @@ class CheckCommandTest extends AbstractTestCase
 
         $rows = array_map(function ($i) {
             return [
-                'id'   => $i,
+                'id'   => $i * 10,
                 'fid1' => $i,
                 'fid2' => $i % 2 === 0 ? $i : null,
             ];
@@ -58,10 +58,15 @@ class CheckCommandTest extends AbstractTestCase
         $this->connection->disableConstraint(false);
 
         $result = $this->runApp([]);
+        $this->assertStringNotContainsString('(id): "(60)"', $result);
         $this->assertStringNotContainsString('fid1: "6"', $result);
+        $this->assertStringContainsString('(id): "(70)"', $result);
         $this->assertStringContainsString('fid1: "7"', $result);
+        $this->assertStringContainsString('(id): "(80)"', $result);
         $this->assertStringContainsString('fid1: "8"', $result);
+        $this->assertStringContainsString('(id): "(90)"', $result);
         $this->assertStringContainsString('fid1: "9"', $result);
+        $this->assertStringContainsString('(id): "(100)"', $result);
         $this->assertStringContainsString('fid1: "10"', $result);
         $this->assertStringContainsString('fid2: "8"', $result);
         $this->assertStringNotContainsString('fid2: "9"', $result);

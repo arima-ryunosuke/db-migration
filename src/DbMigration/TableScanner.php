@@ -207,8 +207,12 @@ class TableScanner
         $onCondition    = [];
         $whereCondition = [];
 
+        foreach ($foreignKey->getLocalTable()->getPrimaryKey()->getColumns() as $pkColumn) {
+            $columns[] = "{$localTableName}.{$quote($pkColumn)} AS pk_$pkColumn";
+        }
+
         foreach (array_combine($foreignKey->getLocalColumns(), $foreignKey->getForeignColumns()) as $local => $foreign) {
-            $columns[]        = "{$localTableName}.{$quote($local)}";
+            $columns[]        = "{$localTableName}.{$quote($local)} AS fk_$local";
             $onCondition[]    = "{$foreignTableName}.{$quote($foreign)} = {$localTableName}.{$quote($local)}";
             $whereCondition[] = "{$localTableName}.{$quote($local)} IS NOT NULL";
             $whereCondition[] = "{$foreignTableName}.{$quote($foreign)} IS NULL";
@@ -221,7 +225,20 @@ class TableScanner
             WHERE     {$implode(' AND ', $whereCondition)}
         ";
 
-        return $this->conn->queryUnbuffered($sql);
+        foreach ($this->conn->queryUnbuffered($sql) as $row) {
+            $pkval  = [];
+            $newrow = [];
+            foreach ($row as $c => $v) {
+                if (starts_with($c, 'pk_')) {
+                    $pkval[substr($c, strlen('pk_'))] = $v;
+                    continue;
+                }
+                if (starts_with($c, 'fk_')) {
+                    $newrow[substr($c, strlen('fk_'))] = $v;
+                }
+            }
+            yield ["({$implode(',',array_keys($pkval))})" => "({$implode(',',$pkval)})"] + $newrow;
+        }
     }
 
     public function associateRecords(iterable $rows): Generator
