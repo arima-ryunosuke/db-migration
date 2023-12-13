@@ -1,7 +1,7 @@
 #!/bin/bash
 
-USER=user
-PASS=pass
+USER=root
+PASS=Password1234
 
 cd $(dirname $(dirname $(readlink -f $0)))
 
@@ -9,7 +9,8 @@ function techo {
   echo -e "\e[0;42m$*\e[0m"
 }
 
-# php dbmigration.phar export mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml -n -v --multiline --migration demo/migration
+# php dbmigration.phar import mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml -n -v --migration demo/migration
+# php dbmigration.phar export mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml -n -v --migration demo/migration --multiline
 
 techo "import database definitation."
 php dbmigration.phar import mysql://$USER:$PASS@127.0.0.1/demo_migration demo/sakila.yaml demo/data/actor.yaml -n -v
@@ -20,6 +21,7 @@ php dbmigration.phar migrate mysql://$USER:$PASS@127.0.0.1/demo_migration demo/s
 techo "change database. (ALTER/UPDATE)"
 mysql -h 127.0.0.1 -u $USER -p$PASS demo_migration << SQL
 ALTER TABLE actor ADD COLUMN dummy INT NOT NULL AFTER last_update;
+ALTER EVENT event1 COMMENT 'eventX';
 UPDATE actor SET first_name = "changed" WHERE actor_id = 1;
 SQL
 
