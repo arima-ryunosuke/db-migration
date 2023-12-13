@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9be61b333e4a85e7dd79f612d116518f",
+    "content-hash": "397e285eeee09bd35475ed401d0415fc",
     "packages": [
         {
             "name": "doctrine/cache",
@@ -101,16 +101,16 @@
         },
         {
             "name": "doctrine/dbal",
-            "version": "3.6.x-dev",
+            "version": "3.7.x-dev",
             "source": {
                 "type": "git",
                 "url": "https://github.com/arima-ryunosuke/dbal.git",
-                "reference": "41b653964359f760876f8f9546681a5ba2b36495"
+                "reference": "63385db87b72c0b593b60348ee23623a23d716ec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/arima-ryunosuke/dbal/zipball/41b653964359f760876f8f9546681a5ba2b36495",
-                "reference": "41b653964359f760876f8f9546681a5ba2b36495",
+                "url": "https://api.github.com/repos/arima-ryunosuke/dbal/zipball/63385db87b72c0b593b60348ee23623a23d716ec",
+                "reference": "63385db87b72c0b593b60348ee23623a23d716ec",
                 "shasum": ""
             },
             "require": {
@@ -126,9 +126,9 @@
                 "doctrine/coding-standard": "12.0.0",
                 "fig/log-test": "^1",
                 "jetbrains/phpstorm-stubs": "2023.1",
-                "phpstan/phpstan": "1.10.34",
+                "phpstan/phpstan": "1.10.42",
                 "phpstan/phpstan-strict-rules": "^1.5",
-                "phpunit/phpunit": "9.6.12",
+                "phpunit/phpunit": "9.6.13",
                 "psalm/plugin-phpunit": "0.18.4",
                 "slevomat/coding-standard": "8.13.1",
                 "squizlabs/php_codesniffer": "3.7.2",
@@ -197,9 +197,9 @@
                 "sqlsrv"
             ],
             "support": {
-                "source": "https://github.com/arima-ryunosuke/dbal/tree/3.6"
+                "source": "https://github.com/arima-ryunosuke/dbal/tree/3.7"
             },
-            "time": "2023-11-22T04:14:32+00:00"
+            "time": "2023-12-13T07:24:27+00:00"
         },
         {
             "name": "doctrine/deprecations",
