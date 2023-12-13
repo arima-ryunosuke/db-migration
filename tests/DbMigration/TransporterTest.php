@@ -65,12 +65,14 @@ class TransporterTest extends AbstractTestCase
         $table->setPrimaryKey(['id']);
         $this->readyTable($this->schema, $table);
         $this->schema->createTrigger(new Trigger('trg1', "INSERT INTO hoge\nVALUES()", 'zzz', [
-            'timing' => 'BEFORE',
-            'event'  => 'UPDATE',
+            'timing'  => 'BEFORE',
+            'event'   => 'UPDATE',
+            'definer' => 'user@localhost',
         ]));
         $this->schema->createTrigger(new Trigger('trg2', "INSERT INTO hoge\nVALUES()", 'zzz', [
-            'timing' => 'AFTER',
-            'event'  => 'DELETE',
+            'timing'  => 'AFTER',
+            'event'   => 'DELETE',
+            'definer' => 'user@localhost',
         ]));
         $this->schema->createRoutine(new Routine('function1', "RETURN\n1", [
             'type'                  => 'FUNCTION',
@@ -78,6 +80,8 @@ class TransporterTest extends AbstractTestCase
             'returnTypeDeclaration' => 'int',
             'deterministic'         => true,
             'dataAccess'            => 'READS SQL DATA',
+            'securityType'          => 'INVOKER',
+            'definer'               => 'user@localhost',
             'comment'               => 'function1comment',
         ]));
         $this->schema->createEvent(new Event('event1', "SELECT\n1", [
@@ -87,6 +91,7 @@ class TransporterTest extends AbstractTestCase
             'until'         => '2023-12-24 00:00:00',
             'completion'    => 'PRESERVE',
             'status'        => 'ENABLE',
+            'definer'       => 'user@localhost',
             'comment'       => 'event1comment',
         ]));
 
@@ -288,9 +293,9 @@ class TransporterTest extends AbstractTestCase
         $this->assertFileContains('CREATE TABLE child', self::$tmpdir . '/table.sql');
         $this->assertFileContains('ALTER TABLE child', self::$tmpdir . '/table.sql');
         $this->assertFileContains('CREATE VIEW', self::$tmpdir . '/table.sql');
-        $this->assertFileContains('CREATE TRIGGER', self::$tmpdir . '/table.sql');
-        $this->assertFileContains('CREATE FUNCTION', self::$tmpdir . '/table.sql');
-        $this->assertFileContains('CREATE EVENT', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE DEFINER=`user`@`localhost` TRIGGER', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE DEFINER=`user`@`localhost` FUNCTION', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE DEFINER=`user`@`localhost` EVENT', self::$tmpdir . '/table.sql');
     }
 
     /**
@@ -390,8 +395,8 @@ class TransporterTest extends AbstractTestCase
             $ddls = $this->transporter->importDDL(self::$tmpdir . "/table.$ext");
             $this->assertContainsString('CREATE TABLE hoge', $ddls);
             $this->assertContainsString('CREATE TABLE fuga', $ddls);
-            $this->assertContainsString('CREATE TRIGGER trg1', $ddls);
-            $this->assertContainsString('CREATE TRIGGER trg2', $ddls);
+            $this->assertContainsString('CREATE DEFINER=`user`@`localhost` TRIGGER trg1', $ddls);
+            $this->assertContainsString('CREATE DEFINER=`user`@`localhost` TRIGGER trg2', $ddls);
             $this->assertContainsString('CREATE VIEW vvview', $ddls);
         }
 
@@ -496,7 +501,7 @@ class TransporterTest extends AbstractTestCase
     function migrateDdl()
     {
         $fn   = $this->readyPhpFile("ddl.php", [
-            'table' => [
+            'table'   => [
                 'fugata'  => [
                     'column' => [
                         'hoge_id' => [
@@ -523,6 +528,51 @@ class TransporterTest extends AbstractTestCase
                     'option' => [],
                 ],
             ],
+            'trigger' => [
+                'trg1' => [
+                    'statement' => "INSERT INTO hoge\nVALUES(1)",
+                    'table'     => 'zzz',
+                    'timing'    => 'BEFORE',
+                    'event'     => 'UPDATE',
+                    'definer'   => 'user@localhost',
+                ],
+                'trg2' => [
+                    'statement' => "INSERT INTO hoge\nVALUES()",
+                    'table'     => 'zzz',
+                    'timing'    => 'AFTER',
+                    'event'     => 'DELETE',
+                    'definer'   => 'user@localhost',
+                ],
+            ],
+            'routine' => [
+                'function1' => [
+                    'statement'             => "RETURN\n1",
+                    'type'                  => 'FUNCTION',
+                    'parameters'            => [],
+                    'returnType'            => 'int',
+                    'returnTypeDeclaration' => 'int',
+                    'deterministic'         => true,
+                    'dataAccess'            => 'READS SQL DATA',
+                    'securityType'          => 'INVOKER',
+                    'definer'               => 'user@localhost',
+                    'language'              => 'SQL',
+                    'comment'               => 'function1comment-altered',
+                ],
+            ],
+            'event'   => [
+                'event1' => [
+                    'statement'     => "SELECT\n1",
+                    'intervalValue' => '1',
+                    'intervalField' => 'YEAR',
+                    'since'         => '2022-12-24 00:00:00',
+                    'until'         => '2023-12-24 00:00:00',
+                    'completion'    => 'PRESERVE',
+                    'status'        => 'ENABLE',
+                    'definer'       => 'user@localhost',
+                    'language'      => 'SQL',
+                    'comment'       => 'event1comment-altered',
+                ],
+            ],
         ]);
         $ddls = $this->transporter->migrateDDL($fn);
 
@@ -531,6 +581,11 @@ class TransporterTest extends AbstractTestCase
         $this->assertContainsString('CHANGE hoge hoge INT NOT NULL AFTER fuga', $ddls);
         $this->assertContainsString('CHANGE fuga fuga INT NOT NULL AFTER name', $ddls);
         $this->assertNotContainsString('CHANGE name', $ddls);
+        $this->assertContainsString('ALTER DEFINER=`user`@`localhost` EVENT event1', $ddls);
+        $this->assertContainsString('ALTER FUNCTION function1', $ddls);
+        $this->assertContainsString('DROP TRIGGER IF EXISTS trg1', $ddls);
+        $this->assertContainsString('CREATE DEFINER=`user`@`localhost` TRIGGER trg1', $ddls);
+        $this->assertNotContainsString('DROP TRIGGER IF EXISTS trg2', $ddls);
 
         $this->assertEquals([], $this->transporter->migrateDDL(''));
 
@@ -1027,7 +1082,7 @@ TCSV
             'delimiter' => '//',
         ]);
         $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
-        $this->assertFileContains("CREATE TRIGGER trg1 BEFORE UPDATE ON zzz FOR EACH ROW INSERT INTO hoge\nVALUES()//", self::$tmpdir . '/table.sql');
+        $this->assertFileContains("CREATE DEFINER=`user`@`localhost` TRIGGER trg1 BEFORE UPDATE ON zzz FOR EACH ROW INSERT INTO hoge\nVALUES()//", self::$tmpdir . '/table.sql');
     }
 
     /**
