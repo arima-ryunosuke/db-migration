@@ -21,6 +21,11 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.6
+
+- [composer] update
+  - DEFINER, TABLE,COLUMN 以外ので差分コメント等
+
 ## 3.1.5
 
 - [feature] check コマンドの結果に主キーを追加
