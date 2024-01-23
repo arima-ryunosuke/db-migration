@@ -21,6 +21,12 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.7
+
+- [composer] update
+  - Trigger の変更の前後に LOCK/UNLOCK TABLES を実行
+    - Event,Routine はまぁ良いとして Trigger は間隙でも実行されないと困ることがある（エラーにもならないし）
+
 ## 3.1.6
 
 - [composer] update
