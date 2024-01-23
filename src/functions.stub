@@ -18,6 +18,40 @@ if (!defined('ryunosuke\\DbMigration\\IS_PRIVATE')) {
     define('ryunosuke\\DbMigration\\IS_PRIVATE', 16);
 }
 
+if (!defined('ryunosuke\\DbMigration\\EN_MONTH_SHORT')) {
+    define('ryunosuke\\DbMigration\\EN_MONTH_SHORT', [
+        1  => "jan",
+        2  => "feb",
+        3  => "mar",
+        4  => "apr",
+        5  => "may",
+        6  => "jun",
+        7  => "jul",
+        8  => "aug",
+        9  => "sep",
+        10 => "oct",
+        11 => "nov",
+        12 => "dec",
+    ]);
+}
+
+if (!defined('ryunosuke\\DbMigration\\EN_MONTH_LONG')) {
+    define('ryunosuke\\DbMigration\\EN_MONTH_LONG', [
+        1  => "january",
+        2  => "february",
+        3  => "march",
+        4  => "april",
+        5  => "may",
+        6  => "june",
+        7  => "july",
+        8  => "august",
+        9  => "september",
+        10 => "october",
+        11 => "november",
+        12 => "december",
+    ]);
+}
+
 if (!defined('ryunosuke\\DbMigration\\JP_ERA')) {
     define('ryunosuke\\DbMigration\\JP_ERA', [
         [
@@ -2479,7 +2513,7 @@ if (!function_exists('ryunosuke\\DbMigration\\iterator_chunk')) {
 
         // Generator は Iterator であるが Iterator は Generator ではないので変換する
         if (is_iterable($iterator)) {
-            $iterator = (function () use ($iterator) { yield from $iterator; })();
+            $iterator = (fn() => yield from $iterator)();
         }
 
         $chunk = 0;
@@ -2547,7 +2581,7 @@ if (!function_exists('ryunosuke\\DbMigration\\iterator_join')) {
     {
         $iterator = new \AppendIterator();
         foreach ($iterables as $iterable) {
-            $iterator->append(is_array($iterable) ? new \ArrayIterator($iterable) : $iterable);
+            $iterator->append(is_array($iterable) ? (fn() => yield from $iterable)() : $iterable);
         }
 
         $n = 0;
@@ -2612,7 +2646,7 @@ if (!function_exists('ryunosuke\\DbMigration\\iterator_split')) {
      */
     function iterator_split($iterable, $chunk_sizes, $preserve_keys = false)
     {
-        $iterable = new \NoRewindIterator(is_array($iterable) ? new \ArrayIterator($iterable) : $iterable);
+        $iterable = new \NoRewindIterator(is_array($iterable) ? (fn() => yield from $iterable)() : $iterable);
 
         $results = [];
 
@@ -2773,6 +2807,7 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_php')) {
             'flags'          => 0,    // token_get_all の $flags. TOKEN_PARSE を与えると ParseError が出ることがあるのでデフォルト 0
             'cache'          => true, // キャッシュするか否か
             'greedy'         => false,// end と nest か一致したときに処理を継続するか
+            'backtick'       => true, // `` もパースするか
             'nest_token'     => [
                 ')' => '(',
                 '}' => '{',
@@ -2787,6 +2822,9 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_php')) {
             $phptag = $option['phptag'] ? '<?php ' : '';
             $phpcode = $phptag . $phpcode;
             $position = -strlen($phptag);
+
+            $backtick = '';
+            $backticking = false;
 
             $tokens = [];
             $tmp = token_get_all($phpcode, $option['flags']);
@@ -2835,9 +2873,23 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_php')) {
                 }
                 // @codeCoverageIgnoreEnd
 
+                if (!$option['backtick']) {
+                    if ($token[1] === '`') {
+                        if ($backticking) {
+                            $token[1] = $backtick . $token[1];
+                            $backtick = '';
+                        }
+                        $backticking = !$backticking;
+                    }
+                    if ($backticking) {
+                        $backtick .= $token[1];
+                        continue;
+                    }
+                }
+
                 $token[] = $position;
                 if ($option['flags'] & TOKEN_NAME) {
-                    $token[] = token_name($token[0]);
+                    $token[] = !$option['backtick'] && $token[0] === 96 ? 'T_BACKTICK' : token_name($token[0]);
                 }
 
                 $position += strlen($token[1]);
@@ -4415,6 +4467,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                 elseif (is_string($token)) {
                     return $this->_append($token, 'red');
                 }
+                elseif (is_array($token)) {
+                    return $this->_append($this->string($token), 'cyan');
+                }
                 elseif (is_object($token)) {
                     return $this->_append($this->string($token), 'green', ['type' => 'object-index', 'id' => spl_object_id($token)]);
                 }
@@ -4453,7 +4508,21 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                 if (is_null($token)) {
                     return 'null';
                 }
+                elseif (is_array($token)) {
+                    return json_encode($token, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                }
                 elseif (is_object($token)) {
+                    if ($token instanceof \Generator) {
+                        try {
+                            $ref = new \ReflectionGenerator($token);
+                            $ename = $ref->getExecutingFile();
+                            $eline = $ref->getExecutingLine();
+                            return get_class($token) . "#" . spl_object_id($token) . "@$ename:$eline";
+                        }
+                        catch (\ReflectionException $e) {
+                            return get_class($token) . "#" . spl_object_id($token);
+                        }
+                    }
                     if ($token instanceof \Closure) {
                         $ref = new \ReflectionFunction($token);
                         $fname = $ref->getFileName();
@@ -4461,7 +4530,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         $eline = $ref->getEndLine();
                         if ($fname && $sline && $eline) {
                             $lines = $sline === $eline ? $sline : "$sline~$eline";
-                            return get_class($token) . "@$fname:$lines#" . spl_object_id($token);
+                            return get_class($token) . "#" . spl_object_id($token) . "@$fname:$lines";
                         }
                     }
                     return get_class($token) . "#" . spl_object_id($token);
@@ -4509,6 +4578,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
             public function export($value, $nest, $parents, $keys, $callback)
             {
                 $position = strlen($this->content);
+
+                $spacer1 = $this->options['indent'] === null ? '' : str_repeat(' ', ($nest + 1) * $this->options['indent']);
+                $spacer2 = $this->options['indent'] === null ? '' : str_repeat(' ', ($nest + 0) * $this->options['indent']);
 
                 // オブジェクトは一度処理してれば無駄なので参照表示
                 if (is_object($value)) {
@@ -4578,9 +4650,6 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
 
                         return $objective ? "{$first_condition}[]" : 'array[]';
                     })();
-
-                    $spacer1 = $this->options['indent'] === null ? '' : str_repeat(' ', ($nest + 1) * $this->options['indent']);
-                    $spacer2 = $this->options['indent'] === null ? '' : str_repeat(' ', ($nest + 0) * $this->options['indent']);
 
                     $key = null;
                     if ($primitive_only) {
@@ -4682,6 +4751,25 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         }
                         $this->plain(']');
                     }
+                }
+                elseif ($value instanceof \Generator) {
+                    $this->value($value);
+
+                    if ($this->options['minify']) {
+                        goto FINALLY_;
+                    }
+
+                    $this->plain(" {\n");
+                    for ($i = 0; $i < 3 && $value->valid(); $i++, $value->next()) {
+                        $this->plain("{$spacer1}yield ");
+                        $this->index($value->key())->plain(' => ');
+                        $this->export($value->current(), $nest + 1, $parents, array_merge($keys, [$value->key()]), true);
+                        $this->plain(";\n");
+                    }
+                    if ($value->valid()) {
+                        $this->plain("$spacer1(more yields)\n");
+                    }
+                    $this->plain("{$spacer2}}");
                 }
                 elseif ($value instanceof \Closure) {
                     $this->value($value);

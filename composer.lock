@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "397e285eeee09bd35475ed401d0415fc",
+    "content-hash": "d1494fdb2e85719ba0910a76c56d4105",
     "packages": [
         {
             "name": "doctrine/cache",
@@ -101,16 +101,16 @@
         },
         {
             "name": "doctrine/dbal",
-            "version": "3.7.x-dev",
+            "version": "3.7.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/arima-ryunosuke/dbal.git",
-                "reference": "63385db87b72c0b593b60348ee23623a23d716ec"
+                "reference": "42242be5d2c2d9cbfbfd51925efbfc28591cd64f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/arima-ryunosuke/dbal/zipball/63385db87b72c0b593b60348ee23623a23d716ec",
-                "reference": "63385db87b72c0b593b60348ee23623a23d716ec",
+                "url": "https://api.github.com/repos/arima-ryunosuke/dbal/zipball/42242be5d2c2d9cbfbfd51925efbfc28591cd64f",
+                "reference": "42242be5d2c2d9cbfbfd51925efbfc28591cd64f",
                 "shasum": ""
             },
             "require": {
@@ -126,14 +126,14 @@
                 "doctrine/coding-standard": "12.0.0",
                 "fig/log-test": "^1",
                 "jetbrains/phpstorm-stubs": "2023.1",
-                "phpstan/phpstan": "1.10.42",
+                "phpstan/phpstan": "1.10.56",
                 "phpstan/phpstan-strict-rules": "^1.5",
-                "phpunit/phpunit": "9.6.13",
+                "phpunit/phpunit": "9.6.15",
                 "psalm/plugin-phpunit": "0.18.4",
                 "slevomat/coding-standard": "8.13.1",
-                "squizlabs/php_codesniffer": "3.7.2",
-                "symfony/cache": "^5.4|^6.0",
-                "symfony/console": "^4.4|^5.4|^6.0",
+                "squizlabs/php_codesniffer": "3.8.1",
+                "symfony/cache": "^5.4|^6.0|^7.0",
+                "symfony/console": "^4.4|^5.4|^6.0|^7.0",
                 "vimeo/psalm": "4.30.0"
             },
             "suggest": {
@@ -197,9 +197,9 @@
                 "sqlsrv"
             ],
             "support": {
-                "source": "https://github.com/arima-ryunosuke/dbal/tree/3.7"
+                "source": "https://github.com/arima-ryunosuke/dbal/tree/3.7.3"
             },
-            "time": "2023-12-13T07:24:27+00:00"
+            "time": "2024-01-23T08:59:13+00:00"
         },
         {
             "name": "doctrine/deprecations",
@@ -489,16 +489,16 @@
         },
         {
             "name": "symfony/console",
-            "version": "v5.4.32",
+            "version": "v5.4.34",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "c70df1ffaf23a8d340bded3cfab1b86752ad6ed7"
+                "reference": "4b4d8cd118484aa604ec519062113dd87abde18c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/c70df1ffaf23a8d340bded3cfab1b86752ad6ed7",
-                "reference": "c70df1ffaf23a8d340bded3cfab1b86752ad6ed7",
+                "url": "https://api.github.com/repos/symfony/console/zipball/4b4d8cd118484aa604ec519062113dd87abde18c",
+                "reference": "4b4d8cd118484aa604ec519062113dd87abde18c",
                 "shasum": ""
             },
             "require": {
@@ -568,7 +568,7 @@
                 "terminal"
             ],
             "support": {
-                "source": "https://github.com/symfony/console/tree/v5.4.32"
+                "source": "https://github.com/symfony/console/tree/v5.4.34"
             },
             "funding": [
                 {
@@ -584,7 +584,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-11-18T18:23:04+00:00"
+            "time": "2023-12-08T13:33:03+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
@@ -1230,16 +1230,16 @@
         },
         {
             "name": "symfony/string",
-            "version": "v5.4.32",
+            "version": "v5.4.34",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/string.git",
-                "reference": "91bf4453d65d8231688a04376c3a40efe0770f04"
+                "reference": "e3f98bfc7885c957488f443df82d97814a3ce061"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/string/zipball/91bf4453d65d8231688a04376c3a40efe0770f04",
-                "reference": "91bf4453d65d8231688a04376c3a40efe0770f04",
+                "url": "https://api.github.com/repos/symfony/string/zipball/e3f98bfc7885c957488f443df82d97814a3ce061",
+                "reference": "e3f98bfc7885c957488f443df82d97814a3ce061",
                 "shasum": ""
             },
             "require": {
@@ -1296,7 +1296,7 @@
                 "utf8"
             ],
             "support": {
-                "source": "https://github.com/symfony/string/tree/v5.4.32"
+                "source": "https://github.com/symfony/string/tree/v5.4.34"
             },
             "funding": [
                 {
@@ -1312,7 +1312,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-11-26T13:43:46+00:00"
+            "time": "2023-12-09T13:20:28+00:00"
         },
         {
             "name": "symfony/yaml",
@@ -2028,16 +2028,16 @@
         },
         {
             "name": "ryunosuke/functions",
-            "version": "v1.6.11",
+            "version": "v1.6.15",
             "source": {
                 "type": "git",
                 "url": "https://github.com/arima-ryunosuke/php-functions.git",
-                "reference": "08a6b18e9642e7a5f4fb125c212868bca8bf6973"
+                "reference": "446b89b5d898975aa858042fb11f54b964e56236"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/arima-ryunosuke/php-functions/zipball/08a6b18e9642e7a5f4fb125c212868bca8bf6973",
-                "reference": "08a6b18e9642e7a5f4fb125c212868bca8bf6973",
+                "url": "https://api.github.com/repos/arima-ryunosuke/php-functions/zipball/446b89b5d898975aa858042fb11f54b964e56236",
+                "reference": "446b89b5d898975aa858042fb11f54b964e56236",
                 "shasum": ""
             },
             "require": {
@@ -2071,9 +2071,9 @@
             "description": "Utility functions for PHP",
             "support": {
                 "issues": "https://github.com/arima-ryunosuke/php-functions/issues",
-                "source": "https://github.com/arima-ryunosuke/php-functions/tree/v1.6.11"
+                "source": "https://github.com/arima-ryunosuke/php-functions/tree/v1.6.15"
             },
-            "time": "2023-12-02T12:02:40+00:00"
+            "time": "2024-01-08T06:58:23+00:00"
         },
         {
             "name": "sebastian/code-unit-reverse-lookup",
@@ -2857,9 +2857,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "doctrine/dbal": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
