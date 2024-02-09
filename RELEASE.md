@@ -21,6 +21,11 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.8
+
+- [composer] update
+  - 式デフォルト対応
+
 ## 3.1.7
 
 - [composer] update
