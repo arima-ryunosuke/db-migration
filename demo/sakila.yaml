@@ -112,7 +112,7 @@ table:
         column:
             film_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
             title: { type: string, default: null, notnull: true, length: 128, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            description: { type: text, default: null, notnull: false, length: 65535, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            description: { type: text, default: '_utf8mb4''empty''', notnull: false, length: 65535, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci, expressionDefault: true } }
             release_year: { type: date, default: null, notnull: false, comment: null, platformOptions: {  } }
             language_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
             original_language_id: { type: boolean, default: null, notnull: false, comment: null, platformOptions: {  } }
