@@ -118,7 +118,7 @@ class MigrationTable
                 if (isset($tablenames[$k])) {
                     foreach ($v as $row) {
                         $logs[]   = $row;
-                        $affected += $this->connection->insert($k, $row);
+                        $affected += $this->connection->upsert($k, $row);
                     }
                 }
                 else {

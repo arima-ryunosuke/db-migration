@@ -53,13 +53,14 @@ class MigrationTableTest extends AbstractTestCase
             'ttt' => [
                 ['name' => 'from array1'],
                 ['name' => 'from array2'],
+                ['name' => 'from array2'],
             ],
         ]));
 
         // attached
         $versions = $migrationTable->fetch();
         $this->assertJsonStringEqualsJsonString(json_encode(['insert into ttt values("from sql1")', 'insert into ttt values("from sql2")']), $versions['1.sql']['logs']);
-        $this->assertJsonStringEqualsJsonString(json_encode([["name" => "from array1"], ["name" => "from array2"]]), $versions['2.sql']['logs']);
+        $this->assertJsonStringEqualsJsonString(json_encode([["name" => "from array1"], ["name" => "from array2"], ["name" => "from array2"]]), $versions['2.sql']['logs']);
 
         // migrated
         $this->assertEquals([

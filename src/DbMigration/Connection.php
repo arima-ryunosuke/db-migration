@@ -4,6 +4,7 @@ namespace ryunosuke\DbMigration;
 
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Generator;
 use mysqli;
 use PDO;
@@ -120,6 +121,31 @@ class Connection extends \Doctrine\DBAL\Connection
 
         $implode = fn($v) => implode(',', $v);
         return $this->executeStatement("INSERT INTO $table ({$implode(array_keys($data))}) VALUES ({$implode($this->quote($data))})");
+    }
+
+    public function upsert($table, array $data, array $types = [])
+    {
+        if (count($data) === 0) {
+            return parent::insert($table, $data, $types);
+        }
+
+        static $tableObjects = [];
+        $tableObjects[$table] ??= $this->createSchemaManager()->introspectTable($table);
+
+        $cols = array_keys($data);
+
+        $implode = fn($v) => implode(',', $v);
+        $sql     = "INSERT INTO $table ({$implode($cols)}) VALUES ({$implode($this->quote($data))})";
+
+        if ($this->getDatabasePlatform() instanceof MySQLPlatform) {
+            $sql .= " ON DUPLICATE KEY UPDATE {$implode(array_map(fn($c) => "$c = VALUES($c)", $cols))}";
+        }
+        else {
+            $pkcol = $tableObjects[$table]->getPrimaryKey()->getColumns();
+            $sql   .= " ON CONFLICT({$implode($pkcol)}) DO UPDATE SET {$implode(array_map(fn($c) => "$c = EXCLUDED.$c", $cols))}";
+        }
+
+        return $this->executeStatement($sql);
     }
 
     /**

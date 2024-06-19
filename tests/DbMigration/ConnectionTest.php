@@ -5,6 +5,7 @@ namespace ryunosuke\Test\DbMigration;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Tools\DsnParser;
+use Doctrine\DBAL\Types\Type;
 use ryunosuke\DbMigration\Connection;
 
 class ConnectionTest extends AbstractTestCase
@@ -76,6 +77,37 @@ class ConnectionTest extends AbstractTestCase
             ['id' => 1],
             ['id' => 3],
         ], $conn->fetchAllAssociative('select * from hoge'));
+    }
+
+    function test_upsert()
+    {
+        $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id', 'name');
+        $table_hoge->getColumn('id')->setAutoincrement(true);
+        $table_hoge->getColumn('name')->setDefault('X');
+        $table_hoge->getColumn('name')->setType(Type::getType('string'));
+
+        $conns = (function () {
+            yield DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]) => [
+                'initial'  => [],
+                'affected' => 2,
+            ];
+            yield DriverManager::getConnection(['driver' => 'sqlite3', 'memory' => true] + ['wrapperClass' => Connection::class]) => [
+                'initial'  => ['name' => 'X'],
+                'affected' => 1,
+            ];
+        })();
+        foreach ($conns as $conn => ['initial' => $initial, 'affected' => $affected]) {
+            /** @var Connection $conn */
+            $this->readyTable($conn->createSchemaManager(), $table_hoge);
+
+            $this->assertEquals(1, $conn->upsert('hoge', $initial));
+            $this->assertEquals(1, $conn->upsert('hoge', ['id' => 2, 'name' => 'A']));
+            $this->assertEquals($affected, $conn->upsert('hoge', ['id' => 2, 'name' => 'B']));
+            $this->assertEquals([
+                ['id' => 1, 'name' => 'X'],
+                ['id' => 2, 'name' => 'B'],
+            ], $conn->fetchAllAssociative('select * from hoge'));
+        }
     }
 
     function test_quote()
