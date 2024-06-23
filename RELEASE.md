@@ -21,6 +21,12 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.9
+
+- [composer] update
+  - doctrine で BC break な変更があったっぽいので
+- [feature] データ記述言語での migration を upsert に変更
+
 ## 3.1.8
 
 - [composer] update
