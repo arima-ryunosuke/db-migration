@@ -51,7 +51,7 @@ class Transporter
 
     private array $defaultColumnAttributes = [
         'length'           => null,
-        'precision'        => 10,
+        'precision'        => null,
         'scale'            => 0,
         'fixed'            => false,
         'autoincrement'    => false,
