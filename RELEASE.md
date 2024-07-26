@@ -21,6 +21,10 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.10
+
+- [fixbug] int で precision が出力される不具合を修正
+
 ## 3.1.9
 
 - [composer] update
