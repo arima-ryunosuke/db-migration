@@ -8861,7 +8861,8 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
             'delimiter'       => ',',
             'enclosure'       => '"',
             'escape'          => '\\',
-            'encoding'        => mb_internal_encoding(),
+            'encoding'        => ini_get('default_charset'),
+            'scrub'           => 'TRANSLIT',
             'initial'         => '', // "\xEF\xBB\xBF"
             'headers'         => null,
             'structure'       => false,
@@ -8879,9 +8880,14 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
             $fp = fopen('php://temp', 'rw+');
         }
         try {
-            $size = call_safely(function ($fp, $csvarrays, $delimiter, $enclosure, $escape, $encoding, $initial, $headers, $structure, $callback, $callback_header) {
+            $size = call_safely(function ($fp, $csvarrays, $delimiter, $enclosure, $escape, $encoding, $scrub, $initial, $headers, $structure, $callback, $callback_header) {
+                $default_charset = ini_get('default_charset');
+                if ($default_charset !== $encoding) {
+                    // import とは違い、吐き出すときは明確なエラーだろうので TRANSLIT も IGNORE もしない
+                    stream_filter_append($fp, "convert.iconv.$default_charset/$encoding" . (strlen($scrub) ? "//$scrub" : ""), STREAM_FILTER_WRITE);
+                }
+
                 $size = 0;
-                $mb_internal_encoding = mb_internal_encoding();
 
                 if (!is_array($csvarrays)) {
                     [$csvarrays, $csvarrays2] = iterator_split($csvarrays, [1], true);
@@ -8893,8 +8899,11 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                         $csvarrays[$n] = array_map('rawurldecode', str_array(explode('&', $query), '=', true));
                     }
                 }
-                if (strlen($initial)) {
-                    fwrite($fp, $initial);
+                if (is_stringable($initial) && strlen($initial)) {
+                    $size += fwrite($fp, $initial);
+                }
+                elseif (is_array($initial) && $initial) {
+                    $size += fputcsv($fp, $initial, $delimiter, $enclosure, $escape);
                 }
                 if (!$headers) {
                     $tmp = [];
@@ -8941,9 +8950,6 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                     }
 
                     $headerline = $headers;
-                    if ($encoding !== $mb_internal_encoding) {
-                        mb_convert_variables($encoding, $mb_internal_encoding, $headerline);
-                    }
                     if ($structure) {
                         $headerline = array_map(fn($header) => preg_replace('#\[\d+]$#imu', '[]', $header), $headerline);
                     }
@@ -8965,13 +8971,10 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                         }
                     }
                     $row = array_intersect_key(array_replace($default, $array), $default);
-                    if ($encoding !== $mb_internal_encoding) {
-                        mb_convert_variables($encoding, $mb_internal_encoding, $row);
-                    }
                     $size += fputcsv($fp, $row, $delimiter, $enclosure, $escape);
                 }
                 return $size;
-            }, $fp, $csvarrays, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['initial'], $options['headers'], $options['structure'], $options['callback'], $options['callback_header']);
+            }, $fp, $csvarrays, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['initial'], $options['headers'], $options['structure'], $options['callback'], $options['callback_header']);
             if ($output) {
                 return $size;
             }
@@ -9070,12 +9073,15 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
             'delimiter' => ',',
             'enclosure' => '"',
             'escape'    => '\\',
-            'encoding'  => mb_internal_encoding(),
+            'encoding'  => ini_get('default_charset'),
+            'scrub'     => 'IGNORE',
+            'initial'   => [],
             'headers'   => [],
             'headermap' => null,
             'structure' => false,
             'grouping'  => null,
             'callback'  => null, // map + filter 用コールバック（1行が参照で渡ってくるので書き換えられる&&false を返すと結果から除かれる）
+            'limit'     => null, // 正味のデータ行の最大値（超えた場合はそこで処理を終了する。例外が飛んだりはしない）
         ];
 
         // 文字キーを含む場合はヘッダーありの読み換えとなる
@@ -9094,16 +9100,31 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
         }
 
         try {
-            return call_safely(function ($fp, $delimiter, $enclosure, $escape, $encoding, $headers, $headermap, $structure, $grouping, $callback) {
-                $mb_internal_encoding = mb_internal_encoding();
+            return call_safely(function ($fp, $delimiter, $enclosure, $escape, $encoding, $scrub, $initial, $headers, $headermap, $structure, $grouping, $callback, $limit) {
+                $default_charset = ini_get('default_charset');
+                if ($default_charset !== $encoding) {
+                    stream_filter_append($fp, "convert.iconv.$encoding/$default_charset" . (strlen($scrub) ? "//$scrub" : ""), STREAM_FILTER_READ);
+                }
+
+                foreach ($initial as $rule => $count) {
+                    for ($i = 0; $i < $count; $i++) {
+                        if ($rule === 'byte') {
+                            fgetc($fp);
+                        }
+                        elseif ($rule === 'line') {
+                            fgets($fp);
+                        }
+                        elseif ($rule === 'csv') {
+                            fgetcsv($fp, 0, $delimiter, $enclosure, $escape);
+                        }
+                    }
+                }
+
                 $result = [];
                 $n = -1;
                 while ($row = fgetcsv($fp, 0, $delimiter, $enclosure, $escape)) {
                     if ($row === [null]) {
                         continue;
-                    }
-                    if ($mb_internal_encoding !== $encoding) {
-                        mb_convert_variables($mb_internal_encoding, $encoding, $row);
                     }
                     if (!$headers) {
                         $headers = $row;
@@ -9154,6 +9175,10 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
                     else {
                         $result[] = $row;
                     }
+
+                    if ($limit !== null && count($result) >= $limit) {
+                        break;
+                    }
                 }
 
                 if ($grouping !== null) {
@@ -9163,7 +9188,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
                 }
 
                 return $result;
-            }, $fp, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['headers'], $options['headermap'], $options['structure'], $options['grouping'], $options['callback']);
+            }, $fp, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['initial'], $options['headers'], $options['headermap'], $options['structure'], $options['grouping'], $options['callback'], $options['limit']);
         }
         finally {
             fclose($fp);
@@ -17883,7 +17908,7 @@ if (!function_exists('ryunosuke\\DbMigration\\iterator_join')) {
         }
 
         $n = 0;
-        foreach ($iterator as $k => $it) {
+        foreach (new \NoRewindIterator($iterator) as $k => $it) {
             if ($preserve_keys) {
                 yield $k => $it;
             }
@@ -28976,7 +29001,7 @@ if (!function_exists('ryunosuke\\DbMigration\\cache')) {
                 // 名前空間自体がないなら作る or 読む
                 if (!isset($this->cache[$namespace])) {
                     $nsarray = [];
-                    $cachpath = $this->cachedir . '/' . rawurldecode($namespace) . self::CACHE_EXT;
+                    $cachpath = $this->cachedir . '/' . rawurlencode($namespace) . self::CACHE_EXT;
                     if (file_exists($cachpath)) {
                         $nsarray = require $cachpath;
                     }

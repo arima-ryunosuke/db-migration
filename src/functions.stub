@@ -2736,7 +2736,7 @@ if (!function_exists('ryunosuke\\DbMigration\\iterator_join')) {
         }
 
         $n = 0;
-        foreach ($iterator as $k => $it) {
+        foreach (new \NoRewindIterator($iterator) as $k => $it) {
             if ($preserve_keys) {
                 yield $k => $it;
             }
@@ -3889,7 +3889,7 @@ if (!function_exists('ryunosuke\\DbMigration\\cache')) {
                 // 名前空間自体がないなら作る or 読む
                 if (!isset($this->cache[$namespace])) {
                     $nsarray = [];
-                    $cachpath = $this->cachedir . '/' . rawurldecode($namespace) . self::CACHE_EXT;
+                    $cachpath = $this->cachedir . '/' . rawurlencode($namespace) . self::CACHE_EXT;
                     if (file_exists($cachpath)) {
                         $nsarray = require $cachpath;
                     }
