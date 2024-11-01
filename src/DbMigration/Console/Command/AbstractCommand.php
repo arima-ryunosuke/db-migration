@@ -184,7 +184,7 @@ abstract class AbstractCommand extends Command
     protected function event(Connection $conn)
     {
         $eventFile = $this->input->getOption('event');
-        if (!strlen($eventFile)) {
+        if (!strlen($eventFile ?? '')) {
             return;
         }
         if (!file_exists($eventFile)) {
@@ -225,7 +225,7 @@ abstract class AbstractCommand extends Command
     protected function config(InputInterface $input, OutputInterface $output)
     {
         $configFile = $input->getOption('config');
-        if (!strlen($configFile)) {
+        if (!strlen($configFile ?? '')) {
             return;
         }
         if (!file_exists($configFile)) {

@@ -14,12 +14,12 @@ namespace ryunosuke\DbMigration\FileType\Tool;
  */
 class MbstringFilter extends \php_user_filter
 {
-    private $remains;
+    private $remains = '';
     private $convert_func;
     private $convert_args = [];
     private $from_encoding;
 
-    public function onCreate()
+    public function onCreate(): bool
     {
         if (preg_match('/^convert\.mbstring\.kana\.([A-z]*)(?::([-\w]+))?$/', $this->filtername, $matches)) {
             $this->convert_func = "mb_convert_kana";
@@ -71,7 +71,7 @@ class MbstringFilter extends \php_user_filter
      * @param boolean $closing
      * @return integer        PSFS_* constants
      */
-    public function filter($in, $out, &$consumed, $closing)
+    public function filter($in, $out, &$consumed, $closing): int
     {
         while ($bucket = stream_bucket_make_writeable($in)) {
             $buffered_data = $this->remains . $bucket->data;

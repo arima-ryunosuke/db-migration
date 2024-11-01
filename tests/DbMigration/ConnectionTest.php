@@ -139,9 +139,9 @@ class ConnectionTest extends AbstractTestCase
 
     function test_quoteIdentifier()
     {
-        $this->assertEquals("``", $this->connection->quoteIdentifier(null));
+        $this->assertEquals("``", $this->connection->quoteIdentifier(''));
         $this->assertEquals("`123`", $this->connection->quoteIdentifier(123));
         $this->assertEquals("`abc`", $this->connection->quoteIdentifier('abc'));
-        $this->assertEquals(["``", "`123`", "`abc`"], $this->connection->quoteIdentifier([null, 123, 'abc']));
+        $this->assertEquals(["``", "`123`", "`abc`"], $this->connection->quoteIdentifier(['', 123, 'abc']));
     }
 }

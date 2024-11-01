@@ -48,12 +48,6 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
      */
     public function __get($name)
     {
-        // compatible PHPUnit_Framework_TestCase::__get
-        if (is_callable('parent::__get')) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return parent::__get($name);
-        }
-
         // if exsists method and @closurable, return that closure
         if (method_exists($this, $name)) {
             $refclass = new \ReflectionClass($this);
@@ -237,7 +231,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
     {
         $args    = func_get_args();
         $args[0] = new \Exception($message);
-        call_user_func_array('self::assertException', $args);
+        self::assertException(...$args);
     }
 
     public static function assertContainsString($needle, $haystack, $message = '')

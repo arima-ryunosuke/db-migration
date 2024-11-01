@@ -102,7 +102,7 @@ class Json extends AbstractFile
             $result = $this->decode((string) $this);
 
             array_walk_recursive($result, function (&$value) {
-                if (preg_match('#^!include: (.*)#', $value, $m)) {
+                if (preg_match('#^!include: (.*)#', $value ?? '', $m)) {
                     $value = $this->decode(file_get_contents("{$this->pathinfo['dirname']}/{$m[1]}"));
                 }
             });
