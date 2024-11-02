@@ -21,6 +21,11 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.11
+
+- [bin] box を v4 系に変更
+- [fixbug] php8.2 でのエラーを修正
+
 ## 3.1.10
 
 - [fixbug] int で precision が出力される不具合を修正
