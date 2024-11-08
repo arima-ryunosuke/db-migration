@@ -13,6 +13,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\Trigger;
 use Doctrine\DBAL\Schema\View;
+use Doctrine\DBAL\Types\Type;
 use Generator;
 use ryunosuke\DbMigration\FileType\AbstractFile;
 use ryunosuke\DbMigration\FileType\Tool\Exportion;
@@ -152,7 +153,7 @@ class Transporter
                     // add columns
                     foreach ($table->getColumns() as $column) {
                         $array = [
-                            'type'             => $column->getType()->getName(),
+                            'type'             => Type::lookupName($column->getType()),
                             'default'          => $column->getDefault(),
                             'notnull'          => $column->getNotnull(),
                             'length'           => $column->getLength(),
@@ -597,29 +598,29 @@ class Transporter
     private function stripSchemaOf(string $sql)
     {
         if ($this->platform instanceof AbstractMySQLPlatform) {
-            $schemaName = $this->schema->getName();
+            $schemaName = $this->connection->getDatabase();
 
-            $tokens = parse_php($sql);
+            $tokens = php_parse("<?php $sql");
             array_shift($tokens);
 
             $quoted = null;
             foreach ($tokens as $n => $token) {
-                if ($token[1] === '`') {
+                if ($token->text === '`') {
                     if ($quoted === null) {
                         $quoted = $n;
                     }
                     else {
-                        $modifier = implode('', array_column(array_slice($tokens, $quoted + 1, $n - $quoted - 1), 1));
+                        $modifier = implode('', array_column(array_slice($tokens, $quoted + 1, $n - $quoted - 1), 'text'));
                         if ($modifier === $schemaName) {
                             for ($i = $n + 1; $i < count($tokens); $i++) {
-                                if ($tokens[$i][0] === T_WHITESPACE) {
+                                if ($tokens[$i]->id === T_WHITESPACE) {
                                     continue;
                                 }
-                                if ($tokens[$i][1] === '.') {
+                                if ($tokens[$i]->text === '.') {
                                     $length  = $i - $quoted + 1;
-                                    $comment = "`schema`" . implode('', array_column(array_slice($tokens, $n + 1, $i - $quoted - 2), 1));
+                                    $comment = "`schema`" . implode('', array_column(array_slice($tokens, $n + 1, $i - $quoted - 2), 'text'));
                                     $dummy   = array_pad([], $length - 1, null);
-                                    array_splice($tokens, $quoted, $length, array_merge($dummy, [[1 => "/*$comment*/"]]));
+                                    array_splice($tokens, $quoted, $length, array_merge($dummy, [['text' => "/*$comment*/"]]));
                                 }
                                 break;
                             }
@@ -629,7 +630,7 @@ class Transporter
                 }
             }
 
-            $sql = implode('', array_column($tokens, 1));
+            $sql = implode('', array_column($tokens, 'text'));
         }
 
         return $sql;
@@ -638,18 +639,18 @@ class Transporter
     private function restoreSchemaOf(string $sql)
     {
         if ($this->platform instanceof AbstractMySQLPlatform) {
-            $schemaName = $this->schema->getName();
+            $schemaName = $this->connection->getDatabase();
 
-            $tokens = parse_php($sql);
+            $tokens = php_parse("<?php $sql");
             array_shift($tokens);
 
             foreach ($tokens as $n => $token) {
-                if ($token[0] === T_COMMENT) {
-                    $tokens[$n][1] = strtr(substr($token[1], 2, -2), ["`schema`" => "`$schemaName`"]);
+                if ($token->id === T_COMMENT) {
+                    $tokens[$n]->text = strtr(substr($token->text, 2, -2), ["`schema`" => "`$schemaName`"]);
                 }
             }
 
-            $sql = implode('', array_column($tokens, 1));
+            $sql = implode('', array_column($tokens, 'text'));
         }
 
         return $sql;

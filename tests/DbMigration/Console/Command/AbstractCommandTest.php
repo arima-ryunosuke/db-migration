@@ -37,12 +37,9 @@ class AbstractCommandTest extends AbstractTestCase
         $output = new BufferedOutput();
         $this->command->setInputOutput($input, $output);
 
+        $this->assertEquals('', $this->connection->fetchOne('SELECT @initialized'));
         $this->command->event($this->connection);
-
-        $tableName = $this->connection->getDatabase() . '.events';
-        $this->readyTable($this->connection->createSchemaManager(), $this->createSimpleTable($tableName, 'integer', 'id'));
-
-        $this->assertEquals($tableName, $this->connection->fetchOne('SELECT @onSchemaCreateTable'));
+        $this->assertEquals('true', $this->connection->fetchOne('SELECT @initialized'));
 
         $input->setOption('event', __DIR__ . '/notfound.php');
         $this->assertException(new \InvalidArgumentException('is not exists'), function () {

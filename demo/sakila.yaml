@@ -1,11 +1,11 @@
 table:
     actor:
         column:
-            actor_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
-            first_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            last_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
-            fulltext_column: { type: string, default: null, notnull: false, length: 100, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci, generation: { type: STORED, expression: "concat(`first_name`,_utf8mb4'\t',`last_name`)" } } }
+            actor_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
+            first_name: { type: string, default: null, notnull: true, length: 45, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_name: { type: string, default: null, notnull: true, length: 45, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
+            fulltext_column: { type: string, default: null, notnull: false, length: 100, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci, generation: { type: STORED, expression: "concat(`first_name`,_utf8mb4'\t',`last_name`)" } } }
         index:
             PRIMARY: { column: [actor_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_actor_last_name: { column: [last_name], unique: false, option: { lengths: [null] } }
@@ -19,14 +19,14 @@ table:
             row_format: Dynamic
     address:
         column:
-            address_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
-            address: { type: string, default: null, notnull: true, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            address2: { type: string, default: null, notnull: false, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            district: { type: string, default: null, notnull: true, length: 20, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            city_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            postal_code: { type: string, default: null, notnull: false, length: 10, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            phone: { type: string, default: null, notnull: true, length: 20, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            address_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
+            address: { type: string, default: null, notnull: true, length: 50, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            address2: { type: string, default: null, notnull: false, length: 50, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            district: { type: string, default: null, notnull: true, length: 20, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            city_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            postal_code: { type: string, default: null, notnull: false, length: 10, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            phone: { type: string, default: null, notnull: true, length: 20, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [address_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_fk_city_id: { column: [city_id], unique: false, option: { lengths: [null] } }
@@ -40,9 +40,9 @@ table:
             row_format: Dynamic
     category:
         column:
-            category_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            name: { type: string, default: null, notnull: true, length: 25, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            category_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            name: { type: string, default: null, notnull: true, length: 25, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [category_id], primary: true, unique: true, option: { lengths: [null] } }
         foreign: {  }
@@ -54,10 +54,10 @@ table:
             row_format: Dynamic
     city:
         column:
-            city_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
-            city: { type: string, default: null, notnull: true, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            country_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            city_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
+            city: { type: string, default: null, notnull: true, length: 50, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            country_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [city_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_fk_country_id: { column: [country_id], unique: false, option: { lengths: [null] } }
@@ -71,9 +71,9 @@ table:
             row_format: Dynamic
     country:
         column:
-            country_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
-            country: { type: string, default: null, notnull: true, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            country_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
+            country: { type: string, default: null, notnull: true, length: 50, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [country_id], primary: true, unique: true, option: { lengths: [null] } }
         foreign: {  }
@@ -85,15 +85,15 @@ table:
             row_format: Dynamic
     customer:
         column:
-            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
-            store_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            first_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            last_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            email: { type: string, default: null, notnull: false, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            active: { type: boolean, default: '1', notnull: true, comment: null, platformOptions: {  } }
-            create_date: { type: datetime, default: null, notnull: true, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: false, comment: null, platformOptions: {  } }
+            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
+            store_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            first_name: { type: string, default: null, notnull: true, length: 45, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_name: { type: string, default: null, notnull: true, length: 45, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            email: { type: string, default: null, notnull: false, length: 50, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            active: { type: boolean, default: '1', notnull: true, comment: '', platformOptions: {  } }
+            create_date: { type: datetime, default: null, notnull: true, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: false, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [customer_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_fk_address_id: { column: [address_id], unique: false, option: { lengths: [null] } }
@@ -110,17 +110,17 @@ table:
             row_format: Dynamic
     film:
         column:
-            film_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
-            title: { type: string, default: null, notnull: true, length: 128, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            description: { type: text, default: '_utf8mb4''empty''', notnull: false, length: 65535, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci, expressionDefault: true } }
-            release_year: { type: date, default: null, notnull: false, comment: null, platformOptions: {  } }
-            language_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            original_language_id: { type: boolean, default: null, notnull: false, comment: null, platformOptions: {  } }
-            rental_duration: { type: boolean, default: '3', notnull: true, comment: null, platformOptions: {  } }
-            rental_rate: { type: decimal, default: '4.99', notnull: true, precision: 4, scale: 2, unsigned: false, comment: null, platformOptions: {  } }
-            length: { type: smallint, default: null, notnull: false, unsigned: true, comment: null, platformOptions: {  } }
-            replacement_cost: { type: decimal, default: '19.99', notnull: true, precision: 5, scale: 2, unsigned: false, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            film_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
+            title: { type: string, default: null, notnull: true, length: 128, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            description: { type: text, default: '_utf8mb4''empty''', notnull: false, length: 65535, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci, expressionDefault: true } }
+            release_year: { type: date, default: null, notnull: false, comment: '', platformOptions: {  } }
+            language_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            original_language_id: { type: boolean, default: null, notnull: false, comment: '', platformOptions: {  } }
+            rental_duration: { type: boolean, default: '3', notnull: true, comment: '', platformOptions: {  } }
+            rental_rate: { type: decimal, default: '4.99', notnull: true, precision: 4, scale: 2, unsigned: false, comment: '', platformOptions: {  } }
+            length: { type: smallint, default: null, notnull: false, unsigned: true, comment: '', platformOptions: {  } }
+            replacement_cost: { type: decimal, default: '19.99', notnull: true, precision: 5, scale: 2, unsigned: false, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [film_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_fk_language_id: { column: [language_id], unique: false, option: { lengths: [null] } }
@@ -137,9 +137,9 @@ table:
             row_format: Dynamic
     film_actor:
         column:
-            actor_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            actor_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [actor_id, film_id], primary: true, unique: true, option: { lengths: [null, null] } }
             idx_fk_film_id: { column: [film_id], unique: false, option: { lengths: [null] } }
@@ -154,9 +154,9 @@ table:
             row_format: Dynamic
     film_category:
         column:
-            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            category_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            category_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [film_id, category_id], primary: true, unique: true, option: { lengths: [null, null] } }
             fk_film_category_category: { column: [category_id], unique: false, option: { lengths: [null] } }
@@ -171,9 +171,9 @@ table:
             row_format: Dynamic
     film_text:
         column:
-            film_id: { type: smallint, default: null, notnull: true, unsigned: false, comment: null, platformOptions: {  } }
-            title: { type: string, default: null, notnull: true, length: 255, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            description: { type: text, default: null, notnull: false, length: 65535, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            film_id: { type: smallint, default: null, notnull: true, unsigned: false, comment: '', platformOptions: {  } }
+            title: { type: string, default: null, notnull: true, length: 255, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            description: { type: text, default: null, notnull: false, length: 65535, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
         index:
             PRIMARY: { column: [film_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_title_description: { column: [title, description], unique: false, flag: [fulltext], option: { lengths: [null, null] } }
@@ -186,10 +186,10 @@ table:
             row_format: Dynamic
     inventory:
         column:
-            inventory_id: { type: integer, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
-            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            store_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            inventory_id: { type: integer, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
+            film_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            store_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [inventory_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_fk_film_id: { column: [film_id], unique: false, option: { lengths: [null] } }
@@ -205,9 +205,9 @@ table:
             row_format: Dynamic
     language:
         column:
-            language_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            name: { type: string, default: null, notnull: true, length: 20, fixed: true, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            language_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            name: { type: string, default: null, notnull: true, length: 20, fixed: true, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [language_id], primary: true, unique: true, option: { lengths: [null] } }
         foreign: {  }
@@ -219,13 +219,13 @@ table:
             row_format: Dynamic
     payment:
         column:
-            payment_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: null, platformOptions: {  } }
-            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            staff_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            rental_id: { type: integer, default: null, notnull: false, unsigned: false, comment: null, platformOptions: {  } }
-            amount: { type: decimal, default: null, notnull: true, precision: 5, scale: 2, unsigned: false, comment: null, platformOptions: {  } }
-            payment_date: { type: datetime, default: null, notnull: true, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: false, comment: null, platformOptions: {  } }
+            payment_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
+            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            staff_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            rental_id: { type: integer, default: null, notnull: false, unsigned: false, comment: '', platformOptions: {  } }
+            amount: { type: decimal, default: null, notnull: true, precision: 5, scale: 2, unsigned: false, comment: '', platformOptions: {  } }
+            payment_date: { type: datetime, default: null, notnull: true, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: false, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [payment_id], primary: true, unique: true, option: { lengths: [null] } }
             fk_payment_rental: { column: [rental_id], unique: false, option: { lengths: [null] } }
@@ -243,13 +243,13 @@ table:
             row_format: Dynamic
     rental:
         column:
-            rental_id: { type: integer, default: null, notnull: true, unsigned: false, autoincrement: true, comment: null, platformOptions: {  } }
-            rental_date: { type: datetime, default: null, notnull: true, comment: null, platformOptions: {  } }
-            inventory_id: { type: integer, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            return_date: { type: datetime, default: null, notnull: false, comment: null, platformOptions: {  } }
-            staff_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            rental_id: { type: integer, default: null, notnull: true, unsigned: false, autoincrement: true, comment: '', platformOptions: {  } }
+            rental_date: { type: datetime, default: null, notnull: true, comment: '', platformOptions: {  } }
+            inventory_id: { type: integer, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            customer_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            return_date: { type: datetime, default: null, notnull: false, comment: '', platformOptions: {  } }
+            staff_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [rental_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_fk_customer_id: { column: [customer_id], unique: false, option: { lengths: [null] } }
@@ -268,17 +268,17 @@ table:
             row_format: Dynamic
     staff:
         column:
-            staff_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            first_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            last_name: { type: string, default: null, notnull: true, length: 45, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            picture: { type: blob, default: null, notnull: false, length: 65535, comment: null, platformOptions: {  } }
-            email: { type: string, default: null, notnull: false, length: 50, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            store_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            active: { type: boolean, default: '1', notnull: true, comment: null, platformOptions: {  } }
-            username: { type: string, default: null, notnull: true, length: 16, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
-            password: { type: string, default: null, notnull: false, length: 40, comment: null, platformOptions: { charset: utf8mb4, collation: utf8mb4_bin } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            staff_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            first_name: { type: string, default: null, notnull: true, length: 45, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            last_name: { type: string, default: null, notnull: true, length: 45, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            picture: { type: blob, default: null, notnull: false, length: 65535, comment: '', platformOptions: {  } }
+            email: { type: string, default: null, notnull: false, length: 50, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            store_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            active: { type: boolean, default: '1', notnull: true, comment: '', platformOptions: {  } }
+            username: { type: string, default: null, notnull: true, length: 16, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            password: { type: string, default: null, notnull: false, length: 40, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_bin } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [staff_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_fk_address_id: { column: [address_id], unique: false, option: { lengths: [null] } }
@@ -294,10 +294,10 @@ table:
             row_format: Dynamic
     store:
         column:
-            store_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            manager_staff_id: { type: boolean, default: null, notnull: true, comment: null, platformOptions: {  } }
-            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: null, platformOptions: {  } }
-            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: null, platformOptions: {  } }
+            store_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            manager_staff_id: { type: boolean, default: null, notnull: true, comment: '', platformOptions: {  } }
+            address_id: { type: smallint, default: null, notnull: true, unsigned: true, comment: '', platformOptions: {  } }
+            last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
         index:
             PRIMARY: { column: [store_id], primary: true, unique: true, option: { lengths: [null] } }
             idx_fk_address_id: { column: [address_id], unique: false, option: { lengths: [null] } }

@@ -24,7 +24,7 @@ class MigrationTable
         $this->schemaManager = $this->connection->createSchemaManager();
 
         $this->table = new Table($tableName, [
-            new Column('version', Type::getType('string')),
+            new Column('version', Type::getType('string'), ['length' => 255]),
             new Column('apply_at', Type::getType('datetime')),
             new Column('logs', Type::getType('json')),
         ], [
@@ -34,7 +34,7 @@ class MigrationTable
 
     public function exists(): bool
     {
-        return $this->schemaManager->tablesExist($this->table->getName());
+        return $this->schemaManager->tableExists($this->table->getName());
     }
 
     public function create(): bool

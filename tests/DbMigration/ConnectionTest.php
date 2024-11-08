@@ -85,6 +85,7 @@ class ConnectionTest extends AbstractTestCase
         $table_hoge->getColumn('id')->setAutoincrement(true);
         $table_hoge->getColumn('name')->setDefault('X');
         $table_hoge->getColumn('name')->setType(Type::getType('string'));
+        $table_hoge->getColumn('name')->setLength(64);
 
         $conns = (function () {
             yield DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]) => [
@@ -117,31 +118,31 @@ class ConnectionTest extends AbstractTestCase
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
         $conn->maintainType(true);
-        $this->assertSame("NULL", $conn->quote(null));
-        $this->assertSame("FALSE", $conn->quote(false));
-        $this->assertSame("TRUE", $conn->quote(true));
-        $this->assertSame(123, $conn->quote(123));
-        $this->assertSame(3.14, $conn->quote(3.14));
-        $this->assertSame("'abc'", $conn->quote('abc'));
-        $this->assertSame(["NULL", "FALSE", 123, 3.14, "'abc'"], $conn->quote([null, false, 123, 3.14, 'abc']));
+        $this->assertSame("NULL", $conn->quoteValues(null));
+        $this->assertSame("FALSE", $conn->quoteValues(false));
+        $this->assertSame("TRUE", $conn->quoteValues(true));
+        $this->assertSame(123, $conn->quoteValues(123));
+        $this->assertSame(3.14, $conn->quoteValues(3.14));
+        $this->assertSame("'abc'", $conn->quoteValues('abc'));
+        $this->assertSame(["NULL", "FALSE", 123, 3.14, "'abc'"], $conn->quoteValues([null, false, 123, 3.14, 'abc']));
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
         $conn->maintainType(false);
-        $this->assertSame("NULL", $conn->quote(null));
-        $this->assertSame("''", $conn->quote(false));
-        $this->assertSame("'1'", $conn->quote(true));
-        $this->assertSame("'123'", $conn->quote(123));
-        $this->assertSame("'3.14'", $conn->quote(3.14));
-        $this->assertSame("'abc'", $conn->quote('abc'));
-        $this->assertSame(["NULL", "''", "'123'", "'3.14'", "'abc'"], $conn->quote([null, false, 123, 3.14, 'abc']));
+        $this->assertSame("NULL", $conn->quoteValues(null));
+        $this->assertSame("''", $conn->quoteValues(false));
+        $this->assertSame("'1'", $conn->quoteValues(true));
+        $this->assertSame("'123'", $conn->quoteValues(123));
+        $this->assertSame("'3.14'", $conn->quoteValues(3.14));
+        $this->assertSame("'abc'", $conn->quoteValues('abc'));
+        $this->assertSame(["NULL", "''", "'123'", "'3.14'", "'abc'"], $conn->quoteValues([null, false, 123, 3.14, 'abc']));
     }
 
     function test_quoteIdentifier()
     {
-        $this->assertEquals("``", $this->connection->quoteIdentifier(''));
-        $this->assertEquals("`123`", $this->connection->quoteIdentifier(123));
-        $this->assertEquals("`abc`", $this->connection->quoteIdentifier('abc'));
-        $this->assertEquals(["``", "`123`", "`abc`"], $this->connection->quoteIdentifier(['', 123, 'abc']));
+        $this->assertEquals("``", $this->connection->quoteIdentifiers(''));
+        $this->assertEquals("`123`", $this->connection->quoteIdentifiers(123));
+        $this->assertEquals("`abc`", $this->connection->quoteIdentifiers('abc'));
+        $this->assertEquals(["``", "`123`", "`abc`"], $this->connection->quoteIdentifiers(['', 123, 'abc']));
     }
 }

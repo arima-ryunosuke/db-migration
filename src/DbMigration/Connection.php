@@ -2,7 +2,6 @@
 
 namespace ryunosuke\DbMigration;
 
-use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Generator;
@@ -77,7 +76,7 @@ class Connection extends \Doctrine\DBAL\Connection
         }
     }
 
-    public function beginTransaction(int $targetLevel = 0)
+    public function beginIfNeeded(int $targetLevel = 0): bool
     {
         $throughLevel = ++$this->throughTransactionLevel;
 
@@ -89,7 +88,7 @@ class Connection extends \Doctrine\DBAL\Connection
         return false;
     }
 
-    public function commit(int $targetLevel = 0)
+    public function commitIfNeeded(int $targetLevel = 0): bool
     {
         $throughLevel = $this->throughTransactionLevel--;
 
@@ -101,7 +100,7 @@ class Connection extends \Doctrine\DBAL\Connection
         return false;
     }
 
-    public function rollBack(int $targetLevel = 0)
+    public function rollbackIfNeeded(int $targetLevel = 0): bool
     {
         $throughLevel = $this->throughTransactionLevel--;
 
@@ -113,14 +112,14 @@ class Connection extends \Doctrine\DBAL\Connection
         return false;
     }
 
-    public function insert($table, array $data, array $types = [])
+    public function insert(string $table, array $data, array $types = []): int|string
     {
         if (count($data) === 0) {
             return parent::insert($table, $data, $types);
         }
 
         $implode = fn($v) => implode(',', $v);
-        return $this->executeStatement("INSERT INTO $table ({$implode(array_keys($data))}) VALUES ({$implode($this->quote($data))})");
+        return $this->executeStatement("INSERT INTO $table ({$implode(array_keys($data))}) VALUES ({$implode($this->quoteValues($data))})");
     }
 
     public function upsert($table, array $data, array $types = [])
@@ -135,7 +134,7 @@ class Connection extends \Doctrine\DBAL\Connection
         $cols = array_keys($data);
 
         $implode = fn($v) => implode(',', $v);
-        $sql     = "INSERT INTO $table ({$implode($cols)}) VALUES ({$implode($this->quote($data))})";
+        $sql     = "INSERT INTO $table ({$implode($cols)}) VALUES ({$implode($this->quoteValues($data))})";
 
         if ($this->getDatabasePlatform() instanceof MySQLPlatform) {
             $sql .= " ON DUPLICATE KEY UPDATE {$implode(array_map(fn($c) => "$c = VALUES($c)", $cols))}";
@@ -148,14 +147,11 @@ class Connection extends \Doctrine\DBAL\Connection
         return $this->executeStatement($sql);
     }
 
-    /**
-     * @param mixed $value
-     */
-    public function quote($value, $type = ParameterType::STRING)
+    public function quoteValues(mixed $value): int|float|string|array
     {
         if (is_array($value)) {
             foreach ($value as $n => $v) {
-                $value[$n] = $this->quote($v);
+                $value[$n] = $this->quoteValues($v);
             }
             return $value;
         }
@@ -181,18 +177,15 @@ class Connection extends \Doctrine\DBAL\Connection
         return parent::quote($value);
     }
 
-    /**
-     * @param mixed $str
-     */
-    public function quoteIdentifier($str)
+    public function quoteIdentifiers(string|array $identifier): string|array
     {
-        if (is_array($str)) {
-            foreach ($str as $n => $v) {
-                $str[$n] = $this->quoteIdentifier($v);
+        if (is_array($identifier)) {
+            foreach ($identifier as $n => $v) {
+                $identifier[$n] = $this->quoteIdentifiers($v);
             }
-            return $str;
+            return $identifier;
         }
 
-        return parent::quoteIdentifier($str);
+        return parent::quoteIdentifier($identifier);
     }
 }

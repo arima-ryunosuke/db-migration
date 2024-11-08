@@ -2,12 +2,15 @@
 
 namespace ryunosuke\Test\DbMigration;
 
+use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Logging\Middleware as LoggingMiddleware;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Tools\DsnParser;
 use Generator;
 use PHPUnit\Framework\Error\Error;
+use Psr\Log\AbstractLogger;
 use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 
@@ -21,6 +24,11 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
      * @var Connection
      */
     protected $connection;
+
+    /**
+     * @var array
+     */
+    protected $queryLogs;
 
     /**
      * @var AbstractSchemaManager
@@ -53,7 +61,6 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
             $refclass = new \ReflectionClass($this);
             $method   = $refclass->getMethod($name);
             if (strpos($method->getDocComment(), '@closurable') !== false) {
-                $method->setAccessible(true);
                 return $method->getClosure($this);
             }
         }
@@ -80,7 +87,24 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         $c->close();
 
         // get connection
-        $this->connection = DriverManager::getConnection($params + ['wrapperClass' => Connection::class]);
+        $this->queryLogs = [];
+        $config = new Configuration();
+        $config->setMiddlewares([
+            new LoggingMiddleware(new class($this->queryLogs) extends AbstractLogger {
+                private $logs;
+
+                public function __construct(&$logs)
+                {
+                    $this->logs = &$logs;
+                }
+
+                public function log($level, \Stringable|string $message, array $context = [])
+                {
+                    $this->logs[] = $message;
+                }
+            }),
+        ]);
+        $this->connection = DriverManager::getConnection($params + ['wrapperClass' => Connection::class], $config);
         $this->connection->maintainType(true);
 
         // get schema
@@ -140,7 +164,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
     public function readyTable(AbstractSchemaManager $schema_manager, $table)
     {
         try {
-            $schema_manager->dropTable($table);
+            $schema_manager->dropTable($table->getName());
         }
         catch (\Throwable $t) {
         }
@@ -155,7 +179,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
     public function readyView(AbstractSchemaManager $schema_manager, $view)
     {
         try {
-            $schema_manager->dropView($view);
+            $schema_manager->dropView($view->getName());
         }
         catch (\Throwable $t) {
         }
@@ -172,7 +196,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         $table   = new Table($name);
         $columns = array_slice(func_get_args(), 2);
         foreach ($columns as $column) {
-            $table->addColumn($column, $type);
+            $table->addColumn($column, $type, $type === 'string' ? ['length' => 255] : []);
         }
         $table->setPrimaryKey([
             reset($columns),

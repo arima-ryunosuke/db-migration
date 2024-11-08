@@ -22,8 +22,8 @@ abstract class AbstractFile
     public static function create(string $filename, array $options): AbstractFile
     {
         if (($options['connection'] ?? null) instanceof Connection) {
-            $options['quoteIdentifier'] = fn($value) => $options['connection']->quoteIdentifier($value);
-            $options['quoteValue']      = fn($value) => $options['connection']->quote($value);
+            $options['quoteIdentifier'] = fn($value) => $options['connection']->quoteIdentifiers($value);
+            $options['quoteValue']      = fn($value) => $options['connection']->quoteValues($value);
         }
 
         $ext = pathinfo($filename, PATHINFO_EXTENSION);

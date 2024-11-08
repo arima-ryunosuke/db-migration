@@ -116,7 +116,7 @@ class Json extends AbstractFile
         foreach ($this->stream('r') as $line) {
             if ($first) {
                 $p = strpos_quoted($line, '[', 0, '"');
-                if ($p !== false) {
+                if ($p !== null) {
                     $first = false;
                     $line  = substr($line, $p + 1);
                 }
@@ -124,7 +124,7 @@ class Json extends AbstractFile
 
             $buffer .= $line;
             $p      = strpos_quoted($buffer, [',', ']'], 0, ['"' => '"', '{' => '}']);
-            if ($p !== false) {
+            if ($p !== null) {
                 yield $this->decode(substr($buffer, 0, $p));
                 $buffer = substr($buffer, $p + 1);
             }

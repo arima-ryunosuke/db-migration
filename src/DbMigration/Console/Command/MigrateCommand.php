@@ -3,7 +3,6 @@
 namespace ryunosuke\DbMigration\Console\Command;
 
 use Doctrine\DBAL\DriverManager;
-use Doctrine\DBAL\Event\ConnectionEventArgs;
 use ryunosuke\DbMigration\Connection;
 use ryunosuke\DbMigration\FileType\AbstractFile;
 use ryunosuke\DbMigration\MigrationTable;
@@ -97,7 +96,7 @@ class MigrateCommand extends AbstractCommand
         // migrate
         try {
             // pre migration
-            $conn->getEventManager()->dispatchEvent('pre-migration', new ConnectionEventArgs($conn));
+            $this->dispatchEvent('pre-migration', $conn);
 
             // DDL
             $this->migrateDDL($conn, $files);
@@ -110,7 +109,7 @@ class MigrateCommand extends AbstractCommand
         }
         finally {
             // post migration
-            $conn->getEventManager()->dispatchEvent('post-migration', new ConnectionEventArgs($conn));
+            $this->dispatchEvent('post-migration', $conn);
             $conn->close();
         }
 

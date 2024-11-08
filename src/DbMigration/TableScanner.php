@@ -43,13 +43,13 @@ class TableScanner
         $this->table = $table;
 
         // set property from property
-        $this->quotedName         = $conn->quoteIdentifier($this->table->getName());
+        $this->quotedName         = $conn->quoteIdentifiers($this->table->getName());
         $this->primaryKeys        = $this->table->getPrimaryKey()->getColumns();
         $this->flippedPrimaryKeys = array_flip($this->primaryKeys);
-        $this->primaryKeyString   = implode(', ', $this->conn->quoteIdentifier($this->primaryKeys));
+        $this->primaryKeyString   = implode(', ', $this->conn->quoteIdentifiers($this->primaryKeys));
 
         // column to array(ColumnNanme => Column)
-        $this->columns = $table->getColumns();
+        $this->columns = array_combine(array_map(fn($c) => $c->getName(), $table->getColumns()), $table->getColumns());
 
         // parse condition
         $this->filterCondition = $this->parseCondition((array) $filterCondition);
@@ -101,7 +101,7 @@ class TableScanner
                 foreach ($chunk as $newrow) {
                     $value = [];
                     foreach ($columns as $column) {
-                        $value[] = $this->conn->quote($newrow[$column]);
+                        $value[] = $this->conn->quoteValues($newrow[$column]);
                     }
                     $values[] = '(' . implode(',', $value) . ')';
                 }
@@ -112,7 +112,7 @@ class TableScanner
         }
 
         $isMysql      = $this->conn->getDatabasePlatform() instanceof MySqlPlatform;
-        $columnString = implode(', ', $this->conn->quoteIdentifier(array_keys($this->columns)));
+        $columnString = implode(', ', $this->conn->quoteIdentifiers(array_keys($this->columns)));
         foreach ($newrows as $newrow) {
             if ($isMysql) {
                 // to VALUES string
@@ -123,7 +123,7 @@ class TableScanner
             }
             else {
                 // to VALUES string
-                $valueString = implode(', ', $this->conn->quote($newrow));
+                $valueString = implode(', ', $this->conn->quoteValues($newrow));
 
                 // to SQL
                 yield "INSERT INTO $this->quotedName ($columnString) VALUES ($valueString)";
@@ -182,7 +182,7 @@ class TableScanner
     public function getAllRows(): Generator
     {
         // fetch records values
-        $columnString = implode(', ', $this->conn->quoteIdentifier(array_keys(array_diff_key($this->columns, $this->ignoreColumns))));
+        $columnString = implode(', ', $this->conn->quoteIdentifiers(array_keys(array_diff_key($this->columns, $this->ignoreColumns))));
         $sql          = "
             SELECT   {$columnString}
             FROM     {$this->quotedName}
@@ -198,7 +198,7 @@ class TableScanner
     public function getOrphanRows(ForeignKeyConstraint $foreignKey): Generator
     {
         $implode = fn($glue, $array) => implode($glue, $array);
-        $quote   = fn($v) => $this->conn->quoteIdentifier($v);
+        $quote   = fn($v) => $this->conn->quoteIdentifiers($v);
 
         $localTableName   = $this->quotedName;
         $foreignTableName = $quote($foreignKey->getForeignTableName());
@@ -207,7 +207,7 @@ class TableScanner
         $onCondition    = [];
         $whereCondition = [];
 
-        foreach ($foreignKey->getLocalTable()->getPrimaryKey()->getColumns() as $pkColumn) {
+        foreach ($this->table->getPrimaryKey()->getColumns() as $pkColumn) {
             $columns[] = "{$localTableName}.{$quote($pkColumn)} AS pk_$pkColumn";
         }
 
@@ -281,7 +281,7 @@ class TableScanner
     {
         // prepare sql of primary key record
         $columns      = array_diff_key($this->columns, $this->ignoreColumns);
-        $columnString = implode(', ', $this->conn->quoteIdentifier(array_keys($columns)));
+        $columnString = implode(', ', $this->conn->quoteIdentifiers(array_keys($columns)));
         $tuplesString = $this->buildWhere($tuples);
         $sql          = "
             SELECT   {$columnString}
@@ -295,8 +295,8 @@ class TableScanner
 
     private function parseCondition($conds): string
     {
-        $icharactor = $this->conn->getDatabasePlatform()->getIdentifierQuoteCharacter();
-        $identifier = "$icharactor?([_a-z][_a-z0-9]*)$icharactor?";
+        $icharactor = $this->conn->getDatabasePlatform()->quoteSingleIdentifier('dummy');
+        $identifier = "{$icharactor[0]}?([_a-z][_a-z0-9]*){$icharactor[-1]}?";
         $tableName  = $this->table->getName();
 
         $wheres = [];
@@ -313,7 +313,7 @@ class TableScanner
                 }
 
                 if (array_key_exists($tableName, $result)) {
-                    foreach ($this->table->getColumns() as $columnName => $column) {
+                    foreach ($this->columns as $columnName => $column) {
                         if (in_array($columnName, $result[$tableName])) {
                             $wheres[] = $cond;
                         }
@@ -346,8 +346,8 @@ class TableScanner
 
     private function joinKeyValue(array $array, string $separator = ' = '): array
     {
-        $keys = $this->conn->quoteIdentifier(array_keys($array));
-        $vals = $this->conn->quote(array_values($array));
+        $keys = $this->conn->quoteIdentifiers(array_keys($array));
+        $vals = $this->conn->quoteValues(array_values($array));
 
         $maxlen = max(array_map('strlen', $keys));
 
@@ -373,9 +373,9 @@ class TableScanner
                 $column = key($first);
                 $values = [];
                 foreach ($whereArray as $where) {
-                    $values[] = $this->conn->quote($where[$column]);
+                    $values[] = $this->conn->quoteValues($where[$column]);
                 }
-                return '(' . $this->conn->quoteIdentifier($column) . ' IN (' . implode(',', $values) . '))';
+                return '(' . $this->conn->quoteIdentifiers($column) . ' IN (' . implode(',', $values) . '))';
             }
             $or = [];
             foreach ($whereArray as $values) {

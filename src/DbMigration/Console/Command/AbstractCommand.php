@@ -25,6 +25,9 @@ abstract class AbstractCommand extends Command
     /** @var OutputInterface */
     protected $output;
 
+    /** @var \Closure[] */
+    protected $events;
+
     /** @var Logger */
     protected $logger;
 
@@ -191,35 +194,21 @@ abstract class AbstractCommand extends Command
             throw new \InvalidArgumentException("'$eventFile' is not exists.");
         }
 
+        // force connect. postConnect is not completed in time because of automatic connection with getDatabasePlatformVersion.
+        $conn->getNativeConnection();
+
         $allEvent = require $eventFile;
         if ($allEvent instanceof \Closure) {
             $allEvent = $allEvent($this, $conn);
         }
+        $this->events = $allEvent;
+    }
 
-        $emanager = $conn->getEventManager();
-        foreach ($allEvent as $name => $events) {
-            foreach (is_array($events) ? $events : [$events] as $event) {
-                if ($event instanceof \Closure) {
-                    $event = new class($event) {
-                        private $event;
-
-                        public function __construct($event)
-                        {
-                            $this->event = $event;
-                        }
-
-                        public function __call($name, $arguments)
-                        {
-                            return ($this->event)(...$arguments);
-                        }
-                    };
-                }
-                $emanager->addEventListener($name, $event);
-            }
+    protected function dispatchEvent(string $name, ...$args)
+    {
+        if (isset($this->events[$name])) {
+            return $this->events[$name](...$args);
         }
-
-        // force connect. postConnect is not completed in time because of automatic connection with getDatabasePlatformVersion.
-        $conn->connect();
     }
 
     protected function config(InputInterface $input, OutputInterface $output)
@@ -363,23 +352,23 @@ abstract class AbstractCommand extends Command
 
         $catch ??= function ($t) { throw $t; };
 
-        if ($conn->beginTransaction($targetLevel)) {
+        if ($conn->beginIfNeeded($targetLevel)) {
             $this->logger->info("-- <info>begin transaction</info>");
         }
         try {
             $return = $try();
-            if ($conn->commit($targetLevel)) {
+            if ($conn->commitIfNeeded($targetLevel)) {
                 $this->logger->info("-- <info>commit transaction</info>");
             }
             return $return;
         }
         catch (\Throwable $t) {
-            if ($conn->rollBack($targetLevel)) {
+            if ($conn->rollbackIfNeeded($targetLevel)) {
                 $this->logger->info("-- <info>rollback transaction</info>");
             }
 
-            $catch($t);
             $this->logger->debug("-- uncatch exception: ", $t);
+            $catch($t);
         }
     }
 

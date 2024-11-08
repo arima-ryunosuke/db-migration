@@ -35,8 +35,8 @@ class TableScannerTest extends AbstractTestCase
         $table_fuga->addColumn('id2', 'integer');
         $table_fuga->addColumn('fid1', 'integer', ['Notnull' => false]);
         $table_fuga->addColumn('fid2', 'integer', ['Notnull' => false]);
-        $table_fuga->addColumn('data', 'string');
-        $table_fuga->addColumn('ignored', 'string');
+        $table_fuga->addColumn('data', 'string', ['length' => 255]);
+        $table_fuga->addColumn('ignored', 'string', ['length' => 255]);
         $table_fuga->setPrimaryKey(['id1', 'id2']);
         $this->readyTable($this->schema, $table_fuga);
 
@@ -52,7 +52,6 @@ class TableScannerTest extends AbstractTestCase
     private function invoke($methodName, $args)
     {
         $method = $this->refClass->getMethod($methodName);
-        $method->setAccessible(true);
         return $method->invokeArgs($this->scanner, array_slice(func_get_args(), 1));
     }
 
@@ -254,7 +253,6 @@ class TableScannerTest extends AbstractTestCase
         $tuples = iterator_to_array($this->scanner_fuga->getPrimaryRows());
 
         $refmethod = new \ReflectionMethod($this->scanner_fuga, 'getRecordFromPrimaryKeys');
-        $refmethod->setAccessible(true);
 
         $rows = array_map(function ($row) {
             unset($row['ignored']);

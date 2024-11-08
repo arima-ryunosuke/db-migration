@@ -131,7 +131,7 @@ class TransporterTest extends AbstractTestCase
         $table = $this->createSimpleTable('foo', 'integer', 'id');
         $table->addColumn('c_int', 'integer');
         $table->addColumn('c_float', 'float');
-        $table->addColumn('c_varchar', 'string');
+        $table->addColumn('c_varchar', 'string', ['length' => 255]);
         $table->addColumn('c_text', 'text');
         $table->addColumn('c_datetime', 'datetime');
 
@@ -1091,9 +1091,7 @@ TCSV
     function exchangeSchemaFromSQL()
     {
         $stripSchemaOf = $this->refClass->getMethod('stripSchemaOf');
-        $stripSchemaOf->setAccessible(true);
         $restoreSchemaOf = $this->refClass->getMethod('restoreSchemaOf');
-        $restoreSchemaOf->setAccessible(true);
 
         $schemaname = $this->connection->getDatabase();
 

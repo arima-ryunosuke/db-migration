@@ -3,7 +3,6 @@
 namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use Doctrine\DBAL\DriverManager;
-use Doctrine\DBAL\Logging\DebugStack;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\View;
@@ -36,7 +35,7 @@ class MigrateCommandTest extends AbstractTestCase
         $this->readyTable($this->schema, $this->createSimpleTable('unqtable', 'integer', 'id', 'code'));
         $this->readyTable($this->schema, $this->createSimpleTable('sametable', 'integer', 'id'));
         $this->readyTable($this->schema, $this->createSimpleTable('drptable', 'integer', 'id'));
-        $this->readyTable($this->schema, $this->createSimpleTable('eventtable', 'integer', 'id'));
+        $this->readyTable($this->schema, $this->createSimpleTable('eventtable', 'string', 'event'));
         $this->readyTable($this->schema, $this->createSimpleTable('excluded', 'integer', 'id'));
 
         $view = new View('simpleview', 'select 1');
@@ -62,6 +61,8 @@ class MigrateCommandTest extends AbstractTestCase
             '-n'                   => true,
             'dsn'                  => AbstractTestCase::TEST_SCHEME . $GLOBALS['db'],
         ];
+
+        $this->queryLogs = [];
     }
 
     /**
@@ -449,15 +450,12 @@ class MigrateCommandTest extends AbstractTestCase
      */
     function run_dryrun()
     {
-        $logger = new DebugStack();
-        $this->connection->getConfiguration()->setSQLLogger($logger);
-
         $this->runApp([
             '--migration' => $this->getFile('migs'),
             '--check'     => true,
         ]);
 
         // if dryrun, old DB queries are empty
-        $this->assertEmpty($logger->queries);
+        $this->assertEmpty($this->queryLogs);
     }
 }

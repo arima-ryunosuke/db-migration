@@ -80,7 +80,7 @@ class Sql extends AbstractFile
         $buffer = '';
         foreach ($this->stream('r') as $line) {
             $p = strpos_quoted($line, $delimiter, 0, "\"'`");
-            if ($p !== false) {
+            if ($p !== null) {
                 yield trim($buffer . substr($line, 0, $p));
                 $buffer = substr($line, $p + strlen($delimiter));
             }
