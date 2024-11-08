@@ -80,7 +80,7 @@ class ImportCommandTest extends AbstractTestCase
 
         $this->questionSetInputStream('y', 'y');
         $this->assertExceptionMessage("'invalid query'", $this->runApp, [
-            '-m' => $this->getFile('migs_invalid'),
+            '-m'    => $this->getFile('migs_invalid'),
             'files' => [
                 $this->getFile('table.php'),
             ],

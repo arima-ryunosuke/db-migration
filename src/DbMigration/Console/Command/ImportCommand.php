@@ -73,7 +73,7 @@ class ImportCommand extends AbstractCommand
             $smanager->dropDatabase($dbname);
             $this->logger->info("-- <info>drop database</info> $dbname");
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
             $this->logger->info("-- <info>no drop database</info> $dbname");
         }
         $smanager->createDatabase($dbname);

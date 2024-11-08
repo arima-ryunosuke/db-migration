@@ -221,7 +221,7 @@ abstract class AbstractCommand extends Command
         $config    = ($allConfig[$this->getName()] ?? []) + ($allConfig['default'] ?? []);
         foreach ($config as $name => $value) {
             $definition = $this->getDefinition();
-            $name = ctype_digit("$name") ? (int) $name : $name;
+            $name       = ctype_digit("$name") ? (int) $name : $name;
             if ($definition->hasArgument($name)) {
                 $definition->getArgument($name)->setDefault($value);
             }

@@ -448,6 +448,7 @@ class Transporter
         return $this->platform->getAlterSchemaSQL($diff);
     }
 
+    /** @return Generator<string> */
     public function importDML(string $filename): Generator
     {
         $file     = $this->getFileByFilename($filename);

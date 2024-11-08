@@ -88,7 +88,7 @@ class MigrationTable
 
                 $migfiles[$file->pathinfo()['basename']] = $file;
             }
-            catch (DomainException $e) {
+            catch (DomainException) {
                 // through unsupported file
             }
         }

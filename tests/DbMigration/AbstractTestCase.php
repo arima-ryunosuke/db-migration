@@ -12,7 +12,6 @@ use Generator;
 use PHPUnit\Framework\Error\Error;
 use Psr\Log\AbstractLogger;
 use ryunosuke\DbMigration\Connection;
-use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 
 abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 {
@@ -88,7 +87,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 
         // get connection
         $this->queryLogs = [];
-        $config = new Configuration();
+        $config          = new Configuration();
         $config->setMiddlewares([
             new LoggingMiddleware(new class($this->queryLogs) extends AbstractLogger {
                 private $logs;
@@ -151,13 +150,13 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         try {
             $schema_manager->dropDatabase($database);
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
         }
 
         try {
             $schema_manager->createDatabase($database);
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
         }
     }
 
@@ -166,13 +165,13 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         try {
             $schema_manager->dropTable($table->getName());
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
         }
 
         try {
             $schema_manager->createTable($table);
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
         }
     }
 
@@ -181,13 +180,13 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         try {
             $schema_manager->dropView($view->getName());
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
         }
 
         try {
             $schema_manager->createView($view);
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
         }
     }
 

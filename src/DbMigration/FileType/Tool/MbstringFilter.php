@@ -14,7 +14,7 @@ namespace ryunosuke\DbMigration\FileType\Tool;
  */
 class MbstringFilter extends \php_user_filter
 {
-    private $remains = '';
+    private $remains      = '';
     private $convert_func;
     private $convert_args = [];
     private $from_encoding;

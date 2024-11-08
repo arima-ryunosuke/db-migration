@@ -66,7 +66,7 @@ class ConnectionTest extends AbstractTestCase
 
     function test_insert()
     {
-        $conn = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);
+        $conn       = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
         $table_hoge->getColumn('id')->setAutoincrement(true);
         $this->readyTable($this->schema, $table_hoge);

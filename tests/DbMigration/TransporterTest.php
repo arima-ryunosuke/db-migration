@@ -1090,7 +1090,7 @@ TCSV
      */
     function exchangeSchemaFromSQL()
     {
-        $stripSchemaOf = $this->refClass->getMethod('stripSchemaOf');
+        $stripSchemaOf   = $this->refClass->getMethod('stripSchemaOf');
         $restoreSchemaOf = $this->refClass->getMethod('restoreSchemaOf');
 
         $schemaname = $this->connection->getDatabase();
