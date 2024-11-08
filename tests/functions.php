@@ -275,8 +275,8 @@ if (!defined('ryunosuke\\DbMigration\\JSON_BARE_AS_STRING')) {
     define('ryunosuke\\DbMigration\\JSON_BARE_AS_STRING', -106);
 }
 
-if (!defined('ryunosuke\\DbMigration\\TOKEN_NAME')) {
-    define('ryunosuke\\DbMigration\\TOKEN_NAME', 2);
+if (!defined('ryunosuke\\DbMigration\\JSON_OBJECT_HANDLER')) {
+    define('ryunosuke\\DbMigration\\JSON_OBJECT_HANDLER', -107);
 }
 
 if (!defined('ryunosuke\\DbMigration\\SI_UNITS')) {
@@ -476,13 +476,30 @@ if (!function_exists('ryunosuke\\DbMigration\\array_all')) {
     /**
      * 全要素が true になるなら true を返す（1つでも false なら false を返す）
      *
+     * @see array_and()
+     * @deprecated 標準関数と重複
+     * @codeCoverageIgnore
+     * @package ryunosuke\Functions\Package\array
+     */
+    function array_all($array, $callback = null, $default = true)
+    {
+        trigger_error(__FUNCTION__ . ' is deprecated. use array_and or 8.4 builtin', E_USER_DEPRECATED);
+        return array_and($array, $callback, $default);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\array_and') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_and'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_and')) {
+    /**
+     * 全要素が true になるなら true を返す（1つでも false なら false を返す）
+     *
      * $callback が要求するならキーも渡ってくる。
      *
      * Example:
      * ```php
-     * that(array_all([true, true]))->isTrue();
-     * that(array_all([true, false]))->isFalse();
-     * that(array_all([false, false]))->isFalse();
+     * that(array_and([true, true]))->isTrue();
+     * that(array_and([true, false]))->isFalse();
+     * that(array_and([false, false]))->isFalse();
      * ```
      *
      * @package ryunosuke\Functions\Package\array
@@ -492,7 +509,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_all')) {
      * @param bool|mixed $default 空配列の場合のデフォルト値
      * @return bool 全要素が true なら true
      */
-    function array_all($array, $callback = null, $default = true)
+    function array_and($array, $callback = null, $default = true)
     {
         if (is_empty($array)) {
             return $default;
@@ -515,37 +532,15 @@ if (!function_exists('ryunosuke\\DbMigration\\array_any')) {
     /**
      * 全要素が false になるなら false を返す（1つでも true なら true を返す）
      *
-     * $callback が要求するならキーも渡ってくる。
-     *
-     * Example:
-     * ```php
-     * that(array_any([true, true]))->isTrue();
-     * that(array_any([true, false]))->isTrue();
-     * that(array_any([false, false]))->isFalse();
-     * ```
-     *
+     * @see array_or()
+     * @deprecated 標準関数と重複
+     * @codeCoverageIgnore
      * @package ryunosuke\Functions\Package\array
-     *
-     * @param iterable $array 対象配列
-     * @param ?callable $callback 評価クロージャ。 null なら値そのもので評価
-     * @param bool|mixed $default 空配列の場合のデフォルト値
-     * @return bool 全要素が false なら false
      */
     function array_any($array, $callback = null, $default = false)
     {
-        if (is_empty($array)) {
-            return $default;
-        }
-
-        $callback = func_user_func_array($callback);
-
-        $n = 0;
-        foreach ($array as $k => $v) {
-            if ($callback($v, $k, $n++)) {
-                return true;
-            }
-        }
-        return false;
+        trigger_error(__FUNCTION__ . ' is deprecated. use array_or or 8.4 builtin', E_USER_DEPRECATED);
+        return array_or($array, $callback , $default);
     }
 }
 
@@ -1684,40 +1679,6 @@ if (!function_exists('ryunosuke\\DbMigration\\array_fill_gap')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\array_filter_key') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_filter_key'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\array_filter_key')) {
-    /**
-     * キーを主軸とした array_filter
-     *
-     * $callback が要求するなら値も渡ってくる。 php 5.6 の array_filter の ARRAY_FILTER_USE_BOTH と思えばよい。
-     * ただし、完全な互換ではなく、引数順は ($k, $v) なので注意。
-     *
-     * Example:
-     * ```php
-     * that(array_filter_key(['a', 'b', 'c'], fn($k, $v) => $k !== 1))->isSame([0 => 'a', 2 => 'c']);
-     * that(array_filter_key(['a', 'b', 'c'], fn($k, $v) => $v !== 'b'))->isSame([0 => 'a', 2 => 'c']);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\array
-     *
-     * @param iterable $array 対象配列
-     * @param callable $callback 評価クロージャ
-     * @return array $callback が true を返した新しい配列
-     */
-    function array_filter_key($array, $callback)
-    {
-        $callback = func_user_func_array($callback);
-        $result = [];
-        $n = 0;
-        foreach ($array as $k => $v) {
-            if ($callback($k, $v, $n++)) {
-                $result[$k] = $v;
-            }
-        }
-        return $result;
-    }
-}
-
 assert(!function_exists('ryunosuke\\DbMigration\\array_filter_map') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_filter_map'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_filter_map')) {
     /**
@@ -1737,19 +1698,127 @@ if (!function_exists('ryunosuke\\DbMigration\\array_filter_map')) {
      *
      * @param iterable $array 対象配列
      * @param callable $callback 評価クロージャ
-     * @return array $callback が !false を返し map された配列
+     * @return iterable $callback が !false を返し map された配列
      */
     function array_filter_map($array, $callback)
     {
+        // Iterator だが ArrayAccess ではないオブジェクト（Generator とか）は unset できないので配列として扱わざるを得ない
+        if (!(function_configure('array.variant') && is_arrayable($array))) {
+            $array = arrayval($array, false);
+        }
+
         $callback = func_user_func_array($callback);
-        $result = [];
         $n = 0;
-        foreach ($array as $k => &$v) {
-            if ($callback($v, $k, $n++) !== false) {
-                $result[$k] = $v;
+        foreach (arrayval($array, false) as $k => $v) {
+            $map = $callback($v, $k, $n++);
+            if ($map === false) {
+                unset($array[$k]);
+            }
+            else {
+                $array[$k] = $v;
             }
         }
-        return $result;
+        return $array;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\array_filter_recursive') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_filter_recursive'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_filter_recursive')) {
+    /**
+     * 再帰的に array_filter する
+     *
+     * 要素が配列だった場合に再帰する点とコールバックの引数以外は array_filter とほとんど変わらない。
+     * $callback が要求するならキーも渡ってくる。
+     *
+     * $unset_empty:true だと再帰で伏せられた結果が空になった場合、そのキーも伏せられる。
+     *
+     * Example:
+     * ```php
+     * $array = [
+     *     'a'  => 'A', // 生き残る
+     *     'e'  => '',  // 生き残らない
+     *     'a1' => [    // A がいるため $unset_empty は無関係に a1 自体も生き残る
+     *         'A', // 生き残る
+     *         '',  // 生き残らない
+     *     ],
+     *     'a2' => [    // 生き残りが居ないため $unset_empty:true だと a2 自体も生き残らない
+     *         '',  // 生き残らない
+     *         '',  // 生き残らない
+     *     ],
+     *     'b1' => [    // a1 のネスト版
+     *         'a' => [
+     *             'a' => 'A',
+     *             'e' => '',
+     *         ],
+     *     ],
+     *     'b2' => [    // a2 のネスト版
+     *         'a' => [
+     *             'a' => '',
+     *             'e' => '',
+     *         ],
+     *     ],
+     * ];
+     * // 親を伏せない版
+     * that(array_filter_recursive($array, fn($v) => strlen($v), false))->isSame([
+     *     "a"  => "A",
+     *     "a1" => ["A"],
+     *     "a2" => [],
+     *     "b1" => [
+     *         "a" => [
+     *             "a" => "A",
+     *         ],
+     *     ],
+     *     "b2" => [
+     *         "a" => [],
+     *     ],
+     * ]);
+     * // 親を伏せる版
+     * that(array_filter_recursive($array, fn($v) => strlen($v), true))->isSame([
+     *     "a"  => "A",
+     *     "a1" => ["A"],
+     *     "b1" => [
+     *         "a" => [
+     *             "a" => "A",
+     *         ],
+     *     ],
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\array
+     *
+     * @template T as iterable&\ArrayAccess
+     */
+    function array_filter_recursive(
+        /** @var T 対象配列 */ iterable $array,
+        /** 評価クロージャ（値, キー, 親キー配列） */ callable $callback,
+        /** 再帰の際に空になった要素も伏せるか */ bool $unset_empty = true,
+    ): /** フィルタされた配列 */ iterable
+    {
+        $callback = func_user_func_array($callback);
+
+        $main = function ($array, $parents) use (&$main, $callback, $unset_empty) {
+            // オブジェクトによっては活きたイテレータなのでループ内で unset することはできず、あらかじめ集めておく必要がある（ArrayObject 等）
+            $keys = [];
+            foreach ($array as $k => $v) {
+                $keys[] = $k;
+            }
+
+            foreach ($keys as $k) {
+                if (is_iterable($array[$k]) && is_arrayable($array[$k])) {
+                    $array[$k] = $main($array[$k], array_merge($parents, [$k]));
+                    if ($unset_empty && is_empty($array[$k])) {
+                        unset($array[$k]);
+                    }
+                }
+                else {
+                    if (!$callback($array[$k], $k, $parents)) {
+                        unset($array[$k]);
+                    }
+                }
+            }
+            return $array;
+        };
+        return $main($array, []);
     }
 }
 
@@ -1785,7 +1854,11 @@ if (!function_exists('ryunosuke\\DbMigration\\array_filters')) {
      */
     function array_filters($array, ...$callbacks)
     {
-        $array = arrayval($array, false);
+        // Iterator だが ArrayAccess ではないオブジェクト（Generator とか）は unset できないので配列として扱わざるを得ない
+        if (!(function_configure('array.variant') && is_arrayable($array))) {
+            $array = arrayval($array, false);
+        }
+
         foreach ($callbacks as $callback) {
             if (is_string($callback) && $callback[0] === '@') {
                 $margs = [];
@@ -1808,7 +1881,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_filters')) {
                 $callback = func_user_func_array($callback);
             }
             $n = 0;
-            foreach ($array as $k => $v) {
+            foreach (arrayval($array, false) as $k => $v) {
                 if (isset($margs)) {
                     $flag = ([$v, $callback])(...$margs);
                 }
@@ -1833,6 +1906,23 @@ if (!function_exists('ryunosuke\\DbMigration\\array_find')) {
     /**
      * array_search のクロージャ版のようなもの
      *
+     * @see array_find_first()
+     * @deprecated 標準関数と重複
+     * @codeCoverageIgnore
+     * @package ryunosuke\Functions\Package\array
+     */
+    function array_find($array, $callback, $is_key = true)
+    {
+        trigger_error(__FUNCTION__ . ' is deprecated. use array_find_first or 8.4 builtin', E_USER_DEPRECATED);
+        return array_find_first($array, $callback, $is_key);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\array_find_first') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_find_first'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_find_first')) {
+    /**
+     * array_search のクロージャ版のようなもの
+     *
      * コールバックの返り値が true 相当のものを返す。
      * $is_key に true を与えるとそのキーを返す（デフォルトの動作）。
      * $is_key に false を与えるとコールバックの結果を返す。
@@ -1842,11 +1932,11 @@ if (!function_exists('ryunosuke\\DbMigration\\array_find')) {
      * Example:
      * ```php
      * // 最初に見つかったキーを返す
-     * that(array_find(['a', '8', '9'], 'ctype_digit'))->isSame(1);
-     * that(array_find(['a', 'b', 'b'], fn($v) => $v === 'b'))->isSame(1);
+     * that(array_find_first(['a', '8', '9'], 'ctype_digit'))->isSame(1);
+     * that(array_find_first(['a', 'b', 'b'], fn($v) => $v === 'b'))->isSame(1);
      * // 最初に見つかったコールバック結果を返す（最初の数字の2乗を返す）
      * $ifnumeric2power = fn($v) => ctype_digit($v) ? $v * $v : false;
-     * that(array_find(['a', '8', '9'], $ifnumeric2power, false))->isSame(64);
+     * that(array_find_first(['a', '8', '9'], $ifnumeric2power, false))->isSame(64);
      * ```
      *
      * @package ryunosuke\Functions\Package\array
@@ -1854,9 +1944,9 @@ if (!function_exists('ryunosuke\\DbMigration\\array_find')) {
      * @param iterable $array 調べる配列
      * @param callable $callback 評価コールバック
      * @param bool $is_key キーを返すか否か
-     * @return mixed コールバックが true を返した最初のキー。存在しなかったら false
+     * @return mixed コールバックが true を返した最初のキー。存在しなかったら null
      */
-    function array_find($array, $callback, $is_key = true)
+    function array_find_first($array, $callback, $is_key = true)
     {
         $callback = func_user_func_array($callback);
 
@@ -1870,7 +1960,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_find')) {
                 return $result;
             }
         }
-        return false;
+        return null;
     }
 }
 
@@ -1906,7 +1996,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_find_last')) {
     {
         // 配列なら reverse すればよい
         if (is_array($array)) {
-            return array_find(array_reverse($array, true), $callback, $is_key);
+            return array_find_first(array_reverse($array, true), $callback, $is_key);
         }
 
         $callback = func_user_func_array($callback);
@@ -2113,8 +2203,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_get')) {
         if (is_array($key)) {
             $result = [];
             foreach ($key as $k) {
-                // 深遠な事情で少しでも高速化したかったので isset || array_keys_exist にしてある
-                if (isset($array[$k]) || array_keys_exist($k, $array)) {
+                if (array_keys_exist($k, $array)) {
                     $result[$k] = $array[$k];
                 }
             }
@@ -2334,6 +2423,127 @@ if (!function_exists('ryunosuke\\DbMigration\\array_insert')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\array_join') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_join'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_join')) {
+    /**
+     * 配列の SQL 的な JOIN を行う
+     *
+     * $from に対して $on を満たす $join の行を結合する。
+     * $from,$join は共にいわゆる「配列の配列」でなければならない。
+     *
+     * $on は各レコードが渡ってくるので、true を返せば結合、false を返せば結合されない。
+     * $on には配列も渡すことができ、配列を渡した場合は USING 的な動作になる。
+     * - キーが駆動表のカラム名、値が結合表のカラム名を表す
+     * - キーの値同士を json で判定する（厳密に言えば値を json キーにした一時配列で逆引きされる）
+     * - 複数指定時は AND になる
+     * 上記の前提・制約が許容できるなら配列指定の方が高速に動作する。
+     *
+     * join 後のキーは各キーを "+" で連結したものになるが、このキーは暫定的なもの。
+     *
+     * Example:
+     * ```php
+     * // t_article と t_comment の JOIN（のイメージ）
+     * $articles = [
+     *     2 => ['article_id' => 2, 'article_name' => 'hoge'],
+     *     4 => ['article_id' => 4, 'article_name' => 'fuga'],
+     *     5 => ['article_id' => 5, 'article_name' => 'piyo'],
+     * ];
+     * $comments = [
+     *     4 => ['comment_id' => 4, 'article_id' => 2, 'comment' => 'foo'],
+     *     6 => ['comment_id' => 6, 'article_id' => 4, 'comment' => 'bar'],
+     *     7 => ['comment_id' => 7, 'article_id' => 4, 'comment' => 'baz'],
+     *     9 => ['comment_id' => 9, 'article_id' => 9, 'comment' => 'dmy'],
+     * ];
+     * // INNER っぽい動き
+     * that(array_join($articles, $comments, fn($article, $comment) => $article['article_id'] === $comment['article_id'], false))->isSame([
+     *     '2+4' => ['article_id' => 2, 'article_name' => 'hoge', 'comment_id' => 4, 'comment' => 'foo'],
+     *     '4+6' => ['article_id' => 4, 'article_name' => 'fuga', 'comment_id' => 6, 'comment' => 'bar'],
+     *     '4+7' => ['article_id' => 4, 'article_name' => 'fuga', 'comment_id' => 7, 'comment' => 'baz'],
+     * ]);
+     * // LEFT っぽい動き
+     * that(array_join($articles, $comments, fn($article, $comment) => $article['article_id'] === $comment['article_id'], true))->isSame([
+     *     '2+4'    => ['article_id' => 2, 'article_name' => 'hoge', 'comment_id' => 4, 'comment' => 'foo'],
+     *     '4+6'    => ['article_id' => 4, 'article_name' => 'fuga', 'comment_id' => 6, 'comment' => 'bar'],
+     *     '4+7'    => ['article_id' => 4, 'article_name' => 'fuga', 'comment_id' => 7, 'comment' => 'baz'],
+     *     '5+null' => ['article_id' => 5, 'article_name' => 'piyo', 'comment_id' => null, 'comment' => null],
+     * ]);
+     * // ↑のような単純比較クロージャなら配列でも指定できる（そしてこの方がはるかに速い）
+     * that(array_join($articles, $comments, ['article_id' => 'article_id'], false))->isSame([
+     *     '2+4' => ['article_id' => 2, 'article_name' => 'hoge', 'comment_id' => 4, 'comment' => 'foo'],
+     *     '4+6' => ['article_id' => 4, 'article_name' => 'fuga', 'comment_id' => 6, 'comment' => 'bar'],
+     *     '4+7' => ['article_id' => 4, 'article_name' => 'fuga', 'comment_id' => 7, 'comment' => 'baz'],
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\array
+     *
+     * @param array|iterable&\ArrayAccess<\ArrayAccess> $from 駆動表
+     * @param array|iterable&\ArrayAccess<\ArrayAccess> $join 結合表
+     * @param array|callable $on 結合条件。原則として callable で、ある程度の前提制約が置けるときのみ配列を指定する
+     * @param bool $outer true だと OUTER, false だと INNER 的挙動になる
+     * @return array JOIN された配列
+     */
+    function array_join($from, $join, $on, bool $outer = false): array
+    {
+        $arraymode = $on && is_array($on) && !is_callable($on);
+
+        if ($arraymode) {
+            // なぜ json でキーにするのか？ 個別インデックスや文字結合ではダメなのか？
+            // ダメ。null と空文字が区別できない
+
+            $left_cols = array_flip(array_keys($on));
+            $right_cols = array_flip(array_values($on));
+
+            // カラム値をキー、元キーを値としたいわゆるインデックスを作成しておく
+            $index = [];
+            foreach ($join as $j => $right) {
+                $rcols = array_pickup($right, $right_cols);
+                // 一つでも存在しないならマッチさせない
+                if (count($rcols) === count($right_cols)) {
+                    $index[json_encode($rcols)][] = $j;
+                }
+            }
+        }
+        else {
+            // 空配列（無条件結合）はこっちに流れてくる
+            $on = $on ?: fn() => true;
+        }
+
+        // $outer で未結合の時のデフォルト行をあらかじめ作っておく
+        if ($outer) {
+            $cols = [];
+            foreach ($join as $right) {
+                $cols += $right;
+            }
+            $nullrow = array_map(fn() => null, $cols);
+        }
+
+        $result = [];
+        foreach ($from as $i => $left) {
+            $matched_rows = [];
+
+            if ($arraymode) {
+                foreach ($index[json_encode(array_pickup($left, $left_cols))] ?? [] as $j) {
+                    $matched_rows["$i+$j"] = $left + $join[$j];
+                }
+            }
+            else {
+                foreach ($join as $j => $right) {
+                    if ($on($left, $right)) {
+                        $matched_rows["$i+$j"] = $left + $right;
+                    }
+                }
+            }
+
+            if ($outer && !$matched_rows) {
+                $matched_rows["$i+null"] = $left + $nullrow;
+            }
+            $result += $matched_rows;
+        }
+        return $result;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\array_keys_exist') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_keys_exist'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_keys_exist')) {
     /**
@@ -2391,52 +2601,6 @@ if (!function_exists('ryunosuke\\DbMigration\\array_keys_exist')) {
             }
         }
         return true;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\array_kmap') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_kmap'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\array_kmap')) {
-    /**
-     * キーも渡ってくる array_map
-     *
-     * `array_map($callback, $array, array_keys($array))` とほとんど変わりはない。
-     * 違いは下記。
-     *
-     * - 引数の順番が異なる（$array が先）
-     * - キーが死なない（array_map は複数配列を与えるとキーが死ぬ）
-     * - 配列だけでなく Traversable も受け入れる
-     * - callback の第3引数に 0 からの連番が渡ってくる
-     *
-     * Example:
-     * ```php
-     * // キー・値をくっつけるシンプルな例
-     * that(array_kmap([
-     *     'k1' => 'v1',
-     *     'k2' => 'v2',
-     *     'k3' => 'v3',
-     * ], fn($v, $k) => "$k:$v"))->isSame([
-     *     'k1' => 'k1:v1',
-     *     'k2' => 'k2:v2',
-     *     'k3' => 'k3:v3',
-     * ]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\array
-     *
-     * @param iterable $array 対象配列
-     * @param callable $callback 評価クロージャ
-     * @return array $callback を通した新しい配列
-     */
-    function array_kmap($array, $callback)
-    {
-        $callback = func_user_func_array($callback);
-
-        $n = 0;
-        $result = [];
-        foreach ($array as $k => $v) {
-            $result[$k] = $callback($v, $k, $n++);
-        }
-        return $result;
     }
 }
 
@@ -2632,30 +2796,6 @@ if (!function_exists('ryunosuke\\DbMigration\\array_limit')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\array_lmap') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_lmap'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\array_lmap')) {
-    /**
-     * 要素値を $callback の最左に適用して array_map する
-     *
-     * Example:
-     * ```php
-     * $sprintf = fn() => vsprintf('%s%s', func_get_args());
-     * that(array_lmap(['a', 'b'], $sprintf, '-suffix'))->isSame(['a-suffix', 'b-suffix']);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\array
-     *
-     * @param iterable $array 対象配列
-     * @param callable $callback 評価クロージャ
-     * @param mixed ...$variadic $callback に渡され、改変される引数（可変引数）
-     * @return array 評価クロージャを通した新しい配列
-     */
-    function array_lmap($array, $callback, ...$variadic)
-    {
-        return array_nmap(...array_insert(func_get_args(), 0, 2));
-    }
-}
-
 assert(!function_exists('ryunosuke\\DbMigration\\array_lookup') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_lookup'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_lookup')) {
     /**
@@ -2700,7 +2840,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_lookup')) {
         $array = arrayval($array, false);
 
         if ($index_key instanceof \Closure) {
-            return array_combine(array_kmap($array, $index_key), array_column($array, $column_key));
+            return array_combine(array_maps($array, $index_key), array_column($array, $column_key));
         }
         if (func_num_args() === 3) {
             return array_column($array, $column_key, $index_key);
@@ -2730,20 +2870,27 @@ if (!function_exists('ryunosuke\\DbMigration\\array_map_filter')) {
      * @param iterable $array 対象配列
      * @param callable $callback 評価クロージャ
      * @param bool $strict 厳密比較フラグ。 true だと null のみが偽とみなされる
-     * @return array $callback が真を返した新しい配列
+     * @return iterable $callback が真を返した新しい配列
      */
     function array_map_filter($array, $callback, $strict = false)
     {
+        // Iterator だが ArrayAccess ではないオブジェクト（Generator とか）は unset できないので配列として扱わざるを得ない
+        if (!(function_configure('array.variant') && is_arrayable($array))) {
+            $array = arrayval($array, false);
+        }
+
         $callback = func_user_func_array($callback);
-        $result = [];
         $n = 0;
-        foreach ($array as $k => $v) {
+        foreach (arrayval($array, false) as $k => $v) {
             $vv = $callback($v, $k, $n++);
             if (($strict && $vv !== null) || (!$strict && $vv)) {
-                $result[$k] = $vv;
+                $array[$k] = $vv;
+            }
+            else {
+                unset($array[$k]);
             }
         }
-        return $result;
+        return $array;
     }
 }
 
@@ -2778,50 +2925,6 @@ if (!function_exists('ryunosuke\\DbMigration\\array_map_key')) {
             }
         }
         return $result;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\array_map_method') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_map_method'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\array_map_method')) {
-    /**
-     * メソッドを指定できるようにした array_map
-     *
-     * 配列内の要素は全て同一（少なくともシグネチャが同じ $method が存在する）オブジェクトでなければならない。
-     * スルーする場合は $ignore=true とする。スルーした場合 map ではなく filter される（結果配列に含まれない）。
-     * $ignore=null とすると 何もせずそのまま要素を返す。
-     *
-     * Example:
-     * ```php
-     * $exa = new \Exception('a');
-     * $exb = new \Exception('b');
-     * $std = new \stdClass();
-     * // getMessage で map される
-     * that(array_map_method([$exa, $exb], 'getMessage'))->isSame(['a', 'b']);
-     * // getMessage で map されるが、メソッドが存在しない場合は取り除かれる
-     * that(array_map_method([$exa, $exb, $std, null], 'getMessage', [], true))->isSame(['a', 'b']);
-     * // getMessage で map されるが、メソッドが存在しない場合はそのまま返す
-     * that(array_map_method([$exa, $exb, $std, null], 'getMessage', [], null))->isSame(['a', 'b', $std, null]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\array
-     *
-     * @param iterable $array 対象配列
-     * @param string $method メソッド
-     * @param array $args メソッドに渡る引数
-     * @param bool|null $ignore メソッドが存在しない場合にスルーするか。null を渡すと要素そのものを返す
-     * @return array $method が true を返した新しい配列
-     */
-    function array_map_method($array, $method, $args = [], $ignore = false)
-    {
-        if ($ignore === true) {
-            $array = array_filter(arrayval($array, false), fn($object) => is_callable([$object, $method]));
-        }
-        return array_map(function ($object) use ($method, $args, $ignore) {
-            if ($ignore === null && !is_callable([$object, $method])) {
-                return $object;
-            }
-            return ([$object, $method])(...$args);
-        }, arrayval($array, false));
     }
 }
 
@@ -2935,7 +3038,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_maps')) {
      * Example:
      * ```php
      * // 値を3乗したあと16進表記にして大文字化する
-     * that(array_maps([1, 2, 3, 4, 5], rbind('pow', 3), 'dechex', 'strtoupper'))->isSame(['1', '8', '1B', '40', '7D']);
+     * that(array_maps([1, 2, 3, 4, 5], fn($v) => pow($v, 3), 'dechex', 'strtoupper'))->isSame(['1', '8', '1B', '40', '7D']);
      * // キーも渡ってくる
      * that(array_maps(['a' => 'A', 'b' => 'B'], fn($v, $k) => "$k:$v"))->isSame(['a' => 'a:A', 'b' => 'b:B']);
      * // ... で可変引数コール
@@ -2949,11 +3052,15 @@ if (!function_exists('ryunosuke\\DbMigration\\array_maps')) {
      *
      * @param iterable $array 対象配列
      * @param callable ...$callbacks 評価クロージャ配列
-     * @return array 評価クロージャを通した新しい配列
+     * @return iterable 評価クロージャを通した新しい配列
      */
     function array_maps($array, ...$callbacks)
     {
-        $result = arrayval($array, false);
+        // Iterator だが ArrayAccess ではないオブジェクト（Generator とか）は unset できないので配列として扱わざるを得ない
+        if (!(function_configure('array.variant') && is_arrayable($array))) {
+            $array = arrayval($array, false);
+        }
+
         foreach ($callbacks as $callback) {
             if (is_string($callback) && $callback[0] === '@') {
                 $margs = [];
@@ -2976,19 +3083,19 @@ if (!function_exists('ryunosuke\\DbMigration\\array_maps')) {
                 $callback = func_user_func_array($callback);
             }
             $n = 0;
-            foreach ($result as $k => $v) {
+            foreach (arrayval($array, false) as $k => $v) {
                 if (isset($margs)) {
-                    $result[$k] = ([$v, $callback])(...$margs);
+                    $array[$k] = ([$v, $callback])(...$margs);
                 }
                 elseif ($vargs) {
-                    $result[$k] = $callback(...$v);
+                    $array[$k] = $callback(...$v);
                 }
                 else {
-                    $result[$k] = $callback($v, $k, $n++);
+                    $array[$k] = $callback($v, $k, $n++);
                 }
             }
         }
-        return $result;
+        return $array;
     }
 }
 
@@ -3039,7 +3146,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_merge2')) {
         $result = [];
         for ($i = 0; $i <= $max; $i++) {
             foreach ($arrays as $array) {
-                if (isset($array[$i]) && array_key_exists($i, $array)) {
+                if (isset($array[$i]) || array_key_exists($i, $array)) {
                     $result[$i] = $array[$i];
                     break;
                 }
@@ -3195,83 +3302,6 @@ if (!function_exists('ryunosuke\\DbMigration\\array_nest')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\array_nmap') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_nmap'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\array_nmap')) {
-    /**
-     * 要素値を $callback の n 番目(0ベース)に適用して array_map する
-     *
-     * 引数 $n に配列を与えると [キー番目 => 値番目] とみなしてキー・値も渡される（Example 参照）。
-     * その際、「挿入後の番目」ではなく、単純に「元の引数の番目」であることに留意。キー・値が同じ位置を指定している場合はキーが先にくる。
-     *
-     * Example:
-     * ```php
-     * // 1番目に値を渡して map
-     * $sprintf = fn() => vsprintf('%s%s%s', func_get_args());
-     * that(array_nmap(['a', 'b'], $sprintf, 1, 'prefix-', '-suffix'))->isSame(['prefix-a-suffix', 'prefix-b-suffix']);
-     * // 1番目にキー、2番目に値を渡して map
-     * $sprintf = fn() => vsprintf('%s %s %s %s %s', func_get_args());
-     * that(array_nmap(['k' => 'v'], $sprintf, [1 => 2], 'a', 'b', 'c'))->isSame(['k' => 'a k b v c']);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\array
-     *
-     * @param iterable $array 対象配列
-     * @param callable $callback 評価クロージャ
-     * @param int|array $n 要素値を入れる引数番目。配列を渡すとキー・値の両方を指定でき、両方が渡ってくる
-     * @param mixed ...$variadic $callback に渡され、改変される引数（可変引数）
-     * @return array 評価クロージャを通した新しい配列
-     */
-    function array_nmap($array, $callback, $n, ...$variadic)
-    {
-        /** @var $kn */
-        /** @var $vn */
-
-        $is_array = is_array($n);
-        $args = $variadic;
-
-        // 配列が来たら [キー番目 => 値番目] とみなす
-        if ($is_array) {
-            if (empty($n)) {
-                throw new \InvalidArgumentException('array $n is empty.');
-            }
-            [$kn, $vn] = first_keyvalue($n);
-
-            // array_insert は負数も受け入れられるが、それを考慮しだすともう収拾がつかない
-            if ($kn < 0 || $vn < 0) {
-                throw new \InvalidArgumentException('$kn, $vn must be positive.');
-            }
-
-            // どちらが大きいかで順番がズレるので分岐しなければならない
-            if ($kn <= $vn) {
-                $args = array_insert($args, null, $kn);
-                $args = array_insert($args, null, ++$vn);// ↑で挿入してるので+1
-            }
-            else {
-                $args = array_insert($args, null, $vn);
-                $args = array_insert($args, null, ++$kn);// ↑で挿入してるので+1
-            }
-        }
-        else {
-            $args = array_insert($args, null, $n);
-        }
-
-        $result = [];
-        foreach ($array as $k => $v) {
-            // キー値モードなら両方埋める
-            if ($is_array) {
-                $args[$kn] = $k;
-                $args[$vn] = $v;
-            }
-            // 値のみなら値だけ
-            else {
-                $args[$n] = $v;
-            }
-            $result[$k] = $callback(...$args);
-        }
-        return $result;
-    }
-}
-
 assert(!function_exists('ryunosuke\\DbMigration\\array_of') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_of'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_of')) {
     /**
@@ -3299,6 +3329,45 @@ if (!function_exists('ryunosuke\\DbMigration\\array_of')) {
     {
         $nodefault = func_num_args() === 1;
         return fn(array $array) => $nodefault ? array_get($array, $key) : array_get($array, $key, $default);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\array_or') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_or'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_or')) {
+    /**
+     * 全要素が false になるなら false を返す（1つでも true なら true を返す）
+     *
+     * $callback が要求するならキーも渡ってくる。
+     *
+     * Example:
+     * ```php
+     * that(array_or([true, true]))->isTrue();
+     * that(array_or([true, false]))->isTrue();
+     * that(array_or([false, false]))->isFalse();
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\array
+     *
+     * @param iterable $array 対象配列
+     * @param ?callable $callback 評価クロージャ。 null なら値そのもので評価
+     * @param bool|mixed $default 空配列の場合のデフォルト値
+     * @return bool 全要素が false なら false
+     */
+    function array_or($array, $callback = null, $default = false)
+    {
+        if (is_empty($array)) {
+            return $default;
+        }
+
+        $callback = func_user_func_array($callback);
+
+        $n = 0;
+        foreach ($array as $k => $v) {
+            if ($callback($v, $k, $n++)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -3631,85 +3700,6 @@ if (!function_exists('ryunosuke\\DbMigration\\array_prepend')) {
             $array = [$key => $value] + $array;
         }
         return $array;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\array_put') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_put'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\array_put')) {
-    /**
-     * キー指定の配列値設定
-     *
-     * array_set とほとんど同じ。
-     * 第3引数を省略すると（null を与えると）言語機構を使用して配列の最後に設定する（$array[] = $value）。
-     * また、**int を与えても同様の動作**となる。
-     * 第3引数に配列を指定すると潜って設定する。
-     *
-     * 第4引数で追加する条件クロージャを指定できる。
-     * クロージャには `(追加する要素, 追加するキー, 追加される元配列)` が渡ってくる。
-     * このクロージャが false 相当を返した時は追加されないようになる。
-     *
-     * array_set における $require_return は廃止している。
-     * これはもともと end や last_key が遅かったのでオプショナルにしていたが、もう改善しているし、7.3 から array_key_last があるので、呼び元で適宜使えば良い。
-     *
-     * Example:
-     * ```php
-     * $array = ['a' => 'A', 'B'];
-     * // 第3引数 int
-     * that(array_put($array, 'Z', 999))->isSame(1);
-     * that($array)->isSame(['a' => 'A', 'B', 'Z']);
-     * // 第3引数省略（最後に連番キーで設定）
-     * that(array_put($array, 'Z'))->isSame(2);
-     * that($array)->isSame(['a' => 'A', 'B', 'Z', 'Z']);
-     * // 第3引数でキーを指定
-     * that(array_put($array, 'Z', 'z'))->isSame('z');
-     * that($array)->isSame(['a' => 'A', 'B', 'Z', 'Z', 'z' => 'Z']);
-     * that(array_put($array, 'Z', 'z'))->isSame('z');
-     * // 第3引数で配列を指定
-     * that(array_put($array, 'Z', ['x', 'y', 'z']))->isSame('z');
-     * that($array)->isSame(['a' => 'A', 'B', 'Z', 'Z', 'z' => 'Z', 'x' => ['y' => ['z' => 'Z']]]);
-     * // 第4引数で条件を指定（キーが存在するなら追加しない）
-     * that(array_put($array, 'Z', 'z', fn($v, $k, $array) => !isset($array[$k])))->isSame(false);
-     * // 第4引数で条件を指定（値が存在するなら追加しない）
-     * that(array_put($array, 'Z', null, fn($v, $k, $array) => !in_array($v, $array)))->isSame(false);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\array
-     *
-     * @param array $array 配列
-     * @param mixed $value 設定する値
-     * @param array|string|int|null $key 設定するキー
-     * @param callable|null $condition 追加する条件
-     * @return string|int|false 設定したキー
-     */
-    function array_put(&$array, $value, $key = null, $condition = null)
-    {
-        if (is_array($key)) {
-            $k = array_shift($key);
-            if ($key) {
-                if (is_array($array) && array_key_exists($k, $array) && !is_array($array[$k])) {
-                    throw new \InvalidArgumentException('$array[$k] is not array.');
-                }
-                return array_put(...[&$array[$k], $value, $key, $condition]);
-            }
-            else {
-                return array_put(...[&$array, $value, $k, $condition]);
-            }
-        }
-
-        if ($condition !== null) {
-            if (!$condition($value, $key, $array)) {
-                return false;
-            }
-        }
-
-        if ($key === null || is_int($key)) {
-            $array[] = $value;
-            $key = array_key_last($array);
-        }
-        else {
-            $array[$key] = $value;
-        }
-        return $key;
     }
 }
 
@@ -4238,30 +4228,6 @@ if (!function_exists('ryunosuke\\DbMigration\\array_revise')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\array_rmap') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_rmap'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\array_rmap')) {
-    /**
-     * 要素値を $callback の最右に適用して array_map する
-     *
-     * Example:
-     * ```php
-     * $sprintf = fn() => vsprintf('%s%s', func_get_args());
-     * that(array_rmap(['a', 'b'], $sprintf, 'prefix-'))->isSame(['prefix-a', 'prefix-b']);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\array
-     *
-     * @param iterable $array 対象配列
-     * @param callable $callback 評価クロージャ
-     * @param mixed ...$variadic $callback に渡され、改変される引数（可変引数）
-     * @return array 評価クロージャを通した新しい配列
-     */
-    function array_rmap($array, $callback, ...$variadic)
-    {
-        return array_nmap(...array_insert(func_get_args(), func_num_args() - 2, 2));
-    }
-}
-
 assert(!function_exists('ryunosuke\\DbMigration\\array_schema') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_schema'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_schema')) {
     /**
@@ -4465,7 +4431,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_schema')) {
 
             [$maintype, $subtype] = explode('@', implode('', (array) $schema['type']), 2) + [1 => null];
             if ($maintype === 'list') {
-                $result = array_merge(...array_lmap($arrays, $validate, $schema, $path));
+                $result = array_merge(...array_map(fn($v) => $validate($v, $schema, $path), $arrays));
                 if (isset($subtype)) {
                     $subschema = ['type' => $subtype] + array_map_key($schema, fn($k) => $k[0] === '@' ? substr($k, 1) : null);
                     foreach ($result as $k => $v) {
@@ -4611,6 +4577,10 @@ if (!function_exists('ryunosuke\\DbMigration\\array_set')) {
      * 第3引数を省略すると（null を与えると）言語機構を使用して配列の最後に設定する（$array[] = $value）。
      * 第3引数に配列を指定すると潜って設定する。
      *
+     * 第4引数で追加する条件クロージャを指定できる。
+     * クロージャには `(追加する要素, 追加するキー, 追加される元配列)` が渡ってくる。
+     * このクロージャが false 相当を返した時は追加されないようになる。
+     *
      * Example:
      * ```php
      * $array = ['a' => 'A', 'B'];
@@ -4624,6 +4594,10 @@ if (!function_exists('ryunosuke\\DbMigration\\array_set')) {
      * // 第3引数で配列を指定
      * that(array_set($array, 'Z', ['x', 'y', 'z']))->isSame('z');
      * that($array)->isSame(['a' => 'A', 'B', 'Z', 'z' => 'Z', 'x' => ['y' => ['z' => 'Z']]]);
+     * // 第4引数で条件を指定（キーが存在するなら追加しない）
+     * that(array_set($array, 'Z', 'z', fn($v, $k, $array) => !isset($array[$k])))->isSame(null);
+     * // 第4引数で条件を指定（値が存在するなら追加しない）
+     * that(array_set($array, 'Z', null, fn($v, $k, $array) => !in_array($v, $array)))->isSame(null);
      * ```
      *
      * @package ryunosuke\Functions\Package\array
@@ -4631,10 +4605,10 @@ if (!function_exists('ryunosuke\\DbMigration\\array_set')) {
      * @param array $array 配列
      * @param mixed $value 設定する値
      * @param array|string|int|null $key 設定するキー
-     * @param bool $require_return 返り値が不要なら false を渡す
-     * @return string|int 設定したキー
+     * @param callable|null $condition 追加する条件
+     * @return string|int|null 設定したキー
      */
-    function array_set(&$array, $value, $key = null, $require_return = true)
+    function array_set(&$array, $value, $key = null, $condition = null)
     {
         if (is_array($key)) {
             $k = array_shift($key);
@@ -4642,18 +4616,22 @@ if (!function_exists('ryunosuke\\DbMigration\\array_set')) {
                 if (is_array($array) && array_key_exists($k, $array) && !is_array($array[$k])) {
                     throw new \InvalidArgumentException('$array[$k] is not array.');
                 }
-                return array_set(...[&$array[$k], $value, $key, $require_return]);
+                return array_set(...[&$array[$k], $value, $key, $condition]);
             }
             else {
-                return array_set(...[&$array, $value, $k, $require_return]);
+                return array_set(...[&$array, $value, $k, $condition]);
+            }
+        }
+
+        if ($condition !== null) {
+            if (!$condition($value, $key, $array)) {
+                return null;
             }
         }
 
         if ($key === null) {
             $array[] = $value;
-            if ($require_return === true) {
-                $key = last_key($array);
-            }
+            $key = array_key_last($array);
         }
         else {
             $array[$key] = $value;
@@ -5200,7 +5178,7 @@ if (!function_exists('ryunosuke\\DbMigration\\array_zip')) {
                 for ($i = 0, $limit = max(array_map('count', $arrays)); $i < $limit; $i++) {
                     $e = [];
                     foreach ($yielders as $yielder) {
-                        array_put($e, $yielder->current(), $yielder->key());
+                        array_set($e, $yielder->current(), is_int($yielder->key()) ? null : $yielder->key());
                         $yielder->next();
                     }
                     $result[] = $e;
@@ -5240,13 +5218,18 @@ if (!function_exists('ryunosuke\\DbMigration\\arrayize')) {
      * 引数の配列を生成する。
      *
      * 配列以外を渡すと配列化されて追加される。
-     * 連想配列は未対応。あくまで普通の配列化のみ。
+     * 配列を渡してもそのままだが、連番配列の場合はマージ、連想配列の場合は結合となる。
      * iterable や Traversable は考慮せずあくまで「配列」としてチェックする。
      *
      * Example:
      * ```php
+     * // 値は配列化される
      * that(arrayize(1, 2, 3))->isSame([1, 2, 3]);
+     * // 配列はそのまま
      * that(arrayize([1], [2], [3]))->isSame([1, 2, 3]);
+     * // 連想配列、連番配列の挙動
+     * that(arrayize([1, 2, 3], [4, 5, 6], ['a' => 'A1'], ['a' => 'A2']))->isSame([1, 2, 3, 4, 5, 6, 'a' => 'A1']);
+     * // stdClass は foreach 可能だがあくまで配列としてチェックする
      * $object = new \stdClass();
      * that(arrayize($object, false, [1, 2, 3]))->isSame([$object, false, 1, 2, 3]);
      * ```
@@ -5263,11 +5246,13 @@ if (!function_exists('ryunosuke\\DbMigration\\arrayize')) {
             if (!is_array($arg)) {
                 $result[] = $arg;
             }
-            elseif (!is_hasharray($arg)) {
+            elseif ($result && !is_hasharray($arg)) {
                 $result = array_merge($result, $arg);
             }
             else {
-                $result += $arg;
+                // array_merge に合わせるなら $result = $arg + $result で後方上書きの方がいいかも
+                // 些細な変更だけど後方互換性が完全に壊れるのでいったん保留（可変引数なんてほとんど使ってないと思うけど…）
+                $result += $arg; // for compatible
             }
         }
         return $result;
@@ -5742,27 +5727,27 @@ if (!function_exists('ryunosuke\\DbMigration\\kvsort')) {
 
         // 一時配列の準備
         $n = 0;
-        $tmp = [];
+        $virtuals = [];
+        $result = [];
         foreach ($array as $k => $v) {
-            $virtuals = [];
             if ($is_array) {
                 foreach ($schwartzians as $s => $schwartzian) {
-                    $virtuals[$s] = $schwartzian($v, $k, $n);
+                    $virtuals[$k][$s] = $schwartzian($v, $k, $n);
                 }
             }
             else {
-                $virtuals = $schwartzians[0]($v, $k, $n);
+                $virtuals[$k] = $schwartzians[0]($v, $k, $n);
             }
-            $tmp[] = [$n++, $k, $v, $virtuals];
+            $result[$k] = $v;
         }
+        uksort($result, function ($keyA, $keyB) use ($result, $comparator, $virtuals) {
+            $a = $result[$keyA];
+            $b = $result[$keyB];
 
-        // ソートしてから元の配列の体裁で返す
-        usort($tmp, function ($a, $b) use ($comparator, $schwartzians) {
-            $virtuals = $schwartzians ? [$a[3], $b[3]] : [];
-            $com = $comparator(...$virtuals, ...[$a[2], $b[2], $a[1], $b[1]]);
-            return $com !== 0 ? $com : ($a[0] - $b[0]);
+            $virtual = $virtuals ? [$virtuals[$keyA], $virtuals[$keyB]] : [];
+            return $comparator(...$virtual, ...[$a, $b, $keyA, $keyB]);
         });
-        return array_column($tmp, 2, 1);
+        return $result;
     }
 }
 
@@ -6039,6 +6024,71 @@ if (!function_exists('ryunosuke\\DbMigration\\class_aliases')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\class_constants') || (new \ReflectionFunction('ryunosuke\\DbMigration\\class_constants'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\class_constants')) {
+    /**
+     * クラス定数を配列で返す
+     *
+     * `(new \ReflectionClass($class))->getConstants()` とほぼ同じだが、可視性でフィルタができる。
+     * さらに「自分自身の定義か？」でもフィルタできる。
+     *
+     * Example:
+     * ```php
+     * $class = new class extends \ArrayObject
+     * {
+     *     private   const C_PRIVATE   = 'private';
+     *     protected const C_PROTECTED = 'protected';
+     *     public    const C_PUBLIC    = 'public';
+     * };
+     * // 普通に全定数を返す
+     * that(class_constants($class))->isSame([
+     *     'C_PRIVATE'      => 'private',
+     *     'C_PROTECTED'    => 'protected',
+     *     'C_PUBLIC'       => 'public',
+     *     'STD_PROP_LIST'  => \ArrayObject::STD_PROP_LIST,
+     *     'ARRAY_AS_PROPS' => \ArrayObject::ARRAY_AS_PROPS,
+     * ]);
+     * // public のみを返す
+     * that(class_constants($class, IS_PUBLIC))->isSame([
+     *     'C_PUBLIC'       => 'public',
+     *     'STD_PROP_LIST'  => \ArrayObject::STD_PROP_LIST,
+     *     'ARRAY_AS_PROPS' => \ArrayObject::ARRAY_AS_PROPS,
+     * ]);
+     * // 自身定義でかつ public のみを返す
+     * that(class_constants($class, IS_OWNSELF | IS_PUBLIC))->isSame([
+     *     'C_PUBLIC'       => 'public',
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\classobj
+     *
+     * @param string|object $class クラス名 or オブジェクト
+     * @param ?int $filter アクセスレベル定数
+     * @return array クラス定数の配列
+     */
+    function class_constants($class, $filter = null)
+    {
+        $class = ltrim(is_object($class) ? get_class($class) : $class, '\\');
+        $filter ??= (IS_PUBLIC | IS_PROTECTED | IS_PRIVATE);
+
+        $result = [];
+        foreach ((new \ReflectionClass($class))->getReflectionConstants() as $constant) {
+            if (($filter & IS_OWNSELF) && $constant->getDeclaringClass()->name !== $class) {
+                continue;
+            }
+            $modifiers = $constant->getModifiers();
+            $modifiers2 = 0;
+            $modifiers2 |= ($modifiers & \ReflectionProperty::IS_PUBLIC) ? IS_PUBLIC : 0;
+            $modifiers2 |= ($modifiers & \ReflectionProperty::IS_PROTECTED) ? IS_PROTECTED : 0;
+            $modifiers2 |= ($modifiers & \ReflectionProperty::IS_PRIVATE) ? IS_PRIVATE : 0;
+            if ($modifiers2 & $filter) {
+                $result[$constant->name] = $constant->getValue();
+            }
+        }
+        return $result;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\class_extends') || (new \ReflectionFunction('ryunosuke\\DbMigration\\class_extends'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\class_extends')) {
     /**
@@ -6186,7 +6236,7 @@ if (!function_exists('ryunosuke\\DbMigration\\class_extends')) {
             $prms = implode(', ', $params);
             $args = implode(', ', array_keys($params));
 
-            $rtype = reflect_types($reffunc->getReturnType())->getName();
+            $rtype = strval($reffunc->getReturnType());
             $return = $rtype === 'void' ? '' : 'return $return;';
             $rtype = $rtype ? ": $rtype" : '';
 
@@ -6253,28 +6303,29 @@ if (!function_exists('ryunosuke\\DbMigration\\class_extends')) {
             // シグネチャエラーが出てしまうので、指定がない場合は強制的に合わせる
             $refmember = new \ReflectionFunction($override);
             $params = function_parameter(!$refmember->getNumberOfParameters() && $method->getNumberOfParameters() ? $method : $override);
-            $rtype = reflect_types(!$refmember->hasReturnType() && $method->hasReturnType() ? $method : $refmember)->getName();
+            $rtype = strval((!$refmember->hasReturnType() && $method->hasReturnType() ? $method : $refmember)->getReturnType());
             $rtype = $rtype ? ": $rtype" : '';
 
             [, $codeblock] = callable_code($override);
-            $tokens = parse_php($codeblock);
+            $tokens = php_parse('<?php ' . $codeblock);
             array_shift($tokens);
             $parented = null;
             foreach ($tokens as $n => $token) {
-                if ($token[0] !== T_WHITESPACE) {
-                    if ($token[0] === T_STRING && $token[1] === 'parent') {
+                if ($token->id !== T_WHITESPACE) {
+                    if ($token->id === T_STRING && $token->text === 'parent') {
                         $parented = $n;
                     }
-                    elseif ($parented !== null && $token[0] === T_DOUBLE_COLON) {
+                    elseif ($parented !== null && $token->id === T_DOUBLE_COLON) {
                         unset($tokens[$parented]);
-                        $tokens[$n][1] = $receiver;
+                        $tokens[$n] = clone $tokens[$n];
+                        $tokens[$n]->text = $receiver;
                     }
                     else {
                         $parented = null;
                     }
                 }
             }
-            $codeblock = implode('', array_column($tokens, 1));
+            $codeblock = implode('', array_column($tokens, 'text'));
 
             $prms = implode(', ', $params);
             $declares .= "#[\ReturnTypeWillChange]\n$modifier function $ref$name($prms)$rtype $codeblock\n";
@@ -6307,6 +6358,113 @@ if (!function_exists('ryunosuke\\DbMigration\\class_loader')) {
     function class_loader($startdir = null)
     {
         return require auto_loader($startdir);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\class_map') || (new \ReflectionFunction('ryunosuke\\DbMigration\\class_map'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\class_map')) {
+    /**
+     * 指定クラスローダで読み込まれるであろう class => file を返す
+     *
+     * 実質的には composer で読み込まれるクラスマップを返す。
+     * つまり `dump-autoload -o` したときの getClassMap 相当を返す。
+     *
+     * ファイル名からクラス名を逆引きする都合上、猛烈に遅いので注意。
+     *
+     * @package ryunosuke\Functions\Package\classobj
+     */
+    function class_map(
+        /** @var ?\Composer\Autoload\ClassLoader オートローダオブジェクト */
+        ?object $loader = null,
+        /** パスが相対パスだった場合の基底ディレクトリ */
+        ?string $basePath = null,
+        /** キャッシュを使用するか */
+        bool $cache = true,
+    ): /** [class => file] の配列 */ array
+    {
+        $loader ??= class_loader();
+        $basePath ??= dirname((new \ReflectionClass($loader))->getFileName(), 3);
+        $cachekey = json_encode([spl_object_id($loader), $basePath]);
+        if (!$cache) {
+            cache($cachekey, null, __FUNCTION__);
+        }
+        return cache($cachekey, function () use ($loader, $basePath) {
+            $result = [];
+
+            // psr0+4
+            foreach ([
+                0 => $loader->getPrefixes() + ["" => $loader->getFallbackDirs()],
+                4 => $loader->getPrefixesPsr4() + ["" => $loader->getFallbackDirsPsr4()],
+            ] as $level => $psr) {
+                foreach ($psr as $prefix => $dirs) {
+                    foreach ($dirs as $dir) {
+                        $dir = path_normalize(path_is_absolute($dir) ? $dir : "$basePath/$dir");
+                        foreach (file_list($dir, ['name' => '#^[a-z_\x80-\xff][a-z0-9_\x80-\xff]*\.php$#ui']) ?? [] as $file) {
+                            if ($level === 0) {
+                                $class = strtr(substr($file, strlen($dir) + 1, -4), [DIRECTORY_SEPARATOR => '\\']);
+                                if (!isset($result[$class]) && str_starts_with($class, $prefix)) {
+                                    $result[$class] = $file;
+                                }
+                            }
+                            elseif ($level === 4) {
+                                $class = strtr($prefix . substr($file, strlen($dir) + 1, -4), [DIRECTORY_SEPARATOR => '\\']);
+                                if (!isset($result[$class])) {
+                                    $result[$class] = $file;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // クラスファイル名が見つかったからといってクラス定義ファイルとは限らないので中身を見なければならない
+            $result = array_filter($result, function ($file, $class) {
+                try {
+                    [$N, $C] = namespace_split($class);
+                    $tokens = \PhpToken::tokenize(file_get_contents($file), TOKEN_PARSE);
+                    $namespace = '';
+                    $namespacing = false;
+                    foreach ($tokens as $n => $token) {
+                        switch (true) {
+                            case $token->is(T_NAMESPACE):
+                                $namespacing = true;
+                                $namespace = '';
+                                break;
+                            case $token->is([';', '{']):
+                                $namespacing = false;
+                                break;
+                            // namespace の文脈で T_NAME_FULLY_QUALIFIED は流れてこないが \\ がないと T_STRING で流れてくる
+                            case $token->is([T_NAME_QUALIFIED, T_STRING]):
+                                if ($namespacing) {
+                                    $namespace .= $token->text;
+                                }
+                                break;
+                            case $token->is([T_CLASS, T_INTERFACE, T_TRAIT, /*T_ENUM:*/]):
+                                // ある程度で区切らないと無名クラス（new class() { }）や class 定数（Hoge::class）で最後まで読んでしまい、極端に遅くなる
+                                // class/interface/trait/enum キーワードとクラス名が16トークンも離れてることはまずないだろう
+                                for ($i = $n + 1, $l = min($n + 16, count($tokens)); $i < $l; $i++) {
+                                    if ($tokens[$i]->is(T_STRING) && $namespace === $N && $tokens[$i]->is($C)) {
+                                        return true;
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                }
+                catch (\ParseError) {
+                    // TOKEN_PARSE で tokenize するとパースエラーが発生するが、パースエラーになるファイルでクラス定義がされるわけないのでスルーでよい
+                }
+                return false;
+            }, ARRAY_FILTER_USE_BOTH);
+
+            // classmap は composer が生成するかユーザーが明示的に設定するので↑のような漁る処理は必要ない
+            // ただしパスの正規化は行わなければならない
+            foreach ($loader->getClassMap() as $class => $file) {
+                $result[$class] ??= path_normalize(path_is_absolute($file) ? $file : "$basePath/$file");
+            }
+
+            return $result;
+        }, __FUNCTION__);
     }
 }
 
@@ -6363,13 +6521,7 @@ if (!function_exists('ryunosuke\\DbMigration\\class_replace')) {
      * ```php
      * // Y1 extends X1 だとしてクラス定義でオーバーライドする
      * class_replace('\\ryunosuke\\Test\\Package\\files\\classes\\X1', function () {
-     *     // アンスコがついたクラスが定義されるのでそれを継承して定義する
-     *     class X1d extends \ryunosuke\Test\Package\files\classes\X1_
-     *     {
-     *         function method(){return 'this is X1d';}
-     *         function newmethod(){return 'this is newmethod';}
-     *     }
-     *     // このように匿名クラスを返しても良い。ただし、混在せずにどちらか一方にすること
+     *     // アンスコがついたクラスが定義されるので匿名クラスを返す
      *     return new class() extends \ryunosuke\Test\Package\files\classes\X1_
      *     {
      *         function method(){return 'this is X1d';}
@@ -6434,7 +6586,6 @@ if (!function_exists('ryunosuke\\DbMigration\\class_replace')) {
         }
         require_once $fname;
 
-        $classess = get_declared_classes();
         if ($register instanceof \Closure) {
             $newclass = $register();
         }
@@ -6455,37 +6606,29 @@ if (!function_exists('ryunosuke\\DbMigration\\class_replace')) {
             $newclass = $register;
         }
 
-        // クロージャ内部でクラス定義した場合（増えたクラスでエイリアスする）
-        if ($newclass === null) {
-            $classes = array_diff(get_declared_classes(), $classess);
-            if (count($classes) !== 1) {
-                throw new \DomainException('declared multi classes.' . implode(',', $classes));
-            }
-            $newclass = reset($classes);
-        }
-        // php7.0 から無名クラスが使えるのでそのクラス名でエイリアスする
+        // 無名クラス
         if (is_object($newclass)) {
             $newclass = get_class($newclass);
         }
         // 配列はメソッド定義のクロージャ配列とする
         if (is_array($newclass)) {
             $content = file_get_contents($fname);
-            $origspace = parse_php($content, [
+            $origspace = php_parse($content, [
                 'begin' => T_NAMESPACE,
                 'end'   => ';',
             ]);
             array_shift($origspace);
             array_pop($origspace);
 
-            $origclass = parse_php($content, [
+            $origclass = php_parse($content, [
                 'begin'  => T_CLASS,
                 'end'    => T_STRING,
                 'offset' => count($origspace),
             ]);
             array_shift($origclass);
 
-            $origspace = trim(implode('', array_column($origspace, 1)));
-            $origclass = trim(implode('', array_column($origclass, 1)));
+            $origspace = trim(implode('', array_column($origspace, 'text')));
+            $origclass = trim(implode('', array_column($origclass, 'text')));
 
             $classcode = '';
             foreach ($newclass as $name => $member) {
@@ -6508,7 +6651,7 @@ if (!function_exists('ryunosuke\\DbMigration\\class_replace')) {
                         }
                         // 同上。返り値版
                         if (!$refmember->hasReturnType() && $refmethod->hasReturnType()) {
-                            $declare .= ':' . reflect_types($refmethod->getReturnType())->getName();
+                            $declare .= ':' . reflect_type_resolve($refmethod->getReturnType());
                         }
                     }
                     $mname = preg_replaces('#function(\\s*)\\(#u', " $name", $declare);
@@ -6563,9 +6706,9 @@ if (!function_exists('ryunosuke\\DbMigration\\class_uses_all')) {
      * trait T2{use T1;}
      * trait T3{use T2;}
      * that(class_uses_all(new class{use T3;}))->isSame([
-     *     'Example\\T3', // クラスが直接 use している
-     *     'Example\\T2', // T3 が use している
-     *     'Example\\T1', // T2 が use している
+     *     'Example\\T3' => 'Example\\T3', // クラスが直接 use している
+     *     'Example\\T2' => 'Example\\T2', // T3 が use している
+     *     'Example\\T1' => 'Example\\T1', // T2 が use している
      * ]);
      * ```
      *
@@ -6577,6 +6720,14 @@ if (!function_exists('ryunosuke\\DbMigration\\class_uses_all')) {
      */
     function class_uses_all($class, $autoload = true)
     {
+        static $cache = [];
+
+        $cachekey = ltrim(is_object($class) ? get_class($class) : $class, '\\');
+
+        if (isset($cache[$cachekey])) {
+            return $cache[$cachekey];
+        }
+
         // まずはクラス階層から取得
         $traits = [];
         do {
@@ -6599,7 +6750,9 @@ if (!function_exists('ryunosuke\\DbMigration\\class_uses_all')) {
             }
             $count = count($traits);
         }
-        return array_keys($traits);
+
+        $names = array_keys($traits);
+        return $cache[$cachekey] = array_combine($names, $names);
     }
 }
 
@@ -6652,14 +6805,14 @@ if (!function_exists('ryunosuke\\DbMigration\\const_exists')) {
             }
             return $refclass->hasConstant($constname);
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
             return false;
         }
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\detect_namespace') || (new \ReflectionFunction('ryunosuke\\DbMigration\\detect_namespace'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\detect_namespace')) {
+assert(!function_exists('ryunosuke\\DbMigration\\namespace_detect') || (new \ReflectionFunction('ryunosuke\\DbMigration\\namespace_detect'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\namespace_detect')) {
     /**
      * ディレクトリ構造から名前空間を推測して返す
      *
@@ -6674,7 +6827,7 @@ if (!function_exists('ryunosuke\\DbMigration\\detect_namespace')) {
      * // Example 用としてこのパッケージの Transporter を使用してみる
      * $dirname = dirname(class_loader()->findFile(\ryunosuke\Functions\Transporter::class));
      * // "$dirname/Hoge" の名前空間を推測して返す
-     * that(detect_namespace("$dirname/Hoge"))->isSame("ryunosuke\\Functions\\Hoge");
+     * that(namespace_detect("$dirname/Hoge"))->isSame("ryunosuke\\Functions\\Hoge");
      * ```
      *
      * @package ryunosuke\Functions\Package\classobj
@@ -6682,34 +6835,30 @@ if (!function_exists('ryunosuke\\DbMigration\\detect_namespace')) {
      * @param string $location 配置パス。ファイル名を与えるとそのファイルを配置すべきクラス名を返す
      * @return string 名前空間
      */
-    function detect_namespace($location)
+    function namespace_detect($location)
     {
         // php をパースして名前空間部分を得るクロージャ
         $detectNS = function ($phpfile) {
-            $tokens = token_get_all(file_get_contents($phpfile));
+            $tokens = \PhpToken::tokenize(file_get_contents($phpfile));
             $count = count($tokens);
 
             $namespace = [];
             foreach ($tokens as $n => $token) {
-                if (is_array($token) && $token[0] === T_NAMESPACE) {
+                if ($token->id === T_NAMESPACE) {
                     // T_NAMESPACE と T_WHITESPACE で最低でも2つは読み飛ばしてよい
                     for ($m = $n + 2; $m < $count; $m++) {
-                        // @codeCoverageIgnoreStart
-                        if (version_compare(PHP_VERSION, '8.0.0') >= 0) {
-                            if (is_array($tokens[$m]) && $tokens[$m][0] === T_NAME_QUALIFIED) {
-                                return $tokens[$m][1];
-                            }
-                            if (is_array($tokens[$m]) && $tokens[$m][0] === T_NAME_FULLY_QUALIFIED) {
-                                $namespace[] = trim($tokens[$m][1], '\\');
-                            }
+                        if ($tokens[$m]->id === T_NAME_QUALIFIED) {
+                            return $tokens[$m]->text;
                         }
-                        // @codeCoverageIgnoreEnd
+                        if ($tokens[$m]->id === T_NAME_FULLY_QUALIFIED) {
+                            $namespace[] = trim($tokens[$m]->text, '\\');
+                        }
                         // よほどのことがないと T_NAMESPACE の次の T_STRING は名前空間の一部
-                        if (is_array($tokens[$m]) && $tokens[$m][0] === T_STRING) {
-                            $namespace[] = $tokens[$m][1];
+                        if ($tokens[$m]->id === T_STRING) {
+                            $namespace[] = $tokens[$m]->text;
                         }
                         // 終わりが来たら結合して返す
-                        if ($tokens[$m] === ';') {
+                        if ($tokens[$m]->text === ';') {
                             return implode('\\', $namespace);
                         }
                     }
@@ -6729,152 +6878,7 @@ if (!function_exists('ryunosuke\\DbMigration\\detect_namespace')) {
                 }
             }
             $basenames[] = pathinfo($directory, PATHINFO_FILENAME);
-        }) ?: throws(new \InvalidArgumentException('can not detect namespace. invalid output path or not specify namespace.'));
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\get_class_constants') || (new \ReflectionFunction('ryunosuke\\DbMigration\\get_class_constants'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\get_class_constants')) {
-    /**
-     * クラス定数を配列で返す
-     *
-     * `(new \ReflectionClass($class))->getConstants()` とほぼ同じだが、可視性でフィルタができる。
-     * さらに「自分自身の定義か？」でもフィルタできる。
-     *
-     * Example:
-     * ```php
-     * $class = new class extends \ArrayObject
-     * {
-     *     private   const C_PRIVATE   = 'private';
-     *     protected const C_PROTECTED = 'protected';
-     *     public    const C_PUBLIC    = 'public';
-     * };
-     * // 普通に全定数を返す
-     * that(get_class_constants($class))->isSame([
-     *     'C_PRIVATE'      => 'private',
-     *     'C_PROTECTED'    => 'protected',
-     *     'C_PUBLIC'       => 'public',
-     *     'STD_PROP_LIST'  => \ArrayObject::STD_PROP_LIST,
-     *     'ARRAY_AS_PROPS' => \ArrayObject::ARRAY_AS_PROPS,
-     * ]);
-     * // public のみを返す
-     * that(get_class_constants($class, IS_PUBLIC))->isSame([
-     *     'C_PUBLIC'       => 'public',
-     *     'STD_PROP_LIST'  => \ArrayObject::STD_PROP_LIST,
-     *     'ARRAY_AS_PROPS' => \ArrayObject::ARRAY_AS_PROPS,
-     * ]);
-     * // 自身定義でかつ public のみを返す
-     * that(get_class_constants($class, IS_OWNSELF | IS_PUBLIC))->isSame([
-     *     'C_PUBLIC'       => 'public',
-     * ]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\classobj
-     *
-     * @param string|object $class クラス名 or オブジェクト
-     * @param ?int $filter アクセスレベル定数
-     * @return array クラス定数の配列
-     */
-    function get_class_constants($class, $filter = null)
-    {
-        $class = ltrim(is_object($class) ? get_class($class) : $class, '\\');
-        $filter ??= (IS_PUBLIC | IS_PROTECTED | IS_PRIVATE);
-
-        $result = [];
-        foreach ((new \ReflectionClass($class))->getReflectionConstants() as $constant) {
-            if (($filter & IS_OWNSELF) && $constant->getDeclaringClass()->name !== $class) {
-                continue;
-            }
-            $modifiers = $constant->getModifiers();
-            $modifiers2 = 0;
-            $modifiers2 |= ($modifiers & \ReflectionProperty::IS_PUBLIC) ? IS_PUBLIC : 0;
-            $modifiers2 |= ($modifiers & \ReflectionProperty::IS_PROTECTED) ? IS_PROTECTED : 0;
-            $modifiers2 |= ($modifiers & \ReflectionProperty::IS_PRIVATE) ? IS_PRIVATE : 0;
-            if ($modifiers2 & $filter) {
-                $result[$constant->name] = $constant->getValue();
-            }
-        }
-        return $result;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\get_object_properties') || (new \ReflectionFunction('ryunosuke\\DbMigration\\get_object_properties'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\get_object_properties')) {
-    /**
-     * オブジェクトのプロパティを可視・不可視を問わず取得する
-     *
-     * get_object_vars + no public プロパティを返すイメージ。
-     * クロージャだけは特別扱いで this + use 変数を返す。
-     *
-     * Example:
-     * ```php
-     * $object = new \Exception('something', 42);
-     * $object->oreore = 'oreore';
-     *
-     * // get_object_vars はそのスコープから見えないプロパティを取得できない
-     * // var_dump(get_object_vars($object));
-     *
-     * // array キャストは全て得られるが null 文字を含むので扱いにくい
-     * // var_dump((array) $object);
-     *
-     * // この関数を使えば不可視プロパティも取得できる
-     * that(get_object_properties($object))->subsetEquals([
-     *     'message' => 'something',
-     *     'code'    => 42,
-     *     'oreore'  => 'oreore',
-     * ]);
-     *
-     * // クロージャは this と use 変数を返す
-     * that(get_object_properties(fn() => $object))->is([
-     *     'this'   => $this,
-     *     'object' => $object,
-     * ]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\classobj
-     *
-     * @param object $object オブジェクト
-     * @param array $privates 継承ツリー上の private が格納される
-     * @return array 全プロパティの配列
-     */
-    function get_object_properties($object, &$privates = [])
-    {
-        if ($object instanceof \Closure) {
-            $ref = new \ReflectionFunction($object);
-            $uses = method_exists($ref, 'getClosureUsedVariables') ? $ref->getClosureUsedVariables() : $ref->getStaticVariables();
-            return ['this' => $ref->getClosureThis()] + $uses;
-        }
-
-        $fields = [];
-        foreach ((array) $object as $name => $field) {
-            $cname = '';
-            $names = explode("\0", $name);
-            if (count($names) > 1) {
-                $name = array_pop($names);
-                $cname = $names[1];
-            }
-            $fields[$cname][$name] = $field;
-        }
-
-        $classname = get_class($object);
-        $parents = array_values(['', '*', $classname] + class_parents($object));
-        uksort($fields, function ($a, $b) use ($parents) {
-            return array_search($a, $parents, true) <=> array_search($b, $parents, true);
-        });
-
-        $result = [];
-        foreach ($fields as $cname => $props) {
-            foreach ($props as $name => $field) {
-                if ($cname !== '' && $cname !== '*' && $classname !== $cname) {
-                    $privates[$cname][$name] = $field;
-                }
-                if (!array_key_exists($name, $result)) {
-                    $result[$name] = $field;
-                }
-            }
-        }
-
-        return $result;
+        }) ?: throw new \InvalidArgumentException('can not detect namespace. invalid output path or not specify namespace.');
     }
 }
 
@@ -6887,13 +6891,13 @@ if (!function_exists('ryunosuke\\DbMigration\\object_dive')) {
      *
      * Example:
      * ```php
-     * $class = stdclass([
-     *     'a' => stdclass([
-     *         'b' => stdclass([
+     * $class = (object) [
+     *     'a' => (object) [
+     *         'b' => (object) [
      *             'c' => 'vvv'
-     *         ])
-     *     ])
-     * ]);
+     *         ]
+     *     ]
+     * ];
      * that(object_dive($class, 'a.b.c'))->isSame('vvv');
      * that(object_dive($class, 'a.b.x', 9))->isSame(9);
      * // 配列を与えても良い。その場合 $delimiter 引数は意味をなさない
@@ -6989,27 +6993,93 @@ if (!function_exists('ryunosuke\\DbMigration\\object_id')) {
             return $result;
         }
 
-        /** @var array<\WeakReference, int>[] $references */
-        static $references = [];
         static $lastid = 0;
+        static $references = null;
+        $references ??= new \WeakMap();
 
-        $id = spl_object_id($objectOrId);
+        $references[$objectOrId] ??= [\WeakReference::create($objectOrId), ++$lastid];
+        $idmap[$references[$objectOrId][1]] = $references[$objectOrId][0];
+        return $references[$objectOrId][1];
+    }
+}
 
-        if (!isset($references[$id]) || $references[$id][0]->get() === null) {
-            $references[$id] = [\WeakReference::create($objectOrId), ++$lastid];
+assert(!function_exists('ryunosuke\\DbMigration\\object_properties') || (new \ReflectionFunction('ryunosuke\\DbMigration\\object_properties'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\object_properties')) {
+    /**
+     * オブジェクトのプロパティを可視・不可視を問わず取得する
+     *
+     * get_object_vars + no public プロパティを返すイメージ。
+     * クロージャだけは特別扱いで this + use 変数を返す。
+     *
+     * Example:
+     * ```php
+     * $object = new #[\AllowDynamicProperties] class('something', 42) extends \Exception{};
+     * $object->oreore = 'oreore';
+     *
+     * // get_object_vars はそのスコープから見えないプロパティを取得できない
+     * // var_dump(get_object_vars($object));
+     *
+     * // array キャストは全て得られるが null 文字を含むので扱いにくい
+     * // var_dump((array) $object);
+     *
+     * // この関数を使えば不可視プロパティも取得できる
+     * that(object_properties($object))->subsetEquals([
+     *     'message' => 'something',
+     *     'code'    => 42,
+     *     'oreore'  => 'oreore',
+     * ]);
+     *
+     * // クロージャは this と use 変数を返す
+     * that(object_properties(fn() => $object))->is([
+     *     'this'   => $this,
+     *     'object' => $object,
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\classobj
+     *
+     * @param object $object オブジェクト
+     * @param array $privates 継承ツリー上の private が格納される
+     * @return array 全プロパティの配列
+     */
+    function object_properties($object, &$privates = [])
+    {
+        if ($object instanceof \Closure) {
+            $ref = new \ReflectionFunction($object);
+            $uses = method_exists($ref, 'getClosureUsedVariables') ? $ref->getClosureUsedVariables() : $ref->getStaticVariables();
+            return ['this' => $ref->getClosureThis()] + $uses;
         }
 
-        $idmap[$references[$id][1]] = $references[$id][0];
-        return $references[$id][1];
+        $fields = [];
+        foreach ((array) $object as $name => $field) {
+            $cname = '';
+            $names = explode("\0", $name);
+            if (count($names) > 1) {
+                $name = array_pop($names);
+                $cname = $names[1];
+            }
+            $fields[$cname][$name] = $field;
+        }
 
-        /* php8.0 version
-         static $references = null;
-         $references ??= new \WeakMap();
-    
-         $references[$objectOrId] ??= [\WeakReference::create($objectOrId), ++$lastid];
-         $idmap[$references[$objectOrId][1]] = $references[$objectOrId][0];
-         return $references[$objectOrId][1];
-         */
+        $classname = get_class($object);
+        $parents = array_values(['', '*', $classname] + class_parents($object));
+        uksort($fields, function ($a, $b) use ($parents) {
+            return array_search($a, $parents, true) <=> array_search($b, $parents, true);
+        });
+
+        $result = [];
+        foreach ($fields as $cname => $props) {
+            foreach ($props as $name => $field) {
+                if ($cname !== '' && $cname !== '*' && $classname !== $cname) {
+                    $privates[$cname][$name] = $field;
+                }
+                if (!array_key_exists($name, $result)) {
+                    $result[$name] = $field;
+                }
+            }
+        }
+
+        return $result;
     }
 }
 
@@ -7066,14 +7136,14 @@ if (!function_exists('ryunosuke\\DbMigration\\object_storage')) {
 
             public function __construct()
             {
-                $this->objects = class_exists(\WeakMap::class) ? new \WeakMap() : [];
+                $this->objects = new \WeakMap();
                 $this->resources = [];
             }
 
             private function typeid($objectOrResource)
             {
                 if (is_object($objectOrResource)) {
-                    return ['objects', $this->objects instanceof \WeakMap ? $objectOrResource : object_id($objectOrResource)];
+                    return ['objects', $objectOrResource];
                 }
                 if (is_resourcable($objectOrResource)) {
                     return ['resources', (int) $objectOrResource];
@@ -7085,17 +7155,6 @@ if (!function_exists('ryunosuke\\DbMigration\\object_storage')) {
             {
                 // WeakMap と言えど循環参照が残っているかもしれないので呼んでおく
                 gc_collect_cycles();
-
-                // 回収されているオブジェクトを消す（WeakMap なら勝手に消えるのでその必要はない）
-                if (!$this->objects instanceof \WeakMap) {
-                    // @codeCoverageIgnoreStart
-                    foreach ($this->objects as $id => $data) {
-                        if (object_id($id) === null) {
-                            unset($this->objects[$id]);
-                        }
-                    }
-                    // @codeCoverageIgnoreEnd
-                }
 
                 // 参照が切れたり閉じてるリソースを消す
                 if ($this->resources) {
@@ -7114,7 +7173,7 @@ if (!function_exists('ryunosuke\\DbMigration\\object_storage')) {
                 return $this->offsetExists($objectOrResource);
             }
 
-            public function get($objectOrResource, $default = null)
+            public function get($objectOrResource, $default = null): mixed
             {
                 if ($this->has($objectOrResource)) {
                     return $this->offsetGet($objectOrResource);
@@ -7145,8 +7204,7 @@ if (!function_exists('ryunosuke\\DbMigration\\object_storage')) {
                 return isset($this->$type[$id]);
             }
 
-            #[\ReturnTypeWillChange]
-            public function offsetGet($offset)
+            public function offsetGet($offset): mixed
             {
                 [$type, $id] = $this->typeid($offset);
                 return $this->$type[$id];
@@ -7187,82 +7245,6 @@ if (!function_exists('ryunosuke\\DbMigration\\object_storage')) {
                 }
             }
         };
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\optional') || (new \ReflectionFunction('ryunosuke\\DbMigration\\optional'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\optional')) {
-    /**
-     * オブジェクトならそれを、オブジェクトでないなら NullObject を返す
-     *
-     * null を返すかもしれないステートメントを一時変数を介さずワンステートメントで呼ぶことが可能になる。
-     *
-     * NullObject は 基本的に null を返すが、return type が規約されている場合は null 以外を返すこともある。
-     * 取得系呼び出しを想定しているので、設定系呼び出しは行うべきではない。
-     * __set のような明らかに設定が意図されているものは例外が飛ぶ。
-     *
-     * Example:
-     * ```php
-     * // null を返すかもしれないステートメント
-     * $getobject = fn () => null;
-     * // メソッド呼び出しは null を返す
-     * that(optional($getobject())->method())->isSame(null);
-     * // プロパティアクセスは null を返す
-     * that(optional($getobject())->property)->isSame(null);
-     * // empty は true を返す
-     * that(empty(optional($getobject())->nothing))->isSame(true);
-     * // __isset は false を返す
-     * that(isset(optional($getobject())->nothing))->isSame(false);
-     * // __toString は '' を返す
-     * that(strval(optional($getobject())))->isSame('');
-     * // __invoke は null を返す
-     * that(call_user_func(optional($getobject())))->isSame(null);
-     * // 配列アクセスは null を返す
-     * that(optional($getobject())['hoge'])->isSame(null);
-     * // 空イテレータを返す
-     * that(iterator_to_array(optional($getobject())))->isSame([]);
-     *
-     * // $expected を与えるとその型以外は NullObject を返す（\ArrayObject はオブジェクトだが stdClass ではない）
-     * that(optional(new \ArrayObject([1]), 'stdClass')->count())->is(0);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\classobj
-     *
-     * @template T
-     * @param T|null $object オブジェクト
-     * @param null|string|T $expected 期待するクラス名。指定した場合は is_a される
-     * @return T $object がオブジェクトならそのまま返し、違うなら NullObject を返す
-     */
-    function optional($object, $expected = null)
-    {
-        if (is_object($object)) {
-            if ($expected === null || is_a($object, $expected)) {
-                return $object;
-            }
-        }
-
-        static $nullobject = null;
-        if ($nullobject === null) {
-            $nullobject = new class implements \Countable, \ArrayAccess, \IteratorAggregate, \JsonSerializable {
-                // @formatter:off
-                    public function __isset($name) { return false; }
-                    public function __get($name) { return null; }
-                    public function __set($name, $value) { throw new \DomainException('called NullObject#' . __FUNCTION__); }
-                    public function __unset($name) { throw new \DomainException('called NullObject#' . __FUNCTION__); }
-                    public function __call($name, $arguments) { return null; }
-                    public function __invoke() { return null; }
-                    public function __toString() { return ''; }
-                    public function count(): int { return 0; }
-                    public function offsetExists($offset): bool { return false; }
-                    public function offsetGet($offset): ?string { return null; }
-                    public function offsetSet($offset, $value): void { throw new \DomainException('called NullObject#' . __FUNCTION__); }
-                    public function offsetUnset($offset): void { throw new \DomainException('called NullObject#' . __FUNCTION__); }
-                    public function getIterator(): \Traversable { return new \ArrayIterator([]); }
-                    public function jsonSerialize(): \stdClass { return (object)[]; }
-                    // @formatter:on
-            };
-        }
-        return $nullobject;
     }
 }
 
@@ -7346,41 +7328,6 @@ if (!function_exists('ryunosuke\\DbMigration\\register_autoload_function')) {
         spl_autoload_register($loader, true, true);
 
         return $loader;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\stdclass') || (new \ReflectionFunction('ryunosuke\\DbMigration\\stdclass'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\stdclass')) {
-    /**
-     * 初期フィールド値を与えて stdClass を生成する
-     *
-     * 手元にある配列でサクッと stdClass を作りたいことがまれによくあるはず。
-     *
-     * object キャストでもいいんだが、 Iterator/Traversable とかも stdClass 化したいかもしれない。
-     * それにキャストだとコールバックで呼べなかったり、数値キーが死んだりして微妙に使いづらいところがある。
-     *
-     * Example:
-     * ```php
-     * // 基本的には object キャストと同じ
-     * $fields = ['a' => 'A', 'b' => 'B'];
-     * that(stdclass($fields))->is((object) $fields);
-     * // ただしこういうことはキャストでは出来ない
-     * that(array_map('stdclass', [$fields]))->is([(object) $fields]); // コールバックとして利用する
-     * that(property_exists(stdclass(['a', 'b']), '0'))->isTrue();     // 数値キー付きオブジェクトにする
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\classobj
-     *
-     * @param iterable $fields フィールド配列
-     * @return \stdClass 生成した stdClass インスタンス
-     */
-    function stdclass(iterable $fields = [])
-    {
-        $stdclass = new \stdClass();
-        foreach ($fields as $key => $value) {
-            $stdclass->$key = $value;
-        }
-        return $stdclass;
     }
 }
 
@@ -8129,7 +8076,7 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_format')) {
                     'NUMBER'  => fn($token) => "<span style='color:#0000BB;'>" . htmlspecialchars($token, ENT_QUOTES) . "</span>",
                 ],
             ];
-            $rule = $rules[$options['highlight']] ?? throws(new \InvalidArgumentException('highlight must be "cli" or "html".'));
+            $rule = $rules[$options['highlight']] ?? throw new \InvalidArgumentException('highlight must be "cli" or "html".');
             $options['highlight'] = function ($token, $ttype) use ($keywords, $rule) {
                 switch (true) {
                     case isset($keywords[strtoupper($token)]):
@@ -8178,46 +8125,42 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_format')) {
         $tokens = [];
         $comment = '';
         $last = [];
-        foreach (token_get_all("<?php $sql") as $token) {
-            // トークンは配列だったり文字列だったりするので -1 トークンとして配列に正規化
-            if (is_string($token)) {
-                $token = [-1, $token];
-            }
-
+        foreach (\PhpToken::tokenize("<?php $sql") as $token) {
             // パースのために無理やり <?php を付けているので無視
-            if ($token[0] === T_OPEN_TAG) {
+            if ($token->id === T_OPEN_TAG) {
                 continue;
             }
 
             // '--' は php ではデクリメントだが sql ではコメントなので特別扱いする
-            if ($token[0] === T_DEC) {
-                $comment = $token[1];
+            if ($token->id === T_DEC) {
+                $comment = $token->text;
             }
             // 改行は '--' コメントの終わり
-            elseif ($comment && in_array($token[0], [T_WHITESPACE, T_COMMENT], true) && strpos($token[1], "\n") !== false) {
-                $tokens[] = [T_COMMENT, $comment . $token[1]];
+            elseif ($comment && in_array($token->id, [T_WHITESPACE, T_COMMENT], true) && strpos($token->text, "\n") !== false) {
+                $tokens[] = new \PhpToken(T_COMMENT, $comment . $token->text);
                 $comment = '';
             }
             // コメント中はコメントに格納する
             elseif ($comment) {
-                $comment .= $token[1];
+                $comment .= $token->text;
             }
             // END IF, END LOOP などは一つのトークンとする
-            elseif (strtoupper($last[1] ?? '') === 'END' && in_array(strtoupper($token[1]), ['CASE', 'IF', 'LOOP', 'REPEAT', 'WHILE'], true)) {
-                $tokens[array_key_last($tokens)][1] .= " " . $token[1];
+            elseif (strtoupper($last->text ?? '') === 'END' && in_array(strtoupper($token->text), ['CASE', 'IF', 'LOOP', 'REPEAT', 'WHILE'], true)) {
+                $lasttoken = $tokens[array_key_last($tokens)];
+                $lasttoken->text .= " " . $token->text;
             }
             // 上記以外はただのトークンとして格納する
             else {
                 // `string` のような文字列は T_ENCAPSED_AND_WHITESPACE として得られる（ただし ` がついていないので付与）
-                if ($token[0] === T_ENCAPSED_AND_WHITESPACE) {
-                    $tokens[] = [$token[0], "`{$token[1]}`"];
+                if ($token->id === T_ENCAPSED_AND_WHITESPACE) {
+                    $tokens[] = new \PhpToken($token->id, "`{$token->text}`");
                 }
-                elseif ($token[0] !== T_WHITESPACE && $token[1] !== '`') {
-                    $tokens[] = [$token[0], $token[1]];
+                elseif ($token->id !== T_WHITESPACE && $token->text !== '`') {
+                    $tokens[] = new \PhpToken($token->id, $token->text);
                 }
             }
 
-            if ($token[0] !== T_WHITESPACE) {
+            if ($token->id !== T_WHITESPACE) {
                 $last = $token;
             }
         }
@@ -8231,11 +8174,11 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_format')) {
                     break;
                 }
                 $token = $tokens[$index];
-                if ($token[0] === T_COMMENT || $token[0] === T_DOC_COMMENT) {
-                    $comments[] = trim($token[1]);
+                if ($token->id === T_COMMENT || $token->id === T_DOC_COMMENT) {
+                    $comments[] = trim($token->text);
                 }
                 else {
-                    return [$index, trim($token[1]), $comments];
+                    return [$index, trim($token->text), $comments];
                 }
             }
             return [$start, '', $comments];
@@ -8251,9 +8194,9 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_format')) {
             $result = [];
             for ($token_length = count($tokens); $index < $token_length; $index++) {
                 $token = $tokens[$index];
-                $ttype = $token[0];
+                $ttype = $token->id;
 
-                $rawtoken = trim($token[1]);
+                $rawtoken = trim($token->text);
                 $virttoken = $options['syntaxer']($rawtoken, $ttype);
                 $uppertoken = strtoupper($rawtoken);
 
@@ -8290,7 +8233,7 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_format')) {
                         // "columnname ," になってしまう
                         // mysql において関数呼び出し括弧の前に空白は許されない
                         // ただし、関数呼び出しではなく記号の場合はスペースを入れたい（ colname = (SELECT ～) など）
-                        if (!in_array($next[1], ['.', ',', '(', ';']) || ($next[1] === '(' && !preg_match('#^[a-z0-9_"\'`]+$#i', $rawtoken))) {
+                        if (!in_array($prev[1], [';']) && !in_array($next[1], ['.', ',', '(', ';']) || ($next[1] === '(' && !preg_match('#^[a-z0-9_"\'`]+$#i', $rawtoken))) {
                             $result[] = $MARK_SP;
                         }
                         break;
@@ -8495,6 +8438,11 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_format')) {
                             $parts = preg_replace("#$MARK_BR#u", $MARK_BR . $MARK_NT, $parts, substr_count($parts, $MARK_BR) - 1);
                             $result[] = $MARK_BR . $virttoken . $MARK_BR . $MARK_NT . $parts;
                         }
+                        break;
+                    case "COMMIT":
+                    case "ROLLBACK":
+                        // begin は begin～end の一部の可能性があるが commit,rollback は俺の知る限りそのような構文はない
+                        $result[] = $virttoken;
                         break;
                     case "END":
                         if ($context === 'CASE') {
@@ -8858,17 +8806,16 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
     function csv_export($csvarrays, $options = [])
     {
         $options += [
-            'delimiter'       => ',',
-            'enclosure'       => '"',
-            'escape'          => '\\',
-            'encoding'        => ini_get('default_charset'),
-            'scrub'           => 'TRANSLIT',
-            'initial'         => '', // "\xEF\xBB\xBF"
-            'headers'         => null,
-            'structure'       => false,
-            'callback'        => null, // map + filter 用コールバック（1行が参照で渡ってくるので書き換えられる&&false を返すと結果から除かれる）
-            'callback_header' => false, // callback に header 行も渡ってくるか？（互換性のためであり将来的に削除される）
-            'output'          => null,
+            'delimiter' => ',',
+            'enclosure' => '"',
+            'escape'    => '\\',
+            'encoding'  => ini_get('default_charset'),
+            'scrub'     => 'TRANSLIT',
+            'initial'   => '', // "\xEF\xBB\xBF"
+            'headers'   => null,
+            'structure' => false,
+            'callback'  => null, // map + filter 用コールバック（1行が参照で渡ってくるので書き換えられる&&false を返すと結果から除かれる）
+            'output'    => null,
         ];
 
         $output = $options['output'];
@@ -8879,8 +8826,10 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
         else {
             $fp = fopen('php://temp', 'rw+');
         }
+
+        $restore = set_error_exception_handler();
         try {
-            $size = call_safely(function ($fp, $csvarrays, $delimiter, $enclosure, $escape, $encoding, $scrub, $initial, $headers, $structure, $callback, $callback_header) {
+            $size = (function ($fp, $csvarrays, $delimiter, $enclosure, $escape, $encoding, $scrub, $initial, $headers, $structure, $callback) {
                 $default_charset = ini_get('default_charset');
                 if ($default_charset !== $encoding) {
                     // import とは違い、吐き出すときは明確なエラーだろうので TRANSLIT も IGNORE もしない
@@ -8943,7 +8892,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                     $headers = array_combine($headers, $headers);
                 }
                 else {
-                    if ($callback_header && $callback) {
+                    if ($callback) {
                         if ($callback($headers, null) === false) {
                             goto BODY;
                         }
@@ -8974,7 +8923,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                     $size += fputcsv($fp, $row, $delimiter, $enclosure, $escape);
                 }
                 return $size;
-            }, $fp, $csvarrays, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['initial'], $options['headers'], $options['structure'], $options['callback'], $options['callback_header']);
+            })($fp, $csvarrays, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['initial'], $options['headers'], $options['structure'], $options['callback']);
             if ($output) {
                 return $size;
             }
@@ -8982,6 +8931,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
             return stream_get_contents($fp);
         }
         finally {
+            $restore();
             if (!$output) {
                 fclose($fp);
             }
@@ -9099,8 +9049,10 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
             rewind($fp);
         }
 
+        $restore = set_error_exception_handler();
         try {
-            return call_safely(function ($fp, $delimiter, $enclosure, $escape, $encoding, $scrub, $initial, $headers, $headermap, $structure, $grouping, $callback, $limit) {
+            $n = -1;
+            return (function ($fp, $delimiter, $enclosure, $escape, $encoding, $scrub, $initial, $headers, $headermap, $structure, $grouping, $callback, $limit) use (&$n) {
                 $default_charset = ini_get('default_charset');
                 if ($default_charset !== $encoding) {
                     stream_filter_append($fp, "convert.iconv.$encoding/$default_charset" . (strlen($scrub) ? "//$scrub" : ""), STREAM_FILTER_READ);
@@ -9121,7 +9073,6 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
                 }
 
                 $result = [];
-                $n = -1;
                 while ($row = fgetcsv($fp, 0, $delimiter, $enclosure, $escape)) {
                     if ($row === [null]) {
                         continue;
@@ -9137,7 +9088,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
                         foreach ($headers as $i => $header) {
                             $query[] = rawurlencode($header) . "=" . rawurlencode($row[$i]);
                         }
-                        $row = parse_query(implode('&', $query), '&', PHP_QUERY_RFC3986);
+                        $row = query_parse(implode('&', $query), '&', PHP_QUERY_RFC3986);
                         // csv の仕様上、空文字を置かざるを得ないが、数値配列の場合は空にしたいことがある
                         $row = array_map_recursive($row, function ($v) {
                             if (is_array($v) && is_indexarray($v)) {
@@ -9188,9 +9139,17 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
                 }
 
                 return $result;
-            }, $fp, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['initial'], $options['headers'], $options['headermap'], $options['structure'], $options['grouping'], $options['callback'], $options['limit']);
+            })($fp, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['initial'], $options['headers'], $options['headermap'], $options['structure'], $options['grouping'], $options['callback'], $options['limit']);
+        }
+        catch (\Throwable $t) {
+            // 何行目？ が欲しくなることが非常に多いので例外メッセージを書き換える
+            $message = new \ReflectionProperty($t, 'message');
+            $message->setAccessible(true);
+            $message->setValue($t, "csv#$n: " . $t->getMessage());
+            throw $t;
         }
         finally {
+            $restore();
             fclose($fp);
         }
     }
@@ -9462,7 +9421,7 @@ if (!function_exists('ryunosuke\\DbMigration\\html_strip')) {
 
         if ($options['escape-phpcode']) {
             $mapping = [];
-            $html = strip_php($html, [
+            $html = php_strip($html, [
                 'replacer'       => $preserving,
                 'trailing_break' => false,
             ], $mapping);
@@ -9539,8 +9498,8 @@ if (!function_exists('ryunosuke\\DbMigration\\html_strip')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\htmltag') || (new \ReflectionFunction('ryunosuke\\DbMigration\\htmltag'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\htmltag')) {
+assert(!function_exists('ryunosuke\\DbMigration\\html_tag') || (new \ReflectionFunction('ryunosuke\\DbMigration\\html_tag'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\html_tag')) {
     /**
      * css セレクタから html 文字列を生成する
      *
@@ -9554,17 +9513,17 @@ if (!function_exists('ryunosuke\\DbMigration\\htmltag')) {
      * ```php
      * // 単純文字列はただのタグを生成する
      * that(
-     *     htmltag('a#hoge.c1.c2[name=hoge\[\]][href="http://hoge"][hidden]'))
+     *     html_tag('a#hoge.c1.c2[name=hoge\[\]][href="http://hoge"][hidden]'))
      *     ->isSame('<a id="hoge" class="c1 c2" name="hoge[]" href="http://hoge" hidden></a>'
      * );
      * // ペア配列を与えるとコンテント文字列になる
      * that(
-     *     htmltag(['a.c1#hoge.c2[name=hoge\[\]][href="http://hoge"][hidden]' => "this is text's content"]))
+     *     html_tag(['a.c1#hoge.c2[name=hoge\[\]][href="http://hoge"][hidden]' => "this is text's content"]))
      *     ->isSame('<a id="hoge" class="c1 c2" name="hoge[]" href="http://hoge" hidden>this is text&#039;s content</a>'
      * );
      * // ネストした配列を与えると再帰される
      * that(
-     *     htmltag([
+     *     html_tag([
      *         'div#wrapper' => [
      *             'b.class1' => [
      *                 '<plain>',
@@ -9585,7 +9544,7 @@ if (!function_exists('ryunosuke\\DbMigration\\htmltag')) {
      * @param string|array $selector
      * @return string html 文字列
      */
-    function htmltag($selector)
+    function html_tag($selector)
     {
         if (!is_iterable($selector)) {
             $selector = [$selector => ''];
@@ -9633,7 +9592,7 @@ if (!function_exists('ryunosuke\\DbMigration\\htmltag')) {
                 $result .= $html($value);
             }
             elseif (is_iterable($value)) {
-                $result .= $build($key, htmltag($value), false);
+                $result .= $build($key, html_tag($value), false);
             }
             else {
                 $result .= $build($key, $value, true);
@@ -9788,10 +9747,15 @@ if (!function_exists('ryunosuke\\DbMigration\\json_export')) {
         $inline_level = array_unset($options, JSON_INLINE_LEVEL, 0);
         $template_literal = array_unset($options, JSON_TEMPLATE_LITERAL, false);
         $inline_scalarlist = array_unset($options, JSON_INLINE_SCALARLIST, false);
+        // 後方互換性のため null のときのみデフォルト値を使う
+        $object_handlers = array_unset($options, JSON_OBJECT_HANDLER, []) ?? [
+            \DateTimeInterface::class => fn($v) => 'new Date(' . floor($v->format("U.v") * 1000) . ')',
+            \GMP::class               => fn($v) => gmp_strval($v) . "n",
+        ];
 
         $option = array_sum(array_keys(array_filter($options)));
 
-        $encode = function ($value, $parents, $objective) use (&$encode, $option, $depth, $indent, $closure, $template_literal, $inline_scalarlist, $nest_level, $inline_level, $es5, $comma, $comment) {
+        $encode = function ($value, $parents, $objective) use (&$encode, $option, $depth, $indent, $closure, $template_literal, $object_handlers, $inline_scalarlist, $nest_level, $inline_level, $es5, $comma, $comment) {
             $nest = $nest_level + count($parents);
             $indent = $indent ?: 4;
 
@@ -9805,7 +9769,14 @@ if (!function_exists('ryunosuke\\DbMigration\\json_export')) {
                 if ($value instanceof \JsonSerializable) {
                     return $encode($value->jsonSerialize(), $parents, false);
                 }
-                return $encode(arrayval($value, false), $parents, true);
+                if ($es5) {
+                    foreach ($object_handlers as $class => $handler) {
+                        if (is_a($value, $class, true)) {
+                            return $handler($value);
+                        }
+                    }
+                }
+                return $encode((array) $value, $parents, true);
             }
             if (is_array($value)) {
                 $pretty_print = $option & JSON_PRETTY_PRINT;
@@ -9835,7 +9806,7 @@ if (!function_exists('ryunosuke\\DbMigration\\json_export')) {
                     }
                 }
                 if ($inline_scalarlist) {
-                    $inline = $inline || !$objective && array_all($value, fn($v) => is_primitive($v) || $v instanceof \Closure);
+                    $inline = $inline || !$objective && array_and($value, fn($v) => is_primitive($v) || $v instanceof \Closure);
                 }
 
                 $break = $indent0 = $indent1 = $indent2 = $separator = '';
@@ -9901,14 +9872,14 @@ if (!function_exists('ryunosuke\\DbMigration\\json_export')) {
                     return '-Infinity';
                 }
                 if ($template_literal && is_string($value) && strpos($value, "\n") !== false) {
-                    $indent1 = ctype_digit("$indent") ? str_repeat(' ', ($nest + 1) * $indent) : str_repeat($indent, ($nest + 1));
-                    $jsonstr = json_encode(str_replace(["\r\n", "\r"], "\n", $value), $option, $depth);
+                    $jsonstr = json_encode($value, $option, $depth);
                     $jsonstr = substr($jsonstr, 1, -1);
                     $jsonstr = strtr_escaped($jsonstr, [
-                        '\\n' => "\n$indent1",
+                        '\\n' => "\n",
+                        '\\r' => "\r",
                         '`'   => '\\`',
                     ]);
-                    return "`\n$indent1$jsonstr\n$indent1`";
+                    return "`$jsonstr`";
                 }
             }
             return json_encode($value, $option, $depth);
@@ -10014,40 +9985,35 @@ if (!function_exists('ryunosuke\\DbMigration\\json_import')) {
 
             public function __construct($json_string)
             {
-                $this->json_string = "[$json_string]";
+                $this->json_string = "<?php [$json_string]";
             }
 
             public function parse($options)
             {
-                error_clear_last();
-                $tokens = @parse_php($this->json_string, [
+                $tokens = @php_parse($this->json_string, [
                     'cache' => false,
                 ]);
-                $error = error_get_last();
-                if (strpos($error['message'] ?? '', 'Unterminated comment') !== false) {
-                    throw new \ErrorException(sprintf('%s at line %d of the JSON5 data', "Unterminated block comment", $error['line']));
-                }
                 array_shift($tokens);
 
                 $braces = [];
                 for ($i = 0; $i < count($tokens); $i++) {
                     $token = $tokens[$i];
-                    if ($token[1] === '{' || $token[1] === '[') {
+                    if ($token->text === '{' || $token->text === '[') {
                         if ($options[JSON_MAX_DEPTH] <= count($braces) + 1) {
                             throw $this->exception("Maximum stack depth exceeded", $token);
                         }
                         $braces[] = $i;
                     }
-                    elseif ($token[1] === '}' || $token[1] === ']') {
+                    elseif ($token->text === '}' || $token->text === ']') {
                         if (!$braces) {
                             throw $this->exception("Mismatch", $token);
                         }
                         $brace = array_pop($braces);
-                        if ($tokens[$brace][1] !== '{' && $token[1] === '}' || $tokens[$brace][1] !== '[' && $token[1] === ']') {
+                        if ($tokens[$brace]->text !== '{' && $token->text === '}' || $tokens[$brace]->text !== '[' && $token->text === ']') {
                             throw $this->exception("Mismatch", $token);
                         }
-                        $block = array_filter(array_slice(array_splice($tokens, $brace + 1, $i - $brace, []), 0, -1), fn($token) => !(is_array($token) && in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT, T_BAD_CHARACTER], true)));
-                        $elements = array_explode($block, fn($token) => is_array($token) && $token[1] === ',');
+                        $block = array_filter(array_slice(array_splice($tokens, $brace + 1, $i - $brace, []), 0, -1), fn($token) => !(!$token instanceof $this && in_array($token->id, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT, T_BAD_CHARACTER], true)));
+                        $elements = array_explode($block, fn($token) => !$token instanceof $this && $token->text === ',');
                         // for trailing comma
                         if ($elements && !$elements[count($elements) - 1]) {
                             array_pop($elements);
@@ -10057,44 +10023,44 @@ if (!function_exists('ryunosuke\\DbMigration\\json_import')) {
                             throw $this->exception("Missing element", $token);
                         }
                         $i = $brace;
-                        if ($token[1] === '}') {
-                            $object = $this->token('object', $tokens[$brace][3], $token[3] + strlen($token[1]));
+                        if ($token->text === '}') {
+                            $object = $this->token('object', $tokens[$brace]->pos, $token->pos + strlen($token->text));
                             foreach ($elements as $element) {
-                                $keyandval = array_explode($element, fn($token) => is_array($token) && $token[1] === ':');
+                                $keyandval = array_explode($element, fn($token) => !$token instanceof $this && $token->text === ':');
                                 // check no colon (e.g. {123})
                                 if (count($keyandval) !== 2) {
                                     throw $this->exception("Missing object key", first_value($keyandval[0]));
                                 }
                                 // check objective key (e.g. {[1]: 123})
-                                if (($k = array_find($keyandval[0], 'is_object')) !== false) {
+                                if (($k = array_find_first($keyandval[0], fn($v) => $v instanceof $this)) !== null) {
                                     throw $this->exception("Unexpected object key", $keyandval[0][$k]);
                                 }
                                 // check consecutive objective value (e.g. {k: 123 [1]})
-                                if (!(count($keyandval[1]) === 1 && count(array_filter($keyandval[1], 'is_object')) === 1 || count(array_filter($keyandval[1], 'is_array')) === count($keyandval[1]))) {
+                                if (!(count($keyandval[1]) === 1 && count(array_filter($keyandval[1], fn($v) => $v instanceof $this)) === 1 || count(array_filter($keyandval[1], fn($v) => !$v instanceof $this)) === count($keyandval[1]))) {
                                     throw $this->exception("Unexpected object value", $token);
                                 }
                                 $key = first_value($keyandval[0]);
                                 $lastkey = last_value($keyandval[0]);
                                 $val = first_value($keyandval[1]);
                                 $lastval = last_value($keyandval[1]);
-                                if (!is_object($val)) {
-                                    $val = $this->token('value', $val[3], $lastval[3] + strlen($lastval[1]));
+                                if (!$val instanceof $this) {
+                                    $val = $this->token('value', $val->pos, $lastval->pos + strlen($lastval->text));
                                 }
-                                $object->append($this->token('key', $key[3], $lastkey[3] + strlen($lastkey[1])), $val);
+                                $object->append($this->token('key', $key->pos, $lastkey->pos + strlen($lastkey->text)), $val);
                             }
                             $tokens[$brace] = $object;
                         }
-                        if ($token[1] === ']') {
-                            $array = $this->token('array', $tokens[$brace][3], $token[3] + strlen($token[1]));
+                        if ($token->text === ']') {
+                            $array = $this->token('array', $tokens[$brace]->pos, $token->pos + strlen($token->text));
                             foreach ($elements as $element) {
                                 // check consecutive objective value (e.g. [123 [1]])
-                                if (!(count($element) === 1 && count(array_filter($element, 'is_object')) === 1 || count(array_filter($element, 'is_array')) === count($element))) {
+                                if (!(count($element) === 1 && count(array_filter($element, fn($v) => $v instanceof $this)) === 1 || count(array_filter($element, fn($v) => !$v instanceof $this)) === count($element))) {
                                     throw $this->exception("Unexpected array value", $token);
                                 }
                                 $val = first_value($element);
                                 $lastval = last_value($element);
-                                if (!is_object($val)) {
-                                    $val = $this->token('value', $val[3], $lastval[3] + strlen($lastval[1]));
+                                if (!$val instanceof $this) {
+                                    $val = $this->token('value', $val->pos, $lastval->pos + strlen($lastval->text));
                                 }
                                 $array->append(null, $val);
                             }
@@ -10257,16 +10223,15 @@ if (!function_exists('ryunosuke\\DbMigration\\json_import')) {
 
             private function exception($message, $token)
             {
-                $line = $column = $word = null;
-                if (is_array($token)) {
-                    $line = $token[2];
-                    $column = $token[3] - strrpos($this->json_string, "\n", $token[3] - strlen($this->json_string));
-                    $word = $token[1];
-                }
-                if (is_object($token)) {
+                if ($token instanceof $this) {
                     $line = substr_count($token->json_string, "\n", 0, $token->begin_position) + 1;
                     $column = $token->begin_position - strrpos($token->json_string, "\n", $token->begin_position - strlen($token->json_string));
                     $word = substr($token->json_string, $token->begin_position, $token->end_position - $token->begin_position);
+                }
+                else {
+                    $line = $token->line;
+                    $column = $token->pos - strrpos($this->json_string, "\n", $token->pos - strlen($this->json_string));
+                    $word = $token->text;
                 }
                 return new \ErrorException(sprintf("%s '%s' at line %d column %d of the JSON5 data", $message, $word, $line, $column));
             }
@@ -10567,7 +10532,7 @@ if (!function_exists('ryunosuke\\DbMigration\\markdown_table')) {
             'stringify' => fn($v) => var_pretty($v, ['return' => true, 'context' => $option['context'], 'table' => false]),
         ];
 
-        $stringify = fn($v) => strtr(trim(is_stringable($v) ? $v : $option['stringify']($v)), ["\t" => '    ']);
+        $stringify = fn($v) => strtr(trim((is_stringable($v) ? $v : $option['stringify']($v)) ?? ''), ["\t" => '    ']);
         $is_numeric = function ($v) {
             $v = trim($v);
             if (strlen($v) === 0) {
@@ -10685,7 +10650,7 @@ if (!function_exists('ryunosuke\\DbMigration\\paml_export')) {
                 $v = 'true';
             }
             elseif (is_string($v)) {
-                $v = '"' . addcslashes($v, "\"\0\\") . '"';
+                $v = str_quote($v);
             }
 
             if ($k === $n++) {
@@ -10778,7 +10743,7 @@ if (!function_exists('ryunosuke\\DbMigration\\paml_import')) {
             return $caches[$key] ??= paml_import($pamlstring, ['cache' => false] + $options);
         }
 
-        $resolve = function (&$value) use ($options) {
+        $resolve = function (&$value, $options) {
             $prefix = $value[0] ?? null;
             $suffix = $value[-1] ?? null;
 
@@ -10790,8 +10755,11 @@ if (!function_exists('ryunosuke\\DbMigration\\paml_import')) {
 
             if ($prefix === '"' && $suffix === '"') {
                 //$element = stripslashes(substr($element, 1, -1));
-                $value = json_decode($value);
-                return true;
+                $value2 = json_decode($value);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $value = $value2;
+                    return true;
+                }
             }
             if ($prefix === "'" && $suffix === "'") {
                 $value = substr($value, 1, -1);
@@ -10830,7 +10798,7 @@ if (!function_exists('ryunosuke\\DbMigration\\paml_import')) {
                         return true;
                     }
                 }
-                catch (\ParseError $e) {
+                catch (\ParseError) {
                 }
             }
 
@@ -10845,15 +10813,16 @@ if (!function_exists('ryunosuke\\DbMigration\\paml_import')) {
         $result = [];
         foreach ($values as $value) {
             $key = null;
-            if (!$resolve($value)) {
+            if (!$resolve($value, $options)) {
                 $kv = array_map('trim', quoteexplode(':', $value, 2, $options['escapers']));
                 if (count($kv) === 2) {
                     [$key, $value] = $kv;
-                    $resolve($value);
+                    $resolve($key, ['expression' => false] + $options);
+                    $resolve($value, $options);
                 }
             }
 
-            array_put($result, $value, $key);
+            array_set($result, $value, is_int($key) ? null : $key);
         }
         return $result;
     }
@@ -10972,7 +10941,7 @@ if (!function_exists('ryunosuke\\DbMigration\\date_convert')) {
         }
 
         if (!$return_object) {
-            $era = array_find(JP_ERA, function ($era) use ($timestamp) {
+            $era = array_find_first(JP_ERA, function ($era) use ($timestamp) {
                 if ($era['since'] <= $timestamp) {
                     $era['year'] = idate('Y', (int) $timestamp) - idate('Y', $era['since']) + 1;
                     $era['gann'] = $era['year'] === 1 ? '元' : $era['year'];
@@ -10980,10 +10949,10 @@ if (!function_exists('ryunosuke\\DbMigration\\date_convert')) {
                 }
             }, false);
             $format = strtr_escaped($format, [
-                'J' => fn() => $era ? $era['name'] : throws(new \InvalidArgumentException("notfound JP_ERA '$datetimedata'")),
-                'b' => fn() => $era ? $era['abbr'] : throws(new \InvalidArgumentException("notfound JP_ERA '$datetimedata'")),
-                'k' => fn() => $era ? $era['year'] : throws(new \InvalidArgumentException("notfound JP_ERA '$datetimedata'")),
-                'K' => fn() => $era ? $era['gann'] : throws(new \InvalidArgumentException("notfound JP_ERA '$datetimedata'")),
+                'J' => fn() => $era ? $era['name'] : throw new \InvalidArgumentException("notfound JP_ERA '$datetimedata'"),
+                'b' => fn() => $era ? $era['abbr'] : throw new \InvalidArgumentException("notfound JP_ERA '$datetimedata'"),
+                'k' => fn() => $era ? $era['year'] : throw new \InvalidArgumentException("notfound JP_ERA '$datetimedata'"),
+                'K' => fn() => $era ? $era['gann'] : throw new \InvalidArgumentException("notfound JP_ERA '$datetimedata'"),
                 'x' => fn() => ['日', '月', '火', '水', '木', '金', '土'][idate('w', (int) $timestamp)],
                 'Q' => fn() => idate('w', $timestamp) + intdiv(idate('j', $timestamp) - 1, 7) * 7,
             ], '\\');
@@ -11079,75 +11048,29 @@ if (!function_exists('ryunosuke\\DbMigration\\date_fromto')) {
 assert(!function_exists('ryunosuke\\DbMigration\\date_interval') || (new \ReflectionFunction('ryunosuke\\DbMigration\\date_interval'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\date_interval')) {
     /**
-     * 秒を世紀・年・月・日・時間・分・秒・ミリ秒の各要素に分解する
+     * ISO8601継続時間文字列を DateInterval に変換する
      *
-     * @memo $sec に P から始まる iso8601継続時間を渡すと DateInterval のパーサーとして働く。
-     * そのとき、各要素には負数を与えることができる。
-     *
-     * P で始まらない場合、秒の分解機能になる。
-     * 例えば `60 * 60 * 24 * 900 + 12345.678` （約900日12345秒）は・・・
-     *
-     * - 2 年（約900日なので）
-     * - 5 ヶ月（約(900 - 365 * 2 = 170)日なので）
-     * - 18 日（約(170 - 30.416 * 5 = 18)日なので）
-     * - 3 時間（約12345秒なので）
-     * - 25 分（約(12345 - 3600 * 3 = 1545)秒なので）
-     * - 45 秒（約(1545 - 60 * 25 = 45)秒なので）
-     * - 678 ミリ秒（.678 部分そのまま）
-     *
-     * となる（年はうるう年未考慮で365日、月は30.41666666日で換算）。
-     *
-     * $format を与えると DateInterval::format して文字列で返す。与えないと DateInterval をそのまま返す。
-     * $format はクロージャを与えることができる。クロージャを与えた場合、各要素を引数としてコールバックされる。
-     * $format は配列で与えることができる。配列で与えた場合、 0 になる要素は省かれる。
-     * セパレータを与えたり、pre/suffix を与えたりできるが、難解なので省略する。
-     *
-     * $limit_type で換算のリミットを指定できる。例えば 'y' を指定すると「2年5ヶ月」となるが、 'm' を指定すると「29ヶ月」となる。
-     * 数値を与えるとその範囲でオートスケールする。例えば 3 を指定すると値が大きいとき `ymd` の表示になり、年が 0 になると `mdh` の表示に切り替わるようになる。
+     * 各要素には負数を与えることができる。
+     * 秒にはミリ秒を与えることもできる。
      *
      * Example:
      * ```php
-     * // 書式文字列指定（%vはミリ秒）
-     * that(date_interval(60 * 60 * 24 * 900 + 12345.678, '%Y/%M/%D %H:%I:%S.%v'))->isSame('02/05/18 03:25:45.678');
-     *
-     * // 書式にクロージャを与えるとコールバックされる（引数はスケールの小さい方から）
-     * that(date_interval(60 * 60 * 24 * 900 + 12345.678, fn() => implode(',', func_get_args())))->isSame('678,45,25,3,18,5,2,0');
-     *
-     * // リミットを指定（month までしか計算しないので year は 0 になり month は 29になる）
-     * that(date_interval(60 * 60 * 24 * 900 + 12345.678, '%Y/%M/%D %H:%I:%S.%v', 'm'))->isSame('00/29/18 03:25:45.678');
-     *
-     * // 書式に配列を与えてリミットに数値を与えるとその範囲でオートスケールする
-     * $format = [
-     *     'y' => '%y年',
-     *     'm' => '%mヶ月',
-     *     'd' => '%d日',
-     *     ' ',
-     *     'h' => '%h時間',
-     *     'i' => '%i分',
-     *     's' => '%s秒',
-     * ];
-     * // 数が大きいので年・月・日の3要素のみ
-     * that(date_interval(60 * 60 * 24 * 900 + 12345, $format, 3))->isSame('2年5ヶ月18日');
-     * // 数がそこそこだと日・時間・分の3要素に切り替わる
-     * that(date_interval(60 * 60 * 24 * 20 + 12345, $format, 3))->isSame('20日 3時間25分');
-     * // どんなに数が小さくても3要素以下にはならない
-     * that(date_interval(1234, $format, 3))->isSame('0時間20分34秒');
-     *
-     * // 書式指定なし（DateInterval を返す）
-     * that(date_interval(123.456))->isInstanceOf(\DateInterval::class);
+     * // 普通のISO8601継続時間
+     * that(date_interval('P1Y2M3DT4H5M6S'))->format('%R%Y-%M-%DT%H:%I:%S.%f')->is('+01-02-03T04:05:06.0');
+     * // 負数が使える
+     * that(date_interval('P1Y2M3DT4H5M-6S'))->format('%R%Y-%M-%DT%H:%I:%S.%f')->is('+01-02-03T04:05:-6.0');
+     * // ミリ秒が使える
+     * that(date_interval('P1Y2M3DT4H5M6.789S'))->format('%R%Y-%M-%DT%H:%I:%S.%f')->is('+01-02-03T04:05:06.788999');
      * ```
      *
      * @package ryunosuke\Functions\Package\datetime
      *
-     * @param int|float|string $sec タイムスタンプ|ISO8601継続時間文字列
-     * @param string|array|null $format 時刻フォーマット
-     * @param string|int $limit_type どこまで換算するか（[c|y|m|d|h|i|s]）
-     * @return string|\DateInterval 時間差文字列 or DateInterval オブジェクト
+     * @param string $interval ISO8601継続時間文字列か相対表記
+     * @return \DateInterval DateInterval オブジェクト
      */
-    function date_interval($sec, $format = null, $limit_type = 'y')
+    function date_interval($interval)
     {
-        // for compatible
-        if (is_string($sec) && preg_match('#^(?P<S>[\-+])?P((?P<Y>-?\d+)Y)?((?P<M>-?\d+)M)?((?P<D>-?\d+)D)?(T((?P<h>-?\d+)H)?((?P<m>-?\d+)M)?((?P<s>-?\d+(\.\d+)?)S)?)?$#', $sec, $matches, PREG_UNMATCHED_AS_NULL)) {
+        if (preg_match('#^(?P<S>[\-+])?P((?P<Y>-?\d+)Y)?((?P<M>-?\d+)M)?((?P<D>-?\d+)D)?(T((?P<h>-?\d+)H)?((?P<m>-?\d+)M)?((?P<s>-?\d+(\.\d+)?)S)?)?$#', $interval, $matches, PREG_UNMATCHED_AS_NULL)) {
             $interval = new \DateInterval('P0Y');
             $interval->y = (int) $matches['Y'];
             $interval->m = (int) $matches['M'];
@@ -11166,155 +11089,33 @@ if (!function_exists('ryunosuke\\DbMigration\\date_interval')) {
                 $interval->s = -$interval->s;
                 $interval->f = -$interval->f;
             }
-
-            $now = new \DateTimeImmutable();
-            if ($now > $now->add($interval)) {
-                $interval->invert = 1;
-                $interval->y = -$interval->y;
-                $interval->m = -$interval->m;
-                $interval->d = -$interval->d;
-                $interval->h = -$interval->h;
-                $interval->i = -$interval->i;
-                $interval->s = -$interval->s;
-                $interval->f = -$interval->f;
-            }
-            return $interval;
-        }
-
-        $ymdhisv = ['c', 'y', 'm', 'd', 'h', 'i', 's', 'v'];
-        $map = ['c' => 7, 'y' => 6, 'm' => 5, 'd' => 4, 'h' => 3, 'i' => 2, 's' => 1];
-        if (ctype_digit("$limit_type")) {
-            $limit = $map['c'];
-            $limit_type = (int) $limit_type;
-            if (!is_array($format) && !is_null($format)) {
-                throw new \UnexpectedValueException('$format must be array if $limit_type is digit.');
-            }
         }
         else {
-            $limit = $map[$limit_type] ?? throws(new \InvalidArgumentException("limit_type:$limit_type is undefined."));
-        }
-
-        // 各単位を導出
-        $mills = $sec * 1000;
-        $seconds = $sec;
-        $minutes = $seconds / 60;
-        $hours = $minutes / 60;
-        $days = $hours / 24;
-        $months = $days / (365 / 12);
-        $years = $days / 365;
-        $centurys = $years / 100;
-
-        // $limit に従って値を切り捨てて DateInterval を作成
-        $interval = new \DateInterval('PT1S');
-        $interval->c = $limit < $map['c'] ? 0 : (int) $centurys % 1000;
-        $interval->y = $limit < $map['y'] ? 0 : (int) ($limit === $map['y'] ? $years : (int) $years % 100);
-        $interval->m = $limit < $map['m'] ? 0 : (int) ($limit === $map['m'] ? $months : (int) $months % 12);
-        $interval->d = $limit < $map['d'] ? 0 : (int) ($limit === $map['d'] ? $days : (int) ((int) ($days * 100000000) % (int) (365 / 12 * 100000000) / 100000000));
-        $interval->h = $limit < $map['h'] ? 0 : (int) ($limit === $map['h'] ? $hours : (int) $hours % 24);
-        $interval->i = $limit < $map['i'] ? 0 : (int) ($limit === $map['i'] ? $minutes : (int) $minutes % 60);
-        $interval->s = $limit < $map['s'] ? 0 : (int) ($limit === $map['s'] ? $seconds : (int) $seconds % 60);
-        $interval->v = $mills % 1000;
-
-        // null は DateInterval をそのまま返す
-        if ($format === null) {
-            return $interval;
-        }
-
-        // クロージャはコールバックする
-        if ($format instanceof \Closure) {
-            return $format($interval->v, $interval->s, $interval->i, $interval->h, $interval->d, $interval->m, $interval->y, $interval->c);
-        }
-
-        // 配列はいろいろとフィルタする
-        if (is_array($format)) {
-            // 数値ならその範囲でオートスケール
-            if (is_int($limit_type)) {
-                // 配列を回して値があるやつ + $limit_type の範囲とする
-                foreach ($ymdhisv as $n => $key) {
-                    // 最低 $limit_type は保持するために isset する
-                    if ($interval->$key > 0 || !isset($ymdhisv[$n + $limit_type + 1])) {
-                        $pos = [];
-                        for ($i = 0; $i < $limit_type; $i++) {
-                            if (isset($ymdhisv[$n + $i])) {
-                                if (($p = array_pos_key($format, $ymdhisv[$n + $i], -1)) >= 0) {
-                                    $pos[] = $p;
-                                }
-                            }
-                        }
-                        if (!$pos) {
-                            throw new \UnexpectedValueException('$format is empty.');
-                        }
-                        // 順不同なので min/max から slice しなければならない
-                        $min = min($pos);
-                        $max = max($pos);
-                        $format = array_slice($format, $min, $max - $min + 1);
-                        break;
-                    }
-                }
+            $parsed = date_parse($interval);
+            if ($parsed['errors'] || !$parsed['relative']) {
+                throw new \InvalidArgumentException("$interval is invalid DateInterval string");
             }
-
-            // 来ている $format を正規化（日時文字列は配列にするかつ値がないならフィルタ）
-            $tmp = [];
-            foreach ($format as $key => $fmt) {
-                if (isset($interval->$key)) {
-                    if (!is_int($limit_type) && $interval->$key === 0) {
-                        $tmp[] = ['', '', ''];
-                        continue;
-                    }
-                    $fmt = arrayize($fmt);
-                    $fmt = switchs(count($fmt), [
-                        1 => static fn() => ['', $fmt[0], ''],
-                        2 => static fn() => ['', $fmt[0], $fmt[1]],
-                        3 => static fn() => array_values($fmt),
-                    ]);
-                }
-                $tmp[] = $fmt;
-            }
-            // さらに前後の値がないならフィルタ
-            $tmp2 = [];
-            foreach ($tmp as $n => $fmt) {
-                $prevempty = true;
-                for ($i = $n - 1; $i >= 0; $i--) {
-                    if (!is_array($tmp[$i])) {
-                        break;
-                    }
-                    if (strlen($tmp[$i][1])) {
-                        $prevempty = false;
-                        break;
-                    }
-                }
-                $nextempty = true;
-                for ($i = $n + 1, $l = count($tmp); $i < $l; $i++) {
-                    if (!is_array($tmp[$i])) {
-                        break;
-                    }
-                    if (strlen($tmp[$i][1])) {
-                        $nextempty = false;
-                        break;
-                    }
-                }
-
-                if (is_array($fmt)) {
-                    if ($prevempty) {
-                        $fmt[0] = '';
-                    }
-                    if ($nextempty) {
-                        $fmt[2] = '';
-                    }
-                }
-                elseif ($prevempty || $nextempty) {
-                    $fmt = '';
-                }
-                $tmp2 = array_merge($tmp2, arrayize($fmt));
-            }
-            $format = implode('', $tmp2);
+            $interval = new \DateInterval('P0Y');
+            $interval->y = $parsed['relative']['year'];
+            $interval->m = $parsed['relative']['month'];
+            $interval->d = $parsed['relative']['day'];
+            $interval->h = $parsed['relative']['hour'];
+            $interval->i = $parsed['relative']['minute'];
+            $interval->s = $parsed['relative']['second'];
         }
 
-        $format = strtr_escaped($format, [
-            '%c' => $interval->c,
-            '%v' => $interval->v,
-        ], '%');
-        return $interval->format($format);
+        $now = new \DateTimeImmutable();
+        if ($now > $now->add($interval)) {
+            $interval->invert = 1;
+            $interval->y = -$interval->y;
+            $interval->m = -$interval->m;
+            $interval->d = -$interval->d;
+            $interval->h = -$interval->h;
+            $interval->i = -$interval->i;
+            $interval->s = -$interval->s;
+            $interval->f = -$interval->f;
+        }
+        return $interval;
     }
 }
 
@@ -11364,6 +11165,205 @@ if (!function_exists('ryunosuke\\DbMigration\\date_interval_second')) {
         $difftime = $datetime->add($interval);
 
         return date_timestamp($difftime) - date_timestamp($datetime);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\date_interval_string') || (new \ReflectionFunction('ryunosuke\\DbMigration\\date_interval_string'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\date_interval_string')) {
+    /**
+     * 秒を世紀・年・月・日・時間・分・秒・ミリ秒の各要素に分解する
+     *
+     * 例えば `60 * 60 * 24 * 900 + 12345.678` （約900日12345秒）は・・・
+     *
+     * - 2 年（約900日なので）
+     * - 5 ヶ月（約(900 - 365 * 2 = 170)日なので）
+     * - 18 日（約(170 - 30.416 * 5 = 18)日なので）
+     * - 3 時間（約12345秒なので）
+     * - 25 分（約(12345 - 3600 * 3 = 1545)秒なので）
+     * - 45 秒（約(1545 - 60 * 25 = 45)秒なので）
+     * - 678 ミリ秒（.678 部分そのまま）
+     *
+     * となる（年はうるう年未考慮で365日、月は30.41666666日で換算）。
+     *
+     * $format を与えると DateInterval::format して文字列で返す。与えないと DateInterval をそのまま返す。
+     * $format はクロージャを与えることができる。クロージャを与えた場合、各要素を引数としてコールバックされる。
+     * $format は配列で与えることができる。配列で与えた場合、 0 になる要素は省かれる。
+     * セパレータを与えたり、pre/suffix を与えたりできるが、難解なので省略する。
+     *
+     * $limit_type で換算のリミットを指定できる。例えば 'y' を指定すると「2年5ヶ月」となるが、 'm' を指定すると「29ヶ月」となる。
+     * 数値を与えるとその範囲でオートスケールする。例えば 3 を指定すると値が大きいとき `ymd` の表示になり、年が 0 になると `mdh` の表示に切り替わるようになる。
+     *
+     * Example:
+     * ```php
+     * // 書式文字列指定（%vはミリ秒）
+     * that(date_interval_string(60 * 60 * 24 * 900 + 12345.678, '%Y/%M/%D %H:%I:%S.%v'))->isSame('02/05/18 03:25:45.678');
+     *
+     * // 書式にクロージャを与えるとコールバックされる（引数はスケールの小さい方から）
+     * that(date_interval_string(60 * 60 * 24 * 900 + 12345.678, fn() => implode(',', func_get_args())))->isSame('678,45,25,3,18,5,2,0');
+     *
+     * // リミットを指定（month までしか計算しないので year は 0 になり month は 29になる）
+     * that(date_interval_string(60 * 60 * 24 * 900 + 12345.678, '%Y/%M/%D %H:%I:%S.%v', 'm'))->isSame('00/29/18 03:25:45.678');
+     *
+     * // 書式に配列を与えてリミットに数値を与えるとその範囲でオートスケールする
+     * $format = [
+     *     'y' => '%y年',
+     *     'm' => '%mヶ月',
+     *     'd' => '%d日',
+     *     ' ',
+     *     'h' => '%h時間',
+     *     'i' => '%i分',
+     *     's' => '%s秒',
+     * ];
+     * // 数が大きいので年・月・日の3要素のみ
+     * that(date_interval_string(60 * 60 * 24 * 900 + 12345, $format, 3))->isSame('2年5ヶ月18日');
+     * // 数がそこそこだと日・時間・分の3要素に切り替わる
+     * that(date_interval_string(60 * 60 * 24 * 20 + 12345, $format, 3))->isSame('20日 3時間25分');
+     * // どんなに数が小さくても3要素以下にはならない
+     * that(date_interval_string(1234, $format, 3))->isSame('0時間20分34秒');
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\datetime
+     *
+     * @param \DateInterval|string|float|int $interval DateInterval インスタンスか間隔を表す ISO8601 文字列
+     * @param string|array|\Closure $format 時刻フォーマット
+     * @param string|int $limit_type どこまで換算するか（[c|y|m|d|h|i|s]）
+     * @return string|\DateInterval 時間差文字列
+     */
+    function date_interval_string($interval, $format = null, $limit_type = 'y')
+    {
+        $ymdhisv = ['c', 'y', 'm', 'd', 'h', 'i', 's', 'v'];
+        $map = ['c' => 7, 'y' => 6, 'm' => 5, 'd' => 4, 'h' => 3, 'i' => 2, 's' => 1];
+        if (ctype_digit("$limit_type")) {
+            $limit = $map['c'];
+            $limit_type = (int) $limit_type;
+            if (!is_array($format)) {
+                throw new \UnexpectedValueException('$format must be array if $limit_type is digit.');
+            }
+        }
+        else {
+            $limit = $map[$limit_type] ?? throw new \InvalidArgumentException("limit_type:$limit_type is undefined.");
+        }
+
+        $sec = date_interval_second($interval);
+
+        // 各単位を導出
+        $mills = $sec * 1000;
+        $seconds = $sec;
+        $minutes = $seconds / 60;
+        $hours = $minutes / 60;
+        $days = $hours / 24;
+        $months = $days / (365 / 12);
+        $years = $days / 365;
+        $centurys = $years / 100;
+
+        // $limit に従って値を切り捨てて DateInterval を作成
+        // 「以下に示すプロパティが使えるかどうかは、 PHP のバージョンに依存します。 そして、readonly と見なすべきです」
+        // とのことで、今は動いているけどいずれ使えなくなると思う
+        $interval = new #[\AllowDynamicProperties] class ( 'PT1S' ) extends \DateInterval { };
+        $interval->c = $limit < $map['c'] ? 0 : (int) $centurys % 1000;
+        $interval->y = $limit < $map['y'] ? 0 : (int) ($limit === $map['y'] ? $years : (int) $years % 100);
+        $interval->m = $limit < $map['m'] ? 0 : (int) ($limit === $map['m'] ? $months : (int) $months % 12);
+        $interval->d = $limit < $map['d'] ? 0 : (int) ($limit === $map['d'] ? $days : (int) ((int) ($days * 100000000) % (int) (365 / 12 * 100000000) / 100000000));
+        $interval->h = $limit < $map['h'] ? 0 : (int) ($limit === $map['h'] ? $hours : (int) $hours % 24);
+        $interval->i = $limit < $map['i'] ? 0 : (int) ($limit === $map['i'] ? $minutes : (int) $minutes % 60);
+        $interval->s = $limit < $map['s'] ? 0 : (int) ($limit === $map['s'] ? $seconds : (int) $seconds % 60);
+        $interval->v = $mills % 1000;
+
+        // クロージャはコールバックする
+        if ($format instanceof \Closure) {
+            return $format($interval->v, $interval->s, $interval->i, $interval->h, $interval->d, $interval->m, $interval->y, $interval->c);
+        }
+
+        // 配列はいろいろとフィルタする
+        if (is_array($format)) {
+            // 数値ならその範囲でオートスケール
+            if (is_int($limit_type)) {
+                // 配列を回して値があるやつ + $limit_type の範囲とする
+                foreach ($ymdhisv as $n => $key) {
+                    // 最低 $limit_type は保持するために isset する
+                    if ($interval->$key > 0 || !isset($ymdhisv[$n + $limit_type + 1])) {
+                        $pos = [];
+                        for ($i = 0; $i < $limit_type; $i++) {
+                            if (isset($ymdhisv[$n + $i])) {
+                                if (($p = array_pos_key($format, $ymdhisv[$n + $i], -1)) >= 0) {
+                                    $pos[] = $p;
+                                }
+                            }
+                        }
+                        if (!$pos) {
+                            throw new \UnexpectedValueException('$format is empty.');
+                        }
+                        // 順不同なので min/max から slice しなければならない
+                        $min = min($pos);
+                        $max = max($pos);
+                        $format = array_slice($format, $min, $max - $min + 1);
+                        break;
+                    }
+                }
+            }
+
+            // 来ている $format を正規化（日時文字列は配列にするかつ値がないならフィルタ）
+            $tmp = [];
+            foreach ($format as $key => $fmt) {
+                if (isset($interval->$key)) {
+                    if (!is_int($limit_type) && $interval->$key === 0) {
+                        $tmp[] = ['', '', ''];
+                        continue;
+                    }
+                    $fmt = arrayize($fmt);
+                    $fmt = match (count($fmt)) {
+                        1 => ['', $fmt[0], ''],
+                        2 => ['', $fmt[0], $fmt[1]],
+                        3 => array_values($fmt),
+                    };
+                }
+                $tmp[] = $fmt;
+            }
+            // さらに前後の値がないならフィルタ
+            $tmp2 = [];
+            foreach ($tmp as $n => $fmt) {
+                $prevempty = true;
+                for ($i = $n - 1; $i >= 0; $i--) {
+                    if (!is_array($tmp[$i])) {
+                        break;
+                    }
+                    if (strlen($tmp[$i][1])) {
+                        $prevempty = false;
+                        break;
+                    }
+                }
+                $nextempty = true;
+                for ($i = $n + 1, $l = count($tmp); $i < $l; $i++) {
+                    if (!is_array($tmp[$i])) {
+                        break;
+                    }
+                    if (strlen($tmp[$i][1])) {
+                        $nextempty = false;
+                        break;
+                    }
+                }
+
+                if (is_array($fmt)) {
+                    if ($prevempty) {
+                        $fmt[0] = '';
+                    }
+                    if ($nextempty) {
+                        $fmt[2] = '';
+                    }
+                }
+                elseif ($prevempty || $nextempty) {
+                    $fmt = '';
+                }
+                $tmp2 = array_merge($tmp2, arrayize($fmt));
+            }
+            $format = implode('', $tmp2);
+        }
+
+        $format = strtr_escaped($format, [
+            '%c' => $interval->c,
+            '%v' => $interval->v,
+        ], '%');
+        return $interval->format($format);
     }
 }
 
@@ -11498,15 +11498,15 @@ if (!function_exists('ryunosuke\\DbMigration\\date_match')) {
         $matches = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
 
         // 週の特殊処理
-        $matches['W'] = preg_replace_callback("!$dayofweek_pattern!u", fn($m) => $reverse_dayofweek[$m[0]], $matches['W']);
+        $matches['W'] = preg_replace_callback("!$dayofweek_pattern!u", fn($m) => $reverse_dayofweek[$m[0]], $matches['W'] ?? '');
 
         foreach ($matches as $key => &$match) {
             // 9, L 等の特殊処理
             if ($key === 'D') {
-                $match = preg_replace('!(L+|9{2,})!', $lastday, $match);
+                $match = preg_replace('!(L+|9{2,})!', $lastday, $match ?? '');
             }
             else {
-                $match = preg_replace('!(L+|9+)!', 'LAST', $match);
+                $match = preg_replace('!(L+|9+)!', 'LAST', $match ?? '');
             }
 
             // 1-4 などを 1,2,3,4 に展開
@@ -11533,7 +11533,7 @@ if (!function_exists('ryunosuke\\DbMigration\\date_match')) {
                 return implode(',', range($n, 34, 7));
             }
             if ($w === 'LAST') {
-                $w = date('w', strtotime($firstdate));
+                $w = idate('w', strtotime($firstdate));
                 $lasts = array_map(fn($v) => ($v - 29 + $w) % 7, $lastweekdays);
                 return $n + (in_array($n, $lasts, true) ? 4 : 3) * 7;
             }
@@ -11881,7 +11881,7 @@ if (!function_exists('ryunosuke\\DbMigration\\date_timestamp')) {
             $jpnames = array_merge(array_column(JP_ERA, 'name'), array_column(JP_ERA, 'abbr'));
             $datetimedata = preg_replace_callback('/^(' . implode('|', $jpnames) . ')(\d{1,2}|元)/u', function ($matches) {
                 [, $era, $year] = $matches;
-                $eratime = array_find(JP_ERA, function ($v) use ($era) {
+                $eratime = array_find_first(JP_ERA, function ($v) use ($era) {
                     if (in_array($era, [$v['name'], $v['abbr']], true)) {
                         return $v['since'];
                     }
@@ -12273,6 +12273,178 @@ if (!function_exists('ryunosuke\\DbMigration\\error')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\set_all_error_handler') || (new \ReflectionFunction('ryunosuke\\DbMigration\\set_all_error_handler'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\set_all_error_handler')) {
+    /**
+     * あらゆるエラーをハンドルする
+     *
+     * 実質的には set_error_handler+set_exception_handler+register_shutdown_function してるだけ。
+     * あと小細工して初動エラーも拾うがあまり気にしなくてよい。
+     *
+     * ハンドラの引数は Throwable 固定（エラーの場合は Error に変換されてコールされる）。
+     * ハンドラが true/null を返すと設定前（ない場合は標準）のハンドラがコールされる。
+     * 実用上は「ログるかログらないか」くらいの差でしかない。
+     *
+     * @package ryunosuke\Functions\Package\errorfunc
+     * @codeCoverageIgnore カバレッジ不可
+     */
+    function set_all_error_handler(
+        /** 実行されるクロージャ */ \Closure $handler,
+        /** エラー抑制演算子をハンドリングするか */ bool $atmark_error = false,
+        /** fatal 用に予約するサイズ */ int $reserved_byte = 0,
+    ): /** キャンセルする callable */ callable
+    {
+        $result = new class($handler, $atmark_error, $reserved_byte) {
+            private static array  $instances         = [];
+            private static string $reservedMemory    = '';
+            private static bool   $regsteredShutdown = false;
+
+            private $handler;
+            private $error_handler;
+            private $exception_handler;
+
+            public function __construct(\Closure $handler, bool $atmark_error, int $reserved_byte)
+            {
+                self::$instances[spl_object_id($this)] = $this;
+                if (strlen(self::$reservedMemory) < $reserved_byte) {
+                    self::$reservedMemory = str_repeat('x', $reserved_byte);
+                }
+
+                $this->handler = $handler;
+
+                $this->error_handler = set_error_handler(function ($errno, $errstr, $errfile, $errline) use ($atmark_error) {
+                    if (!$atmark_error && !(error_reporting() & $errno)) {
+                        return false;
+                    }
+
+                    $default = ($this->handler)($this->newError($errstr, 0, $errno, $errfile, $errline)) ?? true;
+                    if ($default) {
+                        return ($this->error_handler)($errno, $errstr, $errfile, $errline);
+                    }
+                }) ?? fn() => false;
+
+                $this->exception_handler = set_exception_handler(function (\Throwable $t) {
+                    $default = ($this->handler)($t) ?? true;
+                    if ($default) {
+                        return ($this->exception_handler)($t);
+                    }
+                }) ?? fn($t) => throw $t;
+
+                if (!self::$regsteredShutdown) {
+                    self::$regsteredShutdown = true;
+                    register_shutdown_function(function () {
+                        self::$reservedMemory = '';
+                        // php は循環参照を片付けずに memory size エラーを飛ばすのでやっておく意味はある
+                        gc_collect_cycles();
+                        foreach (self::$instances as $instance) {
+                            // 通常の実行時エラーは set_error_handler でハンドリングされているが
+                            // - 実行時ではないコンパイル時エラー
+                            // - エラーハンドラが呼ばれない実行時エラー（実行メモリ/時間など）
+                            // が存在するので個別にハンドリングしないと呼ばれる機会が失われる
+                            if (($error = error_get_last()) !== null) {
+                                if (false
+                                    || in_array($error['type'], [E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_CORE_WARNING, E_COMPILE_WARNING], true)
+                                    || strpos($error['message'], 'Allowed memory size') === 0
+                                    || strpos($error['message'], 'Maximum execution time') === 0
+                                ) {
+                                    ($instance->handler)($instance->newError($error['message'], 1, $error['type'], $error['file'], $error['line']));
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            public function __invoke()
+            {
+                restore_error_handler();
+                restore_exception_handler();
+                unset(self::$instances[spl_object_id($this)]);
+            }
+
+            public function newError($message, $code, $errno, $errfile, $errline, $previous = null)
+            {
+                return new class($message, $code, $errno, $errfile, $errline, $previous) extends \Error {
+                    private int $severity;
+
+                    public function __construct($message, $code, $errno, $errfile, $errline, $previous)
+                    {
+                        parent::__construct($message, $code, $previous);
+
+                        $this->file = $errfile;
+                        $this->line = $errline;
+
+                        $this->severity = $errno;
+                    }
+
+                    public function getSeverity(): int
+                    {
+                        return $this->severity;
+                    }
+                };
+            }
+        };
+
+        // 初動エラーが error_get_last() で取得できることがある
+        if (($error = error_get_last()) !== null) {
+            // 初動エラーはスクリプト無関係なので line:0 で発生される
+            if ($error['line'] === 0) {
+                $handler($result->newError($error['message'], -1, $error['type'], $error['file'], $error['line']));
+                // 以後一度もエラーがないと shutdown で引っかかってしまう
+                error_clear_last();
+            }
+        }
+
+        return $result;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\set_error_exception_handler') || (new \ReflectionFunction('ryunosuke\\DbMigration\\set_error_exception_handler'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\set_error_exception_handler')) {
+    /**
+     * エラーを ErrorException に変換するハンドラを設定する
+     *
+     * かなり局所的だが、使用するケースは結構ある。
+     * 戻り値として callable を返すので、それを呼べば restore される。
+     * あるいは参照が切れれば RAII で restore される。
+     *
+     * Example:
+     * ```php
+     * // 呼ぶとエラーが例外に変換されるようになる
+     * $restore = set_error_exception_handler();
+     * try {
+     *     $array = [];
+     *     $dummy = $array['undefined'];
+     * }
+     * catch (\Throwable $t) {
+     *     // undefined 例外が飛ぶ
+     *     that($t)->isInstanceof(\ErrorException::class);
+     * }
+     * finally {
+     *     // こうするとハンドラが戻る
+     *     $restore();
+     * }
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\errorfunc
+     *
+     * @param int $error_levels エラーレベル
+     * @param bool $handle_atmark_error エラー抑制時もハンドリングするか
+     * @return callable restore するコールバック
+     */
+    function set_error_exception_handler($error_levels = \E_ALL, $handle_atmark_error = false)
+    {
+        set_error_handler(static function ($errno, $errstr, $errfile, $errline) use ($handle_atmark_error) {
+            if (!$handle_atmark_error && !(error_reporting() & $errno)) {
+                return false;
+            }
+            throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
+        }, $error_levels);
+
+        return finalize('restore_error_handler');
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\set_trace_logger') || (new \ReflectionFunction('ryunosuke\\DbMigration\\set_trace_logger'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\set_trace_logger')) {
     /**
@@ -12387,15 +12559,14 @@ if (!function_exists('ryunosuke\\DbMigration\\stacktrace')) {
                 // オブジェクトは単にプロパティを配列的に出力する
                 elseif (is_object($value)) {
                     $parents[] = $value;
-                    return get_class($value) . $export(get_object_properties($value), $nest, $parents);
+                    return get_class($value) . $export(object_properties($value), $nest, $parents);
                 }
-                // 文字列は改行削除
+                // 文字列はダブルクォート
                 elseif (is_string($value)) {
-                    $value = str_replace(["\r\n", "\r", "\n"], '\n', $value);
                     if (($strlen = strlen($value)) > $limit) {
                         $value = substr($value, 0, $limit) . sprintf('...(more %d length)', $strlen - $limit);
                     }
-                    return '"' . addcslashes($value, "\"\0\\") . '"';
+                    return str_quote($value);
                 }
                 // それ以外は stringify
                 else {
@@ -12642,19 +12813,19 @@ if (!function_exists('ryunosuke\\DbMigration\\process_async')) {
                 return $this->result = $this->status['exitcode'];
             }
 
-            public function setDestructAction($action)
+            public function setDestructAction($action): self
             {
                 $this->destructAction = $action;
                 return $this;
             }
 
-            public function setCompleteAction($action)
+            public function setCompleteAction($action): self
             {
                 $this->completeAction = $action;
                 return $this;
             }
 
-            public function update()
+            public function update(): bool
             {
                 if ($this->proc === null) {
                     return false;
@@ -12724,12 +12895,12 @@ if (!function_exists('ryunosuke\\DbMigration\\process_async')) {
                 return $this->status['running'];
             }
 
-            public function status()
+            public function status(): array
             {
                 return $this->status ?? proc_get_status($this->proc);
             }
 
-            public function terminate()
+            public function terminate(): bool
             {
                 if ($this->proc === null) {
                     return !$this->status['running'];
@@ -12808,7 +12979,6 @@ if (!function_exists('ryunosuke\\DbMigration\\process_closure')) {
     {
         static $storage = null;
         $storage ??= object_storage(__FUNCTION__);
-        /** @noinspection PhpIllegalArrayKeyTypeInspection */
         $closure_code = $storage[$closure] ??= var_export3($closure, true);
 
         $autoload = arrayize($autoload ?? array_merge([auto_loader()], function_configure('process.autoload')));
@@ -12829,7 +12999,22 @@ if (!function_exists('ryunosuke\\DbMigration\\process_closure')) {
         file_put_contents($mainscript = sys_get_temp_dir() . '/process-' . sha1($maincode) . '.php', $maincode);
 
         $return = tempnam($workdir, 'return');
-        $process = process_async(php_binary(), [$mainscript, $return], var_export3(arrayize($args), ["outmode" => "eval"]), $stdout, $stderr, $workdir, $env, $options);
+
+        $options ??= [];
+        $ini = arrayize($options['ini'] ?? []);
+        unset($options['ini']);
+
+        $ini_args = [];
+        foreach ($ini as $key => $value) {
+            if (is_int($key)) {
+                $ini_args[] = "-d$value";
+            }
+            else {
+                $ini_args[] = "-d$key=$value";
+            }
+        }
+
+        $process = process_async(php_binary(), [...$ini_args, $mainscript, $return], var_export3(arrayize($args), ["outmode" => "eval"]), $stdout, $stderr, $workdir, $env, $options);
         $process->setDestructAction('terminate');
         $process->setCompleteAction(function () use ($throw, $return) {
             /** @var $this \ProcessAsync */
@@ -13120,11 +13305,11 @@ if (!function_exists('ryunosuke\\DbMigration\\dir_diff')) {
         $differ = $options['differ'] ?? fn($file1, $file2) => file_equals($file1, $file2) ? null : "";
 
         $list1 = file_list($path1, $filter_condition);
-        if ($list1 === false) {
+        if ($list1 === null) {
             throw new \UnexpectedValueException("$path1 does not exists");
         }
         $list2 = file_list($path2, $filter_condition);
-        if ($list2 === false) {
+        if ($list2 === null) {
             $list2 = [];
         }
 
@@ -13237,7 +13422,7 @@ if (!function_exists('ryunosuke\\DbMigration\\dirname_r')) {
      *
      * @param string $path パス名
      * @param callable $callback コールバック
-     * @return mixed $callback の返り値。頂上まで辿ったら false
+     * @return mixed $callback の返り値。頂上まで辿ったら null
      */
     function dirname_r($path, $callback)
     {
@@ -13248,7 +13433,7 @@ if (!function_exists('ryunosuke\\DbMigration\\dirname_r')) {
 
         $dirname = dirname($path);
         if ($dirname === $path) {
-            return false;
+            return null;
         }
         return dirname_r($dirname, $callback);
     }
@@ -13491,7 +13676,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_list')) {
      *
      * @param string $dirname 調べるディレクトリ名
      * @param array $filter_condition フィルタ条件
-     * @return array|false ファイルの配列
+     * @return ?array ファイルの配列
      */
     function file_list($dirname, $filter_condition = [])
     {
@@ -13522,7 +13707,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_list')) {
         }
 
         if (!file_exists($dirname) || $dirname === dirname($dirname)) {
-            return false;
+            return null;
         }
 
         $match = file_matcher($filter_condition);
@@ -13779,7 +13964,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_matcher')) {
                 }
             }
             foreach (['contains' => false, '!contains' => true] as $key => $cond) {
-                if (isset($filter_condition[$key]) && (!file_exists($file->getPathname()) || $cond === (file_pos($file->getPathname(), $filter_condition[$key]) !== false))) {
+                if (isset($filter_condition[$key]) && (!file_exists($file->getPathname()) || $cond === (file_pos($file->getPathname(), $filter_condition[$key]) !== null))) {
                     return false;
                 }
             }
@@ -13863,7 +14048,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_pos')) {
      * // 2つ目の fuga の位置を返す
      * that(file_pos($testpath, 'fuga', 6))->is(15);
      * // 見つからない場合は false を返す
-     * that(file_pos($testpath, 'hogera'))->is(false);
+     * that(file_pos($testpath, 'hogera'))->is(null);
      * ```
      *
      * @package ryunosuke\Functions\Package\filesystem
@@ -13873,7 +14058,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_pos')) {
      * @param int $start 読み込み位置
      * @param int|null $end 読み込むまでの位置。省略時は指定なし（最後まで）。負数は後ろからのインデックス
      * @param int|null $chunksize 読み込みチャンクサイズ。省略時は 4096 の倍数に正規化
-     * @return int|false $needle の位置。見つからなかった場合は false
+     * @return ?int $needle の位置。見つからなかった場合は null
      */
     function file_pos($filename, $needle, $start = 0, $end = null, $chunksize = null)
     {
@@ -13921,7 +14106,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_pos')) {
                 }
                 $start += strlen($part);
             }
-            return false;
+            return null;
         }
         finally {
             fclose($fp);
@@ -13956,29 +14141,29 @@ if (!function_exists('ryunosuke\\DbMigration\\file_rewrite_contents')) {
         /** @var resource $fp */
         try {
             // 開いて
-            $fp = fopen($filename, 'c+b') ?: throws(new \UnexpectedValueException('failed to fopen.'));
+            $fp = fopen($filename, 'c+b') ?: throw new \UnexpectedValueException('failed to fopen.');
             if ($operation) {
-                flock($fp, $operation) ?: throws(new \UnexpectedValueException('failed to flock.'));
+                flock($fp, $operation) ?: throw new \UnexpectedValueException('failed to flock.');
             }
 
             // 読み込んで
-            rewind($fp) ?: throws(new \UnexpectedValueException('failed to rewind.'));
-            $contents = false !== ($t = stream_get_contents($fp)) ? $t : throws(new \UnexpectedValueException('failed to stream_get_contents.'));
+            rewind($fp) ?: throw new \UnexpectedValueException('failed to rewind.');
+            $contents = false !== ($t = stream_get_contents($fp)) ? $t : throw new \UnexpectedValueException('failed to stream_get_contents.');
 
             // 変更して
-            rewind($fp) ?: throws(new \UnexpectedValueException('failed to rewind.'));
-            ftruncate($fp, 0) ?: throws(new \UnexpectedValueException('failed to ftruncate.'));
+            rewind($fp) ?: throw new \UnexpectedValueException('failed to rewind.');
+            ftruncate($fp, 0) ?: throw new \UnexpectedValueException('failed to ftruncate.');
             $contents = $callback($contents, $fp);
 
             // 書き込んで
-            $return = ($r = fwrite($fp, $contents)) !== false ? $r : throws(new \UnexpectedValueException('failed to fwrite.'));
-            fflush($fp) ?: throws(new \UnexpectedValueException('failed to fflush.'));
+            $return = ($r = fwrite($fp, $contents)) !== false ? $r : throw new \UnexpectedValueException('failed to fwrite.');
+            fflush($fp) ?: throw new \UnexpectedValueException('failed to fflush.');
 
             // 閉じて
             if ($operation) {
-                flock($fp, LOCK_UN) ?: throws(new \UnexpectedValueException('failed to flock.'));
+                flock($fp, LOCK_UN) ?: throw new \UnexpectedValueException('failed to flock.');
             }
-            fclose($fp) ?: throws(new \UnexpectedValueException('failed to fclose.'));
+            fclose($fp) ?: throw new \UnexpectedValueException('failed to fclose.');
 
             // 返す
             return $return;
@@ -13992,6 +14177,142 @@ if (!function_exists('ryunosuke\\DbMigration\\file_rewrite_contents')) {
             }
             throw $ex;
         }
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\file_rotate') || (new \ReflectionFunction('ryunosuke\\DbMigration\\file_rotate'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\file_rotate')) {
+    /**
+     * ファイルをローテーションする
+     *
+     * オプションは logrotate に意図的に似せてある。
+     * 返り値としてローテーションファイル配列を返す。
+     * 基本的に決め打ちな使い方で細かいオプションは実装していない。
+     *
+     * Example:
+     * ```php
+     * // 適当にファイルを用意
+     * rm_rf(sys_get_temp_dir() . '/rotate');
+     * $logfile = sys_get_temp_dir() . '/rotate/log.txt';
+     * file_set_contents($logfile, '');
+     * // 5回ローテートしてみる
+     * foreach (range(1, 5) as $i) {
+     *     file_rotate($logfile, ifempty: true, rotate: 4, compress: 2, dateformat: "-$i"); // dateformat は普通は日付書式文字列（↓の確認がしんどくなるのでここでは連番）
+     * }
+     * // rotate:4 効果で全部で4世代であり、compress:2 効果でうち2世代は圧縮されている
+     * $dirname = dirname($logfile);
+     * that(glob("$dirname/log-*"))->is([
+     *     "$dirname/log-2.txt.gz",
+     *     "$dirname/log-3.txt.gz",
+     *     "$dirname/log-4.txt",
+     *     "$dirname/log-5.txt",
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\filesystem
+     */
+    function file_rotate(
+        /** 対象ファイル名 */ string $filename,
+        /** 空ファイルでもローテーションするか */ bool $ifempty = false,
+        /** 同じファイル（inode）を使い続けるか */ bool $copytruncate = false,
+        /** 既存ローテーションファイルに追記するか */ bool $append = false,
+        /** ローテーションファイルのディレクトリ */ ?string $olddir = null,
+        /** ローテーションファイルのサフィックス */ ?string $dateformat = null,
+        /** 保持世代数（null で無世代） */ ?int $rotate = null,
+        /** 圧縮世代数（例えば 3 を指定すると3世代目から圧縮される） */ ?int $compress = null,
+    ): /** ローテーションファイル配列 */ ?array
+    {
+        /// 共通処理
+
+        assert(!($copytruncate && $append), 'both $copytruncate and $append are true');
+        assert($rotate === null || $rotate >= 0, '$rotate is negative number');
+        assert($compress === null || $compress >= 0, '$compress is negative number');
+
+        $filename = realpath($filename);
+        $pathinfo = pathinfo($filename);
+
+        if ($filename === false) {
+            return null;
+        }
+        if (!$ifempty && !filesize($filename)) {
+            return null;
+        }
+
+        /// 世代ディレクトリ検出
+
+        $olddir ??= $pathinfo['dirname'];
+        if (!path_is_absolute($olddir)) {
+            $olddir = "{$pathinfo['dirname']}/$olddir";
+        }
+        if (!is_dir($olddir)) {
+            @mkdir($olddir, 0777, true);
+            if (is_dir($olddir) === false) {
+                throw new \RuntimeException("failed to mkdir($olddir)");
+            }
+        }
+
+        /// ローテーション
+
+        $oldfile = "$olddir/{$pathinfo['filename']}" . date($dateformat ?? '-Y-m-d', time()) . ".{$pathinfo['extension']}";
+        if ($copytruncate) {
+            if (@copy($filename, $oldfile) === false) {
+                throw new \RuntimeException("failed to copy($filename, $oldfile)");
+            }
+
+            file_put_contents($filename, "");
+        }
+        elseif ($append) {
+            if (@file_put_contents($oldfile, file_get_contents($filename), FILE_APPEND) === false) {
+                throw new \RuntimeException("failed to file_put_contents($oldfile, file_get_contents($filename), FILE_APPEND)");
+            }
+
+            file_put_contents($filename, "");
+        }
+        else {
+            if (@rename($filename, $oldfile) === false) {
+                throw new \RuntimeException("failed to rename($filename, $oldfile)");
+            }
+
+            file_put_contents($filename, "");
+            if (($perms = fileperms($oldfile)) !== false) {
+                chmod($filename, $perms);
+            }
+            if (($owner = fileowner($oldfile)) !== false) {
+                chown($filename, $owner);
+            }
+            if (($group = filegroup($oldfile)) !== false) {
+                chgrp($filename, $group);
+            }
+        }
+
+        /// 世代管理
+
+        $oldfiles = glob("$olddir/{$pathinfo['filename']}*");
+        $oldfiles = array_maps($oldfiles, 'realpath');
+        $oldfiles = array_diff($oldfiles, [$filename]);
+        rsort($oldfiles);
+
+        // 古い世代を削除
+        if ($rotate !== null) {
+            foreach (array_slice($oldfiles, $rotate, null, true) as $n => $file) {
+                if (unlink($file) !== false) {
+                    unset($oldfiles[$n]);
+                }
+            }
+        }
+
+        // 古い世代を圧縮
+        if ($compress !== null) {
+            foreach (array_slice($oldfiles, $compress, null, true) as $n => $file) {
+                if (pathinfo($file, PATHINFO_EXTENSION) !== 'gz') {
+                    if (file_put_contents("compress.zlib://$file.gz", file_get_contents($file)) !== false && unlink($file) !== false) {
+                        $oldfiles[$n] = "$file.gz";
+                    }
+                }
+            }
+        }
+
+        return $oldfiles;
     }
 }
 
@@ -14013,7 +14334,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_set_contents')) {
      * @param string $filename 書き込むファイル名
      * @param string $data 書き込む内容
      * @param int $umask ディレクトリを掘る際の umask
-     * @return int 書き込まれたバイト数
+     * @return ?int 書き込まれたバイト数
      */
     function file_set_contents($filename, $data, $umask = 0002)
     {
@@ -14034,16 +14355,16 @@ if (!function_exists('ryunosuke\\DbMigration\\file_set_contents')) {
         if (strpos(error_get_last()['message'] ?? '', "file created in the system's temporary directory") !== false) {
             $result = file_put_contents($filename, $data);
             @chmod($filename, 0666 & ~$umask);
-            return $result;
+            return $result === false ? null : $result;
         }
         if (($result = file_put_contents($tempnam, $data)) !== false) {
             if (rename($tempnam, $filename)) {
                 @chmod($filename, 0666 & ~$umask);
-                return $result;
+                return $result === false ? null : $result;
             }
             unlink($tempnam);
         }
-        return false;
+        return null;
     }
 }
 
@@ -14084,14 +14405,6 @@ if (!function_exists('ryunosuke\\DbMigration\\file_set_tree')) {
      */
     function file_set_tree($contents_tree, $umask = null)
     {
-        // for compatible
-        // @codeCoverageIgnoreStart
-        if (is_string($contents_tree)) {
-            $contents_tree = [$contents_tree => $umask];
-            $umask = func_get_args()[2] ?? null;
-        }
-        // @codeCoverageIgnoreEnd
-
         $umask ??= umask();
 
         $main = function ($contents_tree, $parent) use (&$main, $umask) {
@@ -14298,16 +14611,13 @@ if (!function_exists('ryunosuke\\DbMigration\\file_tree')) {
      *
      * @param string $dirname 調べるディレクトリ名
      * @param array $filter_condition フィルタ条件
-     * @return array|false ツリー構造の配列
+     * @return ?array ツリー構造の配列
      */
     function file_tree($dirname, $filter_condition = [])
     {
-        // for compatible in future scope
-        //return file_list($dirname, ['nesting' => true] + $filter_condition);
-
         $dirname = path_normalize($dirname);
         if (!file_exists($dirname)) {
-            return false;
+            return null;
         }
 
         $filter_condition += [
@@ -14318,7 +14628,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_tree')) {
         $basedir = basename($dirname);
 
         $result = [$basedir => []];
-        $items = iterator_to_array(new \FilesystemIterator($dirname, \FilesystemIterator::SKIP_DOTS || \FilesystemIterator::CURRENT_AS_SELF));
+        $items = iterator_to_array(new \FilesystemIterator($dirname, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_FILEINFO));
         usort($items, function (\SplFileInfo $a, \SplFileInfo $b) {
             if ($a->isDir() xor $b->isDir()) {
                 return $a->isDir() - $b->isDir();
@@ -14428,7 +14738,7 @@ if (!function_exists('ryunosuke\\DbMigration\\globstar')) {
      *
      * @param string $pattern glob パターン。** が使えること以外は glob と同じ
      * @param int $flags glob フラグ
-     * @return array|false マッチしたファイル名配列
+     * @return ?array マッチしたファイル名配列
      */
     function globstar($pattern, $flags = 0)
     {
@@ -14445,7 +14755,7 @@ if (!function_exists('ryunosuke\\DbMigration\\globstar')) {
         $result = glob($pattern, $flags);
 
         if (count($patterns) === 1) {
-            return $result;
+            return $result === false ? null : $result;
         }
 
         foreach (glob($patterns[0] . '*', $flags & ~GLOB_NOCHECK & ~GLOB_MARK | GLOB_ONLYDIR) as $dir) {
@@ -14490,160 +14800,6 @@ if (!function_exists('ryunosuke\\DbMigration\\mkdir_p')) {
         }
 
         return mkdir($dirname, 0777 & (~$umask), true);
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\path_info') || (new \ReflectionFunction('ryunosuke\\DbMigration\\path_info'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\path_info')) {
-    /**
-     * pathinfo に追加情報を加えて返す
-     *
-     * 追加される情報は下記。
-     * - drive: Windows 環境におけるドライブ文字
-     * - root: 絶対パスの場合はルートパス
-     * - parents: 正規化したディレクトリ名の配列
-     * - dirnames: ディレクトリ名の配列（余計なことはしない）
-     * - localname: 複数拡張子を考慮した本当のファイル名部分
-     * - localpath: ディレクトリ名（余計なことはしない）＋複数拡張子を考慮した本当のファイル名部分（フルパス - 拡張子）
-     * - extensions: 複数拡張子の配列（余計なことはしない）
-     *
-     * 「余計なことはしない」とは空文字をフィルタしたりパスを正規化したりを指す。
-     * 結果のキーはバージョンアップで増えることがある（その場合は互換性破壊とはみなさない）。
-     *
-     * なお、いわゆる URL はサポートしない（スキーム付きを与えた場合の挙動は未定義）。
-     *
-     * Example:
-     * ```php
-     * $DS = DIRECTORY_SEPARATOR;
-     * // 色々混ぜたサンプル
-     * that(path_info('C:/dir1/.././dir2/file.sjis..min.js'))->is([
-     *     "dirname"    => "C:/dir1/.././dir2",
-     *     "basename"   => "file.sjis..min.js",
-     *     "extension"  => "js",
-     *     "filename"   => "file.sjis..min",
-     *     // ここまでオリジナルの pathinfo 結果
-     *     "drive"      => "C:",
-     *     "root"       => "/",                          // 環境依存しない元のルートパス
-     *     "parents"    => ["dir2"],                     // 正規化されたディレクトリ配列
-     *     "dirnames"   => ["dir1", "..", ".", "dir2"],  // 余計なことをしていないディレクトリ配列
-     *     "localname"  => "file",                       // 複数拡張子を考慮した本当のファイル名部分
-     *     "localpath"  => "C:/dir1/.././dir2{$DS}file", // ↑にディレクトリ名を付与したもの
-     *     "extensions" => ["sjis", "", "min", "js"],    // 余計なことをしていない拡張子配列
-     * ]);
-     * // linux における絶対パス
-     * that(path_info('/dir1/dir2/file.sjis.min.js'))->is([
-     *     "dirname"    => "/dir1/dir2",
-     *     "basename"   => "file.sjis.min.js",
-     *     "extension"  => "js",
-     *     "filename"   => "file.sjis.min",
-     *     // ここまでオリジナルの pathinfo 結果
-     *     "drive"      => "",                    // 環境を問わず空
-     *     "root"       => "/",                   // 絶対パスなので "/"
-     *     "parents"    => ["dir1", "dir2"],      // ..等がないので dirnames と同じ
-     *     "dirnames"   => ["dir1", "dir2"],      // ディレクトリ配列
-     *     "localname"  => "file",
-     *     "localpath"  => "/dir1/dir2{$DS}file",
-     *     "extensions" => ["sjis", "min", "js"], // 余計なことをしていない拡張子配列
-     * ]);
-     * // linux における相対パス
-     * that(path_info('dir1/dir2/file.sjis.min.js'))->is([
-     *     "dirname"    => "dir1/dir2",
-     *     "basename"   => "file.sjis.min.js",
-     *     "extension"  => "js",
-     *     "filename"   => "file.sjis.min",
-     *     // ここまでオリジナルの pathinfo 結果
-     *     "drive"      => "",
-     *     "root"       => "",                    // 相対パスなので空（ここ以外は絶対パスと同じ）
-     *     "parents"    => ["dir1", "dir2"],
-     *     "dirnames"   => ["dir1", "dir2"],
-     *     "localname"  => "file",
-     *     "localpath"  => "dir1/dir2{$DS}file",
-     *     "extensions" => ["sjis", "min", "js"],
-     * ]);
-     * // ディレクトリ無し
-     * that(path_info('file.sjis.min.js'))->is([
-     *     "dirname"    => ".",
-     *     "basename"   => "file.sjis.min.js",
-     *     "extension"  => "js",
-     *     "filename"   => "file.sjis.min",
-     *     // ここまでオリジナルの pathinfo 結果
-     *     "drive"      => "",
-     *     "root"       => "",
-     *     "parents"    => [], // オリジナルの pathinfo のようにドットが紛れ込んだりはしない
-     *     "dirnames"   => [], // オリジナルの pathinfo のようにドットが紛れ込んだりはしない
-     *     "localname"  => "file",
-     *     "localpath"  => "file",
-     *     "extensions" => ["sjis", "min", "js"],
-     * ]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\filesystem
-     *
-     * @param string $path パス
-     * @return array パス情報
-     */
-    function path_info($path)
-    {
-        $DS = DIRECTORY_SEPARATOR === '\\' ? '\\/' : '/';
-
-        // キーが存在しないことがあるので順番も含めて正規化する
-        $pathinfo = array_replace([
-            'dirname'   => '',
-            'basename'  => '',
-            'extension' => '',
-            'filename'  => '',
-        ], pathinfo($path));
-
-        $result = $pathinfo;
-
-        // pathinfo の直感的でない挙動を補正する（dirname が . を返したり C:/ の結果が曖昧だったり）
-        if ($pathinfo['dirname'] === '.') {
-            $pathinfo['dirname'] = '';
-        }
-        if (DIRECTORY_SEPARATOR === '\\' && strlen(rtrim($path, '\\')) === 2) {
-            $pathinfo['basename'] = '';
-            $pathinfo['extension'] = '';
-            $pathinfo['filename'] = '';
-        }
-        $dirnames = preg_split("#([" . preg_quote($DS) . "]+)#u", $pathinfo['dirname'], -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-        $basenames = explode('.', $pathinfo['basename']);
-
-        $result['drive'] = '';
-        if (isset($dirnames[0]) && preg_match('#^[a-z]:$#ui', $dirnames[0])) {
-            $result['drive'] = array_shift($dirnames);
-        }
-
-        $result['root'] = '';
-        if (isset($dirnames[0]) && strpbrk($dirnames[0], $DS) !== false) {
-            $result['root'] = array_shift($dirnames);
-        }
-
-        $result['parents'] = array_reduce($dirnames, function ($carry, $dirname) use ($DS) {
-            if (strpbrk($dirname, $DS) !== false || $dirname === '.') {
-                return $carry;
-            }
-            if ($dirname === '..') {
-                return array_slice($carry, 0, -1);
-            }
-            else {
-                return array_merge($carry, [$dirname]);
-            }
-        }, []);
-
-        $result['dirnames'] = array_reduce($dirnames, function ($carry, $dirname) use ($DS) {
-            if (strpbrk($dirname, $DS) === false) {
-                return array_merge($carry, [$dirname]);
-            }
-            else {
-                return array_merge($carry, array_pad([], strlen($dirname) - 1, ''));
-            }
-        }, []);
-
-        $result['localname'] = array_shift($basenames);
-        $result['localpath'] = implode(DIRECTORY_SEPARATOR, array_filter([$pathinfo['dirname'], $result['localname']], 'strlen'));
-        $result['extensions'] = $basenames;
-
-        return $result;
     }
 }
 
@@ -14766,65 +14922,151 @@ if (!function_exists('ryunosuke\\DbMigration\\path_parse')) {
      * パスをパースする
      *
      * pathinfo の（ほぼ）上位互換で下記の差異がある。
+     * - drive: Windows 環境におけるドライブ文字
+     * - root: 絶対パスの場合はルートパス
+     * - parents: 正規化したディレクトリ名の配列
+     * - dirnames: ディレクトリ名の配列（余計なことはしない）
+     * - localname: 複数拡張子を考慮した本当のファイル名部分
+     * - localpath: ディレクトリ名（余計なことはしない）＋複数拡張子を考慮した本当のファイル名部分（フルパス - 拡張子）
+     * - extensions: 複数拡張子の配列（余計なことはしない）
      *
-     * - パスは正規化される
-     * - $flags 引数はない（指定した各部だけを返すことはできない）
-     * - 要素が未設定になることはない（例えば extension は拡張子がなくても明示的に null が入る）
+     * 「余計なことはしない」とは空文字をフィルタしたりパスを正規化したりを指す。
+     * 結果のキーはバージョンアップで増えることがある（その場合は互換性破壊とはみなさない）。
      *
-     * 更に独自で下記のキーを返す。
-     *
-     * - dirlocalname: 親ディレクトリと localname の結合（≒フルパスから複数拡張子を除いたもの）
-     * - localname: 複数拡張子を除いた filename
-     * - extensions: 複数拡張子を配列で返す（拡張子がない場合は空配列）
+     * なお、いわゆる URL はサポートしない（スキーム付きを与えた場合の挙動は未定義）。
      *
      * Example:
      * ```php
      * $DS = DIRECTORY_SEPARATOR;
-     * that(path_parse('/path/to/file.min.css'))->isSame([
-     *     'dirname'      => "{$DS}path{$DS}to",
-     *     'basename'     => "file.min.css",
-     *     'filename'     => "file.min",
-     *     'extension'    => "css",
-     *     // ここまでは（正規化はされるが） pathinfo と同じ
-     *     // ここからは独自のキー
-     *     'dirlocalname' => "{$DS}path{$DS}to{$DS}file",
-     *     'localname'    => "file",
-     *     'extensions'   => ["min", "css"],
+     * // 色々混ぜたサンプル
+     * that(path_parse('C:/dir1/.././dir2/file.sjis..min.js'))->is([
+     *     "dirname"    => "C:/dir1/.././dir2",
+     *     "basename"   => "file.sjis..min.js",
+     *     "extension"  => "js",
+     *     "filename"   => "file.sjis..min",
+     *     // ここまでオリジナルの pathinfo 結果
+     *     "drive"      => "C:",
+     *     "root"       => "/",                          // 環境依存しない元のルートパス
+     *     "parents"    => ["dir2"],                     // 正規化されたディレクトリ配列
+     *     "dirnames"   => ["dir1", "..", ".", "dir2"],  // 余計なことをしていないディレクトリ配列
+     *     "localname"  => "file",                       // 複数拡張子を考慮した本当のファイル名部分
+     *     "localpath"  => "C:/dir1/.././dir2{$DS}file", // ↑にディレクトリ名を付与したもの
+     *     "extensions" => ["sjis", "", "min", "js"],    // 余計なことをしていない拡張子配列
+     * ]);
+     * // linux における絶対パス
+     * that(path_parse('/dir1/dir2/file.sjis.min.js'))->is([
+     *     "dirname"    => "/dir1/dir2",
+     *     "basename"   => "file.sjis.min.js",
+     *     "extension"  => "js",
+     *     "filename"   => "file.sjis.min",
+     *     // ここまでオリジナルの pathinfo 結果
+     *     "drive"      => "",                    // 環境を問わず空
+     *     "root"       => "/",                   // 絶対パスなので "/"
+     *     "parents"    => ["dir1", "dir2"],      // ..等がないので dirnames と同じ
+     *     "dirnames"   => ["dir1", "dir2"],      // ディレクトリ配列
+     *     "localname"  => "file",
+     *     "localpath"  => "/dir1/dir2{$DS}file",
+     *     "extensions" => ["sjis", "min", "js"], // 余計なことをしていない拡張子配列
+     * ]);
+     * // linux における相対パス
+     * that(path_parse('dir1/dir2/file.sjis.min.js'))->is([
+     *     "dirname"    => "dir1/dir2",
+     *     "basename"   => "file.sjis.min.js",
+     *     "extension"  => "js",
+     *     "filename"   => "file.sjis.min",
+     *     // ここまでオリジナルの pathinfo 結果
+     *     "drive"      => "",
+     *     "root"       => "",                    // 相対パスなので空（ここ以外は絶対パスと同じ）
+     *     "parents"    => ["dir1", "dir2"],
+     *     "dirnames"   => ["dir1", "dir2"],
+     *     "localname"  => "file",
+     *     "localpath"  => "dir1/dir2{$DS}file",
+     *     "extensions" => ["sjis", "min", "js"],
+     * ]);
+     * // ディレクトリ無し
+     * that(path_parse('file.sjis.min.js'))->is([
+     *     "dirname"    => ".",
+     *     "basename"   => "file.sjis.min.js",
+     *     "extension"  => "js",
+     *     "filename"   => "file.sjis.min",
+     *     // ここまでオリジナルの pathinfo 結果
+     *     "drive"      => "",
+     *     "root"       => "",
+     *     "parents"    => [], // オリジナルの pathinfo のようにドットが紛れ込んだりはしない
+     *     "dirnames"   => [], // オリジナルの pathinfo のようにドットが紛れ込んだりはしない
+     *     "localname"  => "file",
+     *     "localpath"  => "file",
+     *     "extensions" => ["sjis", "min", "js"],
      * ]);
      * ```
      *
      * @package ryunosuke\Functions\Package\filesystem
      *
-     * @param string $path パス文字列
-     * @return array パスパーツ
+     * @param string $path パス
+     * @return array パス情報
      */
     function path_parse($path)
     {
-        // dirname や extension など、キーの有無が分岐するのは使いにくいことこの上ないのでまずすべて null で埋める
+        $DS = DIRECTORY_SEPARATOR === '\\' ? '\\/' : '/';
+
+        // キーが存在しないことがあるので順番も含めて正規化する
         $pathinfo = array_replace([
-            'dirname'   => null,
-            'basename'  => null,
-            'filename'  => null,
-            'extension' => null,
-        ], pathinfo(path_normalize($path)));
+            'dirname'   => '',
+            'basename'  => '',
+            'extension' => '',
+            'filename'  => '',
+        ], pathinfo($path));
 
-        $localname = $pathinfo['filename'];
-        $extensions = (array) $pathinfo['extension'];
+        $result = $pathinfo;
 
-        while ((($info = pathinfo($localname))['extension'] ?? null) !== null) {
-            $localname = $info['filename'];
-            array_unshift($extensions, $info['extension']);
+        // pathinfo の直感的でない挙動を補正する（dirname が . を返したり C:/ の結果が曖昧だったり）
+        if ($pathinfo['dirname'] === '.') {
+            $pathinfo['dirname'] = '';
+        }
+        if (DIRECTORY_SEPARATOR === '\\' && strlen(rtrim($path, '\\')) === 2) {
+            $pathinfo['basename'] = '';
+            $pathinfo['extension'] = '';
+            $pathinfo['filename'] = '';
+        }
+        $dirnames = preg_split("#([" . preg_quote($DS) . "]+)#u", $pathinfo['dirname'], -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $basenames = explode('.', $pathinfo['basename']);
+
+        $result['drive'] = '';
+        if (isset($dirnames[0]) && preg_match('#^[a-z]:$#ui', $dirnames[0])) {
+            $result['drive'] = array_shift($dirnames);
         }
 
-        return [
-            'dirname'      => path_normalize($pathinfo['dirname'] ?? ''),
-            'basename'     => $pathinfo['basename'],
-            'filename'     => $pathinfo['filename'],
-            'extension'    => $pathinfo['extension'],
-            'dirlocalname' => path_normalize(($pathinfo['dirname'] ?? '') . "/$localname"),
-            'localname'    => $localname,
-            'extensions'   => $extensions,
-        ];
+        $result['root'] = '';
+        if (isset($dirnames[0]) && strpbrk($dirnames[0], $DS) !== false) {
+            $result['root'] = array_shift($dirnames);
+        }
+
+        $result['parents'] = array_reduce($dirnames, function ($carry, $dirname) use ($DS) {
+            if (strpbrk($dirname, $DS) !== false || $dirname === '.') {
+                return $carry;
+            }
+            if ($dirname === '..') {
+                return array_slice($carry, 0, -1);
+            }
+            else {
+                return array_merge($carry, [$dirname]);
+            }
+        }, []);
+
+        $result['dirnames'] = array_reduce($dirnames, function ($carry, $dirname) use ($DS) {
+            if (strpbrk($dirname, $DS) === false) {
+                return array_merge($carry, [$dirname]);
+            }
+            else {
+                return array_merge($carry, array_pad([], strlen($dirname) - 1, ''));
+            }
+        }, []);
+
+        $result['localname'] = array_shift($basenames);
+        $result['localpath'] = implode(DIRECTORY_SEPARATOR, array_filter([$pathinfo['dirname'], $result['localname']], 'strlen'));
+        $result['extensions'] = $basenames;
+
+        return $result;
     }
 }
 
@@ -14853,8 +15095,8 @@ if (!function_exists('ryunosuke\\DbMigration\\path_relative')) {
     {
         $DS = DIRECTORY_SEPARATOR;
 
-        $fa = array_filter(explode($DS, path_resolve($from)), 'strlen');
-        $ta = array_filter(explode($DS, path_resolve($to)), 'strlen');
+        $fa = array_filter(explode($DS, path_resolve($from) ?? $from), 'strlen');
+        $ta = array_filter(explode($DS, path_resolve($to) ?? $to), 'strlen');
 
         $compare = fn($a, $b) => $DS === '\\' ? strcasecmp($a, $b) : strcmp($a, $b);
         $ca = array_udiff_assoc($fa, $ta, $compare);
@@ -14871,55 +15113,35 @@ if (!function_exists('ryunosuke\\DbMigration\\path_resolve')) {
      *
      * 可変引数で与えられた文字列群を結合して絶対パス化して返す。
      * 出来上がったパスが絶対パスでない場合は PATH 環境変数を使用して解決を試みる。
-     *
-     * 歴史的な理由により最後の引数を配列にするとその候補と PATH からの解決を試みる。
-     * 解決できなかった場合 null を返す。
-     * 配列を指定しなかった場合はカレントディレクトリを結合して返す。
+     * それでも絶対パスにできない場合は null を返す。
      *
      * Example:
      * ```php
      * $DS = DIRECTORY_SEPARATOR;
      * that(path_resolve('/absolute/path'))->isSame("{$DS}absolute{$DS}path");
-     * that(path_resolve('absolute/path'))->isSame(getcwd() . "{$DS}absolute{$DS}path");
      * that(path_resolve('/absolute/path/through', '../current/./path'))->isSame("{$DS}absolute{$DS}path{$DS}current{$DS}path");
-     *
-     * # 最後の引数に配列を与えるとそのパスと PATH から解決を試みる（要するに which 的な動作になる）
-     * if ($DS === '/') {
-     *     that(path_resolve('php', []))->isSame(PHP_BINARY);
-     * }
      * ```
      *
      * @package ryunosuke\Functions\Package\filesystem
      *
-     * @param string|array ...$paths パス文字列（可変引数）
+     * @param string ...$paths パス文字列（可変引数）
      * @return ?string 絶対パス
      */
     function path_resolve(...$paths)
     {
-        $resolver = [];
-        if (is_array($paths[count($paths) - 1] ?? '')) {
-            $resolver = array_pop($paths);
-            $resolver[] = getenv('PATH');
-        }
-
         $DS = DIRECTORY_SEPARATOR;
 
         $path = implode($DS, $paths);
 
         if (!path_is_absolute($path)) {
-            if ($resolver) {
-                foreach ($resolver as $p) {
-                    foreach (explode(PATH_SEPARATOR, $p) as $dir) {
-                        if (file_exists("$dir/$path")) {
-                            return path_normalize("$dir/$path");
-                        }
+            foreach ([getcwd(), getenv('PATH')] as $p) {
+                foreach (explode(PATH_SEPARATOR, $p) as $dir) {
+                    if (file_exists("$dir/$path")) {
+                        return path_normalize("$dir/$path");
                     }
                 }
-                return null;
             }
-            else {
-                $path = getcwd() . $DS . $path;
-            }
+            return null;
         }
 
         return path_normalize($path);
@@ -15387,7 +15609,7 @@ if (!function_exists('ryunosuke\\DbMigration\\rsync')) {
                 })($fullpath);
             }
 
-            private function format(string $mode, ?int $var): ?string
+            private function format(string $mode, null|int|float $var): ?string
             {
                 if ($var === null) {
                     return null;
@@ -15627,31 +15849,6 @@ if (!function_exists('ryunosuke\\DbMigration\\tmpname')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\abind') || (new \ReflectionFunction('ryunosuke\\DbMigration\\abind'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\abind')) {
-    /**
-     * $callable の引数を指定配列で束縛したクロージャを返す
-     *
-     * Example:
-     * ```php
-     * $bind = abind('sprintf', [1 => 'a', 3 => 'c']);
-     * that($bind('%s%s%s', 'b'))->isSame('abc');
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param callable $callable 対象 callable
-     * @param array $default_args 本来の引数
-     * @return callable 束縛したクロージャ
-     */
-    function abind($callable, $default_args)
-    {
-        return delegate(function ($callable, $args) use ($default_args) {
-            return $callable(...array_fill_gap($default_args, ...$args));
-        }, $callable, parameter_length($callable, true, true) - count($default_args));
-    }
-}
-
 assert(!function_exists('ryunosuke\\DbMigration\\by_builtin') || (new \ReflectionFunction('ryunosuke\\DbMigration\\by_builtin'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\by_builtin')) {
     /**
@@ -15712,45 +15909,6 @@ if (!function_exists('ryunosuke\\DbMigration\\by_builtin')) {
             $last = $trace;
         }
         throw new \RuntimeException('failed to search backtrace.');
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\call_safely') || (new \ReflectionFunction('ryunosuke\\DbMigration\\call_safely'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\call_safely')) {
-    /**
-     * エラーを例外に変換するブロックでコールバックを実行する
-     *
-     * Example:
-     * ```php
-     * try {
-     *     call_safely(fn() => []['dummy']);
-     * }
-     * catch (\Exception $ex) {
-     *     that($ex->getMessage())->containsAll(['Undefined', 'dummy']);
-     * }
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param callable $callback 実行するコールバック
-     * @param mixed ...$variadic $callback に渡される引数（可変引数）
-     * @return mixed $callback の返り値
-     */
-    function call_safely($callback, ...$variadic)
-    {
-        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-            if (!(error_reporting() & $errno)) {
-                return false;
-            }
-            throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
-        });
-
-        try {
-            return $callback(...$variadic);
-        }
-        finally {
-            restore_error_handler();
-        }
     }
 }
 
@@ -15879,9 +16037,7 @@ if (!function_exists('ryunosuke\\DbMigration\\chain')) {
                     return count($this());
                 }
 
-                /** @noinspection PhpLanguageLevelInspection */
-                #[\ReturnTypeWillChange]
-                public function jsonSerialize()
+                public function jsonSerialize(): mixed
                 {
                     return $this();
                 }
@@ -15895,7 +16051,7 @@ if (!function_exists('ryunosuke\\DbMigration\\chain')) {
                                 $offset = 0;
                                 $expr = array_pop($arguments);
                                 $expr = preg_match('#\$\d+#u', $expr) ? $expr : '$1 ' . $expr;
-                                $arguments[] = eval_func($expr, '_');
+                                $arguments[] = func_eval($expr, '_');
                             }
 
                             $this->data = $this->_apply($this->callback, $arguments, [$offset => $this->data]);
@@ -16026,252 +16182,11 @@ if (!function_exists('ryunosuke\\DbMigration\\chain')) {
             $chain_object::$__CLASS__ = __CLASS__;
             return $chain_object;
         }
-
-        // @codeCoverageIgnoreStart
-        // for compatible
-        return new class(...func_get_args()) implements \IteratorAggregate {
-            private static $nullables = [];
-
-            private $data;
-            private $stack;
-
-            public function __construct($source = null)
-            {
-                if (func_num_args() === 0) {
-                    $this->stack = [];
-                }
-                $this->data = $source;
-            }
-
-            public function __invoke(...$source)
-            {
-                $func_num_args = func_num_args();
-
-                if ($this->stack !== null && $func_num_args === 0) {
-                    throw new \InvalidArgumentException('nonempty stack and no parameter given. maybe invalid __invoke args.');
-                }
-                if ($this->stack === null && $func_num_args > 0) {
-                    throw new \UnexpectedValueException('empty stack and parameter given > 0. maybe invalid __invoke args.');
-                }
-
-                if ($func_num_args > 0) {
-                    $result = [];
-                    foreach ($source as $s) {
-                        $chain = chain($s);
-                        foreach ($this->stack as $stack) {
-                            $chain->{$stack[0]}(...$stack[1]);
-                        }
-                        $result[] = $chain();
-                    }
-                    return $func_num_args === 1 ? reset($result) : $result;
-                }
-                return $this->data;
-            }
-
-            public function __get($name)
-            {
-                return $this->_apply($name, []);
-            }
-
-            public function __call($name, $arguments)
-            {
-                return $this->_apply($name, $arguments);
-            }
-
-            public function __toString()
-            {
-                return (string) $this->data;
-            }
-
-            public function getIterator(): \Traversable
-            {
-                foreach ($this->data as $k => $v) {
-                    yield $k => $v;
-                }
-            }
-
-            public function apply($callback, ...$args)
-            {
-                if (is_array($this->stack)) {
-                    $this->stack[] = [__FUNCTION__, func_get_args()];
-                    return $this;
-                }
-
-                $this->data = $callback($this->data, ...$args);
-                return $this;
-            }
-
-            private function _resolve($name)
-            {
-                $isiterable = is_iterable($this->data);
-                $isstringable = is_stringable($this->data);
-                if (false
-                    // for global
-                    || (is_callable($name, false, $fname))
-                    || ($isiterable && is_callable("array_$name", false, $fname))
-                    || ($isstringable && is_callable("str_$name", false, $fname))
-                    // for namespace
-                    || (is_callable(__NAMESPACE__ . "\\$name", false, $fname))
-                    || ($isiterable && is_callable(__NAMESPACE__ . "\\array_$name", false, $fname))
-                    || ($isstringable && is_callable(__NAMESPACE__ . "\\str_$name", false, $fname))
-                ) {
-                    if (function_configure('chain.nullsafe')) {
-                        if (!array_key_exists($fname, self::$nullables)) {
-                            foreach (reflect_callable($fname)->getParameters() as $parameter) {
-                                $type = $parameter->getType();
-                                self::$nullables[$fname][$parameter->getPosition()] = $type ? $type->allowsNull() : null;
-                            }
-                        }
-                    }
-
-                    return $fname;
-                }
-            }
-
-            private function _apply($name, $arguments)
-            {
-                if (is_array($this->stack)) {
-                    $this->stack[] = [$name, $arguments];
-                    return $this;
-                }
-
-                // 特別扱い1: map は非常によく呼ぶので引数を補正する
-                if ($name === 'map') {
-                    return $this->_apply('array_map1', $arguments);
-                }
-
-                // 実際の呼び出し1: 存在する関数はそのまま移譲する
-                if ($fname = $this->_resolve($name)) {
-                    // for nullsafe call
-                    if ($this->data === null && !(self::$nullables[$fname][0] ?? true)) {
-                        $this->data = null;
-                        return $this;
-                    }
-                    // for placeholder call
-                    if (($placeholder = function_configure('placeholder')) && $placeholders = array_keys($arguments, constant($placeholder), true)) {
-                        $this->data = $fname(...(array_replace($arguments, array_fill_keys($placeholders, $this->data))));
-                        return $this;
-                    }
-                    // for named call
-                    if (is_hasharray($arguments)) {
-                        $this->data = $fname(...(array_insert($arguments, [$this->data], next_key($arguments))));
-                        return $this; // @codeCoverageIgnore
-                    }
-                    $this->data = $fname($this->data, ...$arguments);
-                    return $this;
-                }
-                // 実際の呼び出し2: 数値で終わる呼び出しは引数埋め込み位置を指定して移譲する
-                if (preg_match('#(.+?)(\d+)$#', $name, $match) && $fname = $this->_resolve($match[1])) {
-                    $position = (int) $match[2];
-                    if ($this->data === null && !(self::$nullables[$fname][$position] ?? true)) {
-                        $this->data = null;
-                        return $this;
-                    }
-                    $this->data = $fname(...array_insert($arguments, [$this->data], $position));
-                    return $this;
-                }
-
-                // 接尾呼び出し1: E で終わる呼び出しは文字列を eval した callback とする
-                if (preg_match('#(.+?)E$#', $name, $match)) {
-                    $expr = array_pop($arguments);
-                    $expr = strpos($expr, '$_') === false ? '$_ ' . $expr : $expr;
-                    $arguments[] = eval_func($expr, '_');
-                    return $this->{$match[1]}(...$arguments);
-                }
-                // 接尾呼び出し2: P で終わる呼び出しは演算子を callback とする
-                if (preg_match('#(.+?)P$#', $name, $match)) {
-                    $ops = array_reverse((array) array_pop($arguments));
-                    $arguments[] = function ($v) use ($ops) {
-                        foreach ($ops as $ope => $rand) {
-                            if (is_int($ope)) {
-                                $ope = $rand;
-                                $rand = [];
-                            }
-                            if (!is_array($rand)) {
-                                $rand = [$rand];
-                            }
-                            $v = ope_func($ope)($v, ...$rand);
-                        }
-                        return $v;
-                    };
-                    return $this->{$match[1]}(...$arguments);
-                }
-
-                throw new \BadFunctionCallException("$name is not defined.");
-            }
-        };
-        // @codeCoverageIgnoreEnd
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\delegate') || (new \ReflectionFunction('ryunosuke\\DbMigration\\delegate'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\delegate')) {
-    /**
-     * 指定 callable を指定クロージャで実行するクロージャを返す
-     *
-     * ほぼ内部向けで外から呼ぶことはあまり想定していない。
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param \Closure $invoker クロージャを実行するためのクロージャ（実処理）
-     * @param callable $callable 最終的に実行したいクロージャ
-     * @param ?int $arity 引数の数
-     * @return callable $callable を実行するクロージャ
-     */
-    function delegate($invoker, $callable, $arity = null)
-    {
-        $arity ??= parameter_length($callable, true, true);
-
-        if (reflect_callable($callable)->isInternal()) {
-            static $cache = [];
-            $cache[(string) $arity] ??= evaluate('return new class()
-            {
-                private $invoker, $callable;
-
-                public function spawn($invoker, $callable)
-                {
-                    $that = clone($this);
-                    $that->invoker = $invoker;
-                    $that->callable = $callable;
-                    return $that;
-                }
-
-                public function __invoke(' . implode(',', is_infinite($arity)
-                    ? ['...$_']
-                    : array_map(fn($v) => '$_' . $v, array_keys(array_fill(1, $arity, null)))
-                ) . ')
-                {
-                    return ($this->invoker)($this->callable, func_get_args());
-                }
-            };');
-            return $cache[(string) $arity]->spawn($invoker, $callable);
-        }
-
-        switch (true) {
-            case $arity === 0:
-                return fn() => $invoker($callable, func_get_args());
-            case $arity === 1:
-                return fn($_1) => $invoker($callable, func_get_args());
-            case $arity === 2:
-                return fn($_1, $_2) => $invoker($callable, func_get_args());
-            case $arity === 3:
-                return fn($_1, $_2, $_3) => $invoker($callable, func_get_args());
-            case $arity === 4:
-                return fn($_1, $_2, $_3, $_4) => $invoker($callable, func_get_args());
-            case $arity === 5:
-                return fn($_1, $_2, $_3, $_4, $_5) => $invoker($callable, func_get_args());
-            case is_infinite($arity):
-                return fn(...$_) => $invoker($callable, func_get_args());
-            default:
-                $args = implode(',', array_map(fn($v) => '$_' . $v, array_keys(array_fill(1, $arity, null))));
-                $stmt = 'return function (' . $args . ') use ($invoker, $callable) { return $invoker($callable, func_get_args()); };';
-                return eval($stmt);
-        }
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\eval_func') || (new \ReflectionFunction('ryunosuke\\DbMigration\\eval_func'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\eval_func')) {
+assert(!function_exists('ryunosuke\\DbMigration\\func_eval') || (new \ReflectionFunction('ryunosuke\\DbMigration\\func_eval'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\func_eval')) {
     /**
      * 指定コードで eval するクロージャを返す
      *
@@ -16282,12 +16197,12 @@ if (!function_exists('ryunosuke\\DbMigration\\eval_func')) {
      *
      * Example:
      * ```php
-     * $evalfunc = eval_func('$a + $b + $c', 'a', 'b', 'c');
-     * that($evalfunc(1, 2, 3))->isSame(6);
+     * $func_eval = func_eval('$a + $b + $c', 'a', 'b', 'c');
+     * that($func_eval(1, 2, 3))->isSame(6);
      *
      * // $X による参照
-     * $evalfunc = eval_func('$1 + $2 + $3');
-     * that($evalfunc(1, 2, 3))->isSame(6);
+     * $func_eval = func_eval('$1 + $2 + $3');
+     * that($func_eval(1, 2, 3))->isSame(6);
      * ```
      *
      * @package ryunosuke\Functions\Package\funchand
@@ -16296,24 +16211,24 @@ if (!function_exists('ryunosuke\\DbMigration\\eval_func')) {
      * @param mixed ...$variadic 引数名（可変引数）
      * @return \Closure 新しいクロージャ
      */
-    function eval_func($expression, ...$variadic)
+    function func_eval($expression, ...$variadic)
     {
         static $cache = [];
 
         $args = array_sprintf($variadic, '$%s', ',');
         $cachekey = "$expression($args)";
         if (!isset($cache[$cachekey])) {
-            $tmp = parse_php($expression, TOKEN_NAME);
+            $tmp = php_parse("<?php $expression");
             array_shift($tmp);
             $stmt = '';
             for ($i = 0; $i < count($tmp); $i++) {
-                if (($tmp[$i][1] ?? null) === '$' && $tmp[$i + 1][0] === T_LNUMBER) {
-                    $n = $tmp[$i + 1][1] - 1;
+                if (($tmp[$i]->text ?? null) === '$' && $tmp[$i + 1]->id === T_LNUMBER) {
+                    $n = $tmp[$i + 1]->text - 1;
                     $stmt .= "func_get_arg($n)";
                     $i++;
                 }
                 else {
-                    $stmt .= $tmp[$i][1];
+                    $stmt .= $tmp[$i]->text;
                 }
             }
             $cache[$cachekey] = eval("return function($args) { return $stmt; };");
@@ -16400,6 +16315,90 @@ if (!function_exists('ryunosuke\\DbMigration\\func_new')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\func_operator') || (new \ReflectionFunction('ryunosuke\\DbMigration\\func_operator'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\func_operator')) {
+    /**
+     * 演算子のクロージャを返す
+     *
+     * 関数ベースなので `??` のような言語組み込みの特殊な演算子は若干希望通りにならない（Notice が出る）。
+     * 2つ目以降の引数でオペランドを指定できる。
+     *
+     * Example:
+     * ```php
+     * $not = func_operator('!');    // 否定演算子クロージャ
+     * that(false)->isSame($not(true));
+     *
+     * $minus = func_operator('-'); // マイナス演算子クロージャ
+     * that($minus(2))->isSame(-2);       // 引数1つで呼ぶと1項演算子
+     * that($minus(3, 2))->isSame(3 - 2); // 引数2つで呼ぶと2項演算子
+     *
+     * $cond = func_operator('?:'); // 条件演算子クロージャ
+     * that($cond('OK', 'NG'))->isSame('OK' ?: 'NG');               // 引数2つで呼ぶと2項演算子
+     * that($cond(false, 'OK', 'NG'))->isSame(false ? 'OK' : 'NG'); // 引数3つで呼ぶと3項演算子
+     *
+     * $gt5 = func_operator('<=', 5); // 5以下を判定するクロージャ
+     * that(array_filter([1, 2, 3, 4, 5, 6, 7, 8, 9], $gt5))->isSame([1, 2, 3, 4, 5]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\funchand
+     *
+     * @param string $operator 演算子
+     * @param mixed ...$operands 右オペランド
+     * @return \Closure 演算子のクロージャ
+     */
+    function func_operator($operator, ...$operands)
+    {
+        static $operators = null;
+        $operators = $operators ?: [
+            ''           => static fn($v1) => $v1, // こんな演算子はないが、「if ($value) {}」として使えることがある
+            '!'          => static fn($v1) => !$v1,
+            '+'          => static fn($v1, $v2 = null) => func_num_args() === 1 ? (+$v1) : ($v1 + $v2),
+            '-'          => static fn($v1, $v2 = null) => func_num_args() === 1 ? (-$v1) : ($v1 - $v2),
+            '~'          => static fn($v1) => ~$v1,
+            '++'         => static fn(&$v1) => ++$v1,
+            '--'         => static fn(&$v1) => --$v1,
+            '?:'         => static fn($v1, $v2, $v3 = null) => func_num_args() === 2 ? ($v1 ?: $v2) : ($v1 ? $v2 : $v3),
+            '??'         => static fn($v1, $v2) => $v1 ?? $v2,
+            '=='         => static fn($v1, $v2) => $v1 == $v2,
+            '==='        => static fn($v1, $v2) => $v1 === $v2,
+            '!='         => static fn($v1, $v2) => $v1 != $v2,
+            '<>'         => static fn($v1, $v2) => $v1 <> $v2,
+            '!=='        => static fn($v1, $v2) => $v1 !== $v2,
+            '<'          => static fn($v1, $v2) => $v1 < $v2,
+            '<='         => static fn($v1, $v2) => $v1 <= $v2,
+            '>'          => static fn($v1, $v2) => $v1 > $v2,
+            '>='         => static fn($v1, $v2) => $v1 >= $v2,
+            '<=>'        => static fn($v1, $v2) => $v1 <=> $v2,
+            '.'          => static fn($v1, $v2) => $v1 . $v2,
+            '*'          => static fn($v1, $v2) => $v1 * $v2,
+            '/'          => static fn($v1, $v2) => $v1 / $v2,
+            '%'          => static fn($v1, $v2) => $v1 % $v2,
+            '**'         => static fn($v1, $v2) => $v1 ** $v2,
+            '^'          => static fn($v1, $v2) => $v1 ^ $v2,
+            '&'          => static fn($v1, $v2) => $v1 & $v2,
+            '|'          => static fn($v1, $v2) => $v1 | $v2,
+            '<<'         => static fn($v1, $v2) => $v1 << $v2,
+            '>>'         => static fn($v1, $v2) => $v1 >> $v2,
+            '&&'         => static fn($v1, $v2) => $v1 && $v2,
+            '||'         => static fn($v1, $v2) => $v1 || $v2,
+            'or'         => static fn($v1, $v2) => $v1 or $v2,
+            'and'        => static fn($v1, $v2) => $v1 and $v2,
+            'xor'        => static fn($v1, $v2) => $v1 xor $v2,
+            'instanceof' => static fn($v1, $v2) => $v1 instanceof $v2,
+            'new'        => static fn($v1, ...$v) => new $v1(...$v),
+            'clone'      => static fn($v1) => clone $v1,
+        ];
+
+        $opefunc = $operators[trim($operator)] ?? throw new \InvalidArgumentException("$operator is not defined Operator.");
+
+        if ($operands) {
+            return static fn($v1) => $opefunc($v1, ...$operands);
+        }
+
+        return $opefunc;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\func_user_func_array') || (new \ReflectionFunction('ryunosuke\\DbMigration\\func_user_func_array'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\func_user_func_array')) {
     /**
@@ -16439,12 +16438,12 @@ if (!function_exists('ryunosuke\\DbMigration\\func_user_func_array')) {
 
         // 上記以外は「引数ぴったりで削ぎ落としてコールするクロージャ」を返す
         $plength = parameter_length($callback, true, true);
-        return delegate(function ($callback, $args) use ($plength) {
+        return function (...$args) use ($callback, $plength) {
             if (is_infinite($plength)) {
                 return $callback(...$args);
             }
             return $callback(...array_slice($args, 0, $plength));
-        }, $callback, $plength);
+        };
     }
 }
 
@@ -16639,337 +16638,6 @@ if (!function_exists('ryunosuke\\DbMigration\\is_callback')) {
         }
 
         return false;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\lbind') || (new \ReflectionFunction('ryunosuke\\DbMigration\\lbind'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\lbind')) {
-    /**
-     * $callable の最左に引数を束縛した callable を返す
-     *
-     * Example:
-     * ```php
-     * $bind = lbind('sprintf', '%s%s');
-     * that($bind('N', 'M'))->isSame('NM');
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param callable $callable 対象 callable
-     * @param mixed ...$variadic 本来の引数（可変引数）
-     * @return callable 束縛したクロージャ
-     */
-    function lbind($callable, ...$variadic)
-    {
-        return nbind(...array_insert(func_get_args(), 0, 1));
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\namedcallize') || (new \ReflectionFunction('ryunosuke\\DbMigration\\namedcallize'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\namedcallize')) {
-    /**
-     * callable を名前付き引数で呼べるようにしたクロージャを返す
-     *
-     * callable のデフォルト引数は適用されるが、それ以外にも $default でデフォルト値を与えることができる（部分適用のようなものだと思えば良い）。
-     * 最終的な優先順位は下記。上に行くほど優先。
-     *
-     * 1. 呼び出し時の引数
-     * 2. この関数の $default 引数
-     * 3. callable のデフォルト引数
-     *
-     * 引数は n 番目でも引数名でもどちらでも良い。
-     * n 番目の場合は引数名に依存しないが、順番に依存してしまう。
-     * 引数名の場合は順番に依存しないが、引数名に依存してしまう。
-     *
-     * 可変引数の場合は 1 と 2 がマージされる。
-     * 必須引数が渡されていない or 定義されていない引数が渡された場合は例外を投げる。
-     *
-     * Example:
-     * ```php
-     * // ベースとなる関数（引数をそのまま連想配列で返す）
-     * $f = fn ($x, $a = 1, $b = 2, ...$other) => get_defined_vars();
-     *
-     * // x に 'X', a に 9 を与えて名前付きで呼べるクロージャ
-     * $f1 = namedcallize($f, [
-     *     'x' => 'X',
-     *     'a' => 9,
-     * ]);
-     * // 引数無しで呼ぶと↑で与えた引数が使用される（b は渡されていないのでデフォルト引数の 2 が使用される）
-     * that($f1())->isSame([
-     *     'x'     => 'X',
-     *     'a'     => 9,
-     *     'b'     => 2,
-     *     'other' => [],
-     * ]);
-     * // 引数付きで呼ぶとそれが優先される
-     * that($f1([
-     *     'x'     => 'XXX',
-     *     'a'     => 99,
-     *     'b'     => 999,
-     *     'other' => [1, 2, 3],
-     * ]))->isSame([
-     *     'x'     => 'XXX',
-     *     'a'     => 99,
-     *     'b'     => 999,
-     *     'other' => [1, 2, 3],
-     * ]);
-     * // 引数名ではなく、 n 番目指定でも同じ
-     * that($f1([
-     *     'x' => 'XXX',
-     *     1   => 99,
-     *     2   => 999,
-     *     3   => [1, 2, 3],
-     * ]))->isSame([
-     *     'x'     => 'XXX',
-     *     'a'     => 99,
-     *     'b'     => 999,
-     *     'other' => [1, 2, 3],
-     * ]);
-     *
-     * // x に 'X', other に [1, 2, 3] を与えて名前付きで呼べるクロージャ
-     * $f2 = namedcallize($f, [
-     *     'x'     => 'X',
-     *     'other' => [1, 2, 3],
-     * ]);
-     * // other は可変引数なのでマージされる
-     * that($f2(['other' => [4, 5, 6]]))->isSame([
-     *     'x'     => 'X',
-     *     'a'     => 1,
-     *     'b'     => 2,
-     *     'other' => [1, 2, 3, 4, 5, 6],
-     * ]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param callable $callable
-     * @param array $defaults デフォルト引数
-     * @return \Closure 名前付き引数で呼べるようにしたクロージャ
-     */
-    function namedcallize($callable, $defaults = [])
-    {
-        static $dummy_arg;
-        $dummy_arg ??= new \stdClass();
-
-        /** @var \ReflectionFunctionAbstract $reffunc */
-        $reffunc = reflect_callable($callable);
-        $refparams = $reffunc->getParameters();
-
-        $defargs = [];
-        $argnames = [];
-        $variadicname = null;
-        foreach ($refparams as $n => $param) {
-            $pname = $param->getName();
-
-            $argnames[$n] = $pname;
-
-            // 可変引数は貯めておく
-            if ($param->isVariadic()) {
-                $variadicname = $pname;
-            }
-
-            // ユーザ指定は最優先
-            if (array_key_exists($pname, $defaults)) {
-                $defargs[$pname] = $defaults[$pname];
-            }
-            elseif (array_key_exists($n, $defaults)) {
-                $defargs[$pname] = $defaults[$n];
-            }
-            // デフォルト引数があるならそれを
-            elseif ($param->isDefaultValueAvailable()) {
-                $defargs[$pname] = $param->getDefaultValue();
-            }
-            // それ以外なら「指定されていない」ことを表すダミー引数を入れておく（あとでチェックに使う）
-            else {
-                $defargs[$pname] = $param->isVariadic() ? [] : $dummy_arg;
-            }
-        }
-
-        return function ($params = []) use ($reffunc, $defargs, $argnames, $variadicname, $dummy_arg) {
-            $params = array_map_key($params, fn($k) => is_int($k) ? $argnames[$k] : $k);
-            $params = array_replace($defargs, $params);
-
-            // 勝手に突っ込んだ $dummy_class がいるのはおかしい。指定されていないと思われる
-            if ($dummyargs = array_filter($params, fn($v) => $v === $dummy_arg)) {
-                // が、php8 未満では組み込みのデフォルト値は取れないので、除外
-                if (!$reffunc->isInternal()) {
-                    throw new \InvalidArgumentException('missing required arguments(' . implode(', ', array_keys($dummyargs)) . ').');
-                }
-            }
-            // diff って余りが出るのはおかしい。余計なものがあると思われる
-            if ($diffargs = array_diff_key($params, $defargs)) {
-                throw new \InvalidArgumentException('specified undefined arguments(' . implode(', ', array_keys($diffargs)) . ').');
-            }
-
-            // 可変引数はマージする
-            if ($variadicname) {
-                $params = array_merge($params, $defargs[$variadicname], $params[$variadicname]);
-                unset($params[$variadicname]);
-            }
-
-            if ($reffunc instanceof \ReflectionMethod && $reffunc->isConstructor()) {
-                $object = $reffunc->getDeclaringClass()->newInstanceWithoutConstructor();
-                $reffunc->invoke($object, ...array_values($params));
-                return $object;
-            }
-            return $reffunc->invoke(...array_values($params));
-        };
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\nbind') || (new \ReflectionFunction('ryunosuke\\DbMigration\\nbind'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\nbind')) {
-    /**
-     * $callable の指定位置に引数を束縛したクロージャを返す
-     *
-     * Example:
-     * ```php
-     * $bind = nbind('sprintf', 2, 'X');
-     * that($bind('%s%s%s', 'N', 'N'))->isSame('NXN');
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param callable $callable 対象 callable
-     * @param int $n 挿入する引数位置
-     * @param mixed ...$variadic 本来の引数（可変引数）
-     * @return callable 束縛したクロージャ
-     */
-    function nbind($callable, $n, ...$variadic)
-    {
-        return delegate(function ($callable, $args) use ($variadic, $n) {
-            return $callable(...array_insert($args, $variadic, $n));
-        }, $callable, parameter_length($callable, true, true) - count($variadic));
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\not_func') || (new \ReflectionFunction('ryunosuke\\DbMigration\\not_func'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\not_func')) {
-    /**
-     * 返り値の真偽値を逆転した新しいクロージャを返す
-     *
-     * Example:
-     * ```php
-     * $not_strlen = not_func('strlen');
-     * that($not_strlen('hoge'))->isFalse();
-     * that($not_strlen(''))->isTrue();
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param callable $callable 対象 callable
-     * @return callable 新しいクロージャ
-     */
-    function not_func($callable)
-    {
-        return delegate(fn($callable, $args) => !$callable(...$args), $callable);
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\ope_func') || (new \ReflectionFunction('ryunosuke\\DbMigration\\ope_func'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\ope_func')) {
-    /**
-     * 演算子のクロージャを返す
-     *
-     * 関数ベースなので `??` のような言語組み込みの特殊な演算子は若干希望通りにならない（Notice が出る）。
-     * 2つ目以降の引数でオペランドを指定できる。
-     *
-     * Example:
-     * ```php
-     * $not = ope_func('!');    // 否定演算子クロージャ
-     * that(false)->isSame($not(true));
-     *
-     * $minus = ope_func('-'); // マイナス演算子クロージャ
-     * that($minus(2))->isSame(-2);       // 引数1つで呼ぶと1項演算子
-     * that($minus(3, 2))->isSame(3 - 2); // 引数2つで呼ぶと2項演算子
-     *
-     * $cond = ope_func('?:'); // 条件演算子クロージャ
-     * that($cond('OK', 'NG'))->isSame('OK' ?: 'NG');               // 引数2つで呼ぶと2項演算子
-     * that($cond(false, 'OK', 'NG'))->isSame(false ? 'OK' : 'NG'); // 引数3つで呼ぶと3項演算子
-     *
-     * $gt5 = ope_func('<=', 5); // 5以下を判定するクロージャ
-     * that(array_filter([1, 2, 3, 4, 5, 6, 7, 8, 9], $gt5))->isSame([1, 2, 3, 4, 5]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param string $operator 演算子
-     * @param mixed ...$operands 右オペランド
-     * @return \Closure 演算子のクロージャ
-     */
-    function ope_func($operator, ...$operands)
-    {
-        static $operators = null;
-        $operators = $operators ?: [
-            ''           => static fn($v1) => $v1, // こんな演算子はないが、「if ($value) {}」として使えることがある
-            '!'          => static fn($v1) => !$v1,
-            '+'          => static fn($v1, $v2 = null) => func_num_args() === 1 ? (+$v1) : ($v1 + $v2),
-            '-'          => static fn($v1, $v2 = null) => func_num_args() === 1 ? (-$v1) : ($v1 - $v2),
-            '~'          => static fn($v1) => ~$v1,
-            '++'         => static fn(&$v1) => ++$v1,
-            '--'         => static fn(&$v1) => --$v1,
-            '?:'         => static fn($v1, $v2, $v3 = null) => func_num_args() === 2 ? ($v1 ?: $v2) : ($v1 ? $v2 : $v3),
-            '??'         => static fn($v1, $v2) => $v1 ?? $v2,
-            '=='         => static fn($v1, $v2) => $v1 == $v2,
-            '==='        => static fn($v1, $v2) => $v1 === $v2,
-            '!='         => static fn($v1, $v2) => $v1 != $v2,
-            '<>'         => static fn($v1, $v2) => $v1 <> $v2,
-            '!=='        => static fn($v1, $v2) => $v1 !== $v2,
-            '<'          => static fn($v1, $v2) => $v1 < $v2,
-            '<='         => static fn($v1, $v2) => $v1 <= $v2,
-            '>'          => static fn($v1, $v2) => $v1 > $v2,
-            '>='         => static fn($v1, $v2) => $v1 >= $v2,
-            '<=>'        => static fn($v1, $v2) => $v1 <=> $v2,
-            '.'          => static fn($v1, $v2) => $v1 . $v2,
-            '*'          => static fn($v1, $v2) => $v1 * $v2,
-            '/'          => static fn($v1, $v2) => $v1 / $v2,
-            '%'          => static fn($v1, $v2) => $v1 % $v2,
-            '**'         => static fn($v1, $v2) => $v1 ** $v2,
-            '^'          => static fn($v1, $v2) => $v1 ^ $v2,
-            '&'          => static fn($v1, $v2) => $v1 & $v2,
-            '|'          => static fn($v1, $v2) => $v1 | $v2,
-            '<<'         => static fn($v1, $v2) => $v1 << $v2,
-            '>>'         => static fn($v1, $v2) => $v1 >> $v2,
-            '&&'         => static fn($v1, $v2) => $v1 && $v2,
-            '||'         => static fn($v1, $v2) => $v1 || $v2,
-            'or'         => static fn($v1, $v2) => $v1 or $v2,
-            'and'        => static fn($v1, $v2) => $v1 and $v2,
-            'xor'        => static fn($v1, $v2) => $v1 xor $v2,
-            'instanceof' => static fn($v1, $v2) => $v1 instanceof $v2,
-            'new'        => static fn($v1, ...$v) => new $v1(...$v),
-            'clone'      => static fn($v1) => clone $v1,
-        ];
-
-        $opefunc = $operators[trim($operator)] ?? throws(new \InvalidArgumentException("$operator is not defined Operator."));
-
-        if ($operands) {
-            return static fn($v1) => $opefunc($v1, ...$operands);
-        }
-
-        return $opefunc;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\rbind') || (new \ReflectionFunction('ryunosuke\\DbMigration\\rbind'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\rbind')) {
-    /**
-     * $callable の最右に引数を束縛した callable を返す
-     *
-     * Example:
-     * ```php
-     * $bind = rbind('sprintf', 'X');
-     * that($bind('%s%s', 'N'))->isSame('NX');
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\funchand
-     *
-     * @param callable $callable 対象 callable
-     * @param mixed ...$variadic 本来の引数（可変引数）
-     * @return callable 束縛したクロージャ
-     */
-    function rbind($callable, ...$variadic)
-    {
-        return nbind(...array_insert(func_get_args(), null, 1));
     }
 }
 
@@ -17338,7 +17006,7 @@ if (!function_exists('ryunosuke\\DbMigration\\cpu_timer')) {
                 ];
             }
 
-            public function __invoke($callback)
+            public function __invoke($callback): array
             {
                 $this->start();
 
@@ -17353,6 +17021,53 @@ if (!function_exists('ryunosuke\\DbMigration\\cpu_timer')) {
                 $rusage['ru_utime'] = $rusage['ru_utime.tv_sec'] + $rusage['ru_utime.tv_usec'] / 1000 / 1000;
                 $rusage['ru_stime'] = $rusage['ru_stime.tv_sec'] + $rusage['ru_stime.tv_usec'] / 1000 / 1000;
                 return $rusage;
+            }
+        };
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\finalize') || (new \ReflectionFunction('ryunosuke\\DbMigration\\finalize'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\finalize')) {
+    /**
+     * 自身が死ぬときに指定 callable を呼ぶオブジェクトを返す
+     *
+     * invoke を実装しているので明示的にも呼べる。
+     * 明示的だろうと暗黙的だろうと必ず1回しか呼ばれない。
+     *
+     * Example:
+     * ```php
+     * $called = 0;
+     * $finalizer = finalize(function()use(&$called){$called++;});
+     * that($called)->is(0); // まだ呼ばれていない
+     *
+     * // コールすると・・・
+     * $finalizer();
+     * that($called)->is(1); // 呼ばれている
+     *
+     * // unset（GC）でも呼ばれる
+     * unset($finalizer);
+     * that($called)->is(1); // が、一度しか呼ばれないので呼ばれない
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\info
+     *
+     * @param callable $finalizer 実行する php コード
+     * @return callable GC 時に $finalizer を実行する callable
+     */
+    function finalize(callable $finalizer)
+    {
+        return new class($finalizer) {
+            public function __construct(private $finalizer) { }
+
+            public function __destruct() { $this->__invoke(); }
+
+            public function __invoke()
+            {
+                if (isset($this->finalizer)) {
+                    ($this->finalizer)();
+                    unset($this->finalizer);
+                    gc_collect_cycles();
+                }
             }
         };
     }
@@ -17529,21 +17244,22 @@ if (!function_exists('ryunosuke\\DbMigration\\ini_sets')) {
      * @package ryunosuke\Functions\Package\info
      *
      * @param array $values ini のエントリ名と値の配列
-     * @return callable ini を元に戻すクロージャ
+     * @return callable ini を元に戻す callable
      */
     function ini_sets($values)
     {
-        $currents = [];
-        foreach ($values as $name => $value) {
-            $current = ini_set($name, $value);
-            if ($current !== false) {
-                $currents[$name] = $current;
+        $main = static function ($values) {
+            $currents = [];
+            foreach ($values as $name => $value) {
+                $current = ini_set($name, $value);
+                if ($current !== false) {
+                    $currents[$name] = $current;
+                }
             }
-        }
-        return static function () use ($currents) {
-            ini_sets($currents);
             return $currents;
         };
+        $currents = $main($values);
+        return finalize(fn() => $main($currents));
     }
 }
 
@@ -17709,6 +17425,468 @@ if (!function_exists('ryunosuke\\DbMigration\\sys_set_temp_dir')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\system_status') || (new \ReflectionFunction('ryunosuke\\DbMigration\\system_status'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\system_status')) {
+    /**
+     * システムの各種情報配列を返す
+     *
+     * Windows 版はオマケ実装。
+     * この関数の結果は互換性を考慮しない。
+     *
+     * @codeCoverageIgnore
+     * @package ryunosuke\Functions\Package\info
+     */
+    function system_status(
+        /** バイト系数値の単位 */ string $siunit = '',
+        /** 日時系のフォーマット */ string $datetime_format = \DateTime::RFC3339,
+    ): array {
+        $unitize = function ($size) use ($siunit) {
+            return match ($siunit) {
+                'k'     => sprintf('%.3f', $size / 1024),
+                'm'     => sprintf('%.3f', $size / 1024 / 1024),
+                'g'     => sprintf('%.3f', $size / 1024 / 1024 / 1024),
+                'h'     => si_prefix($size, 1024),
+                ','     => number_format($size),
+                ''      => $size,
+                default => throw new \InvalidArgumentException("$siunit must be [k,m,g,h,'']"),
+            };
+        };
+        $datetime = function ($time) use ($datetime_format) {
+            if (strlen($datetime_format)) {
+                return date($datetime_format, $time);
+            }
+            else {
+                return $time;
+            }
+        };
+
+        // counter 値だけは待機が長いので一括で取ってくる
+        $counters = null;
+        if (DIRECTORY_SEPARATOR === '\\') {
+            $counters = process_async('powershell', [
+                '-Command',
+                'ConvertTo-Json @(
+              Get-Counter -MaxSamples 1 -SampleInterval 1 -Counter "\System\Processor Queue Length","\Process(*)\% Privileged Time","\Process(*)\% User Time","\Processor(*)\% Processor Time"
+            ).CounterSamples',
+            ]);
+            $counters->setCompleteAction(function () {
+                /** @var \ProcessAsync $this */
+                $data = json_decode($this->stdout, true);
+                $counters = [
+                    'queue'  => [],
+                    'system' => [],
+                    'user'   => [],
+                    'time'   => [],
+                ];
+                foreach ($data as $stat) {
+                    if (str_ends_with($stat['Path'], '\\system\\processor queue length')) {
+                        $counters['queue'] = $stat['CookedValue'];
+                    }
+                    elseif (str_ends_with($stat['Path'], '\\% privileged time')) {
+                        $counters['system'][$stat['InstanceName']] = $stat['CookedValue'];
+                    }
+                    elseif (str_ends_with($stat['Path'], '\\% user time')) {
+                        $counters['user'][$stat['InstanceName']] = $stat['CookedValue'];
+                    }
+                    elseif (str_ends_with($stat['Path'], '\\% processor time')) {
+                        $counters['time'][$stat['InstanceName']] = $stat['CookedValue'];
+                    }
+                }
+                unset($counters['system']['_total'], $counters['system']['idle']);
+                unset($counters['user']['_total'], $counters['user']['idle']);
+                unset($counters['time']['_total']);
+                return $counters;
+            });
+        }
+
+        return array_map(fn($gather) => $gather(), [
+            'os'         => (function () use ($datetime, $counters) {
+                if (DIRECTORY_SEPARATOR === '\\') {
+                    $provide = process_async('powershell', ['-Command', 'ConvertTo-Json (Get-WmiObject win32_operatingsystem | Select-Object *)']);
+                    $provide->setCompleteAction(function () use ($counters) {
+                        /** @var \ProcessAsync $this */
+                        $data = json_decode($this->stdout, true);
+                        return [
+                            'name'    => $data['Caption'],
+                            'version' => php_uname('r'),
+                            'release' => $data['Version'],
+                            'uptime'  => time() - date_create_from_format('YmdHis.u+', $data['LastBootUpTime'])->getTimestamp(),
+                            'process' => [
+                                'running' => count(array_filter($counters()['user'], fn($v) => $v > 0)),
+                                'blocked' => count(array_filter($counters()['system'], fn($v) => $v > 0)),
+                            ],
+                            'loadavg' => [1 => (float) $counters()['queue']],
+                        ];
+                    });
+                }
+                else {
+                    $provide = function () {
+                        $os_release = parse_ini_file('/etc/os-release');
+                        $proc_uptime = explode(' ', file_get_contents('/proc/uptime'));
+                        preg_match_all('#^(procs_.+?)\s+(\d+)$#mu', file_get_contents('/proc/stat'), $matches, PREG_SET_ORDER);
+                        $procs = [];
+                        foreach ($matches as [, $name, $count]) {
+                            $procs[$name] = $count;
+                        }
+                        return [
+                            'name'    => $os_release['NAME'],
+                            'version' => $os_release['VERSION_ID'],
+                            'release' => php_uname('r'),
+                            'uptime'  => (int) $proc_uptime[0],
+                            'process' => [
+                                'running' => (int) $procs['procs_running'],
+                                'blocked' => (int) $procs['procs_blocked'],
+                            ],
+                            'loadavg' => array_combine([60, 300, 900], sys_getloadavg()),
+                        ];
+                    };
+                }
+
+                return function () use ($provide, $datetime) {
+                    $misc = $provide();
+                    return [
+                        'name'         => $misc['name'],
+                        'version'      => $misc['version'],
+                        'release'      => $misc['release'],
+                        'architecture' => php_uname('m'),
+                        'hostname'     => php_uname('n'),
+                        'boottime'     => $datetime(time() - $misc['uptime']),
+                        'uptime'       => $misc['uptime'],
+                        'localtime'    => $datetime(time()),
+                        'process'      => $misc['process'],
+                        'loadavg'      => $misc['loadavg'],
+                    ];
+                };
+            })(),
+            'cpu'        => (function () use ($unitize, $counters) {
+                if (DIRECTORY_SEPARATOR === '\\') {
+                    $provide = process_async('powershell', ['-Command', 'ConvertTo-Json @(Get-WmiObject win32_processor | Select-Object *)']);
+                    $provide->setCompleteAction(function () use ($counters) {
+                        /** @var \ProcessAsync $this */
+                        $cpu_info = json_decode($this->stdout, true);
+                        $rules = [
+                            'id'     => fn($v) => $v['DeviceID'],
+                            'bit'    => fn($v) => (int) $v['DataWidth'],
+                            'clock'  => fn($v) => $v['MaxClockSpeed'] * 1024 * 1024,
+                            'core'   => fn($v) => (int) $v['NumberOfCores'],
+                            'thread' => fn($v) => (int) $v['NumberOfLogicalProcessors'],
+                            'cache'  => fn($v) => ($v['L2CacheSize'] + $v['L3CacheSize']) * 1024,
+                            'name'   => fn($v) => trim($v['Name']),
+                            'vendor' => fn($v) => trim($v['Manufacturer']),
+                        ];
+                        $cpus = [];
+                        foreach ($cpu_info as $cpu) {
+                            $cpus[] = array_map(fn($rule) => $rule($cpu), $rules);
+                        }
+                        return [$cpus, array_map(fn($v) => $v / 100, $counters()['time'])];
+                    });
+                }
+                else {
+                    $provide = function () {
+                        $CLK_TCK = 100; // sysconf(_SC_CLK_TCK);
+                        $TIME_SPAN = 1000 / rand(5000, 10000);
+
+                        $proc_stat = function () {
+                            preg_match_all('#^cpu(\d+)\s+(.+)$#mu', file_get_contents('/proc/stat'), $matches, PREG_SET_ORDER);
+                            $stats = [];
+                            foreach ($matches as [, $core, $ticks]) {
+                                [$user, $nice, $system, /*$idle*/, $iowait, $irq, $softirq, $steal, $guest, $guest_nice] = preg_split('#\s+#u', $ticks, -1, PREG_SPLIT_NO_EMPTY);
+                                $stats[$core] = (int) $user + (int) $nice + (int) $system + (int) $iowait + (int) $irq + (int) $softirq + (int) $steal + (int) $guest + (int) $guest_nice;
+                            }
+                            return $stats;
+                        };
+
+                        $before = $proc_stat();
+                        usleep((int) ($TIME_SPAN * 1000 * 1000));
+                        $after = $proc_stat();
+
+                        $times = [];
+                        foreach ($after as $core => $ticks) {
+                            $times[$core] = ($ticks - $before[$core]) / $CLK_TCK / $TIME_SPAN;
+                        }
+
+                        $rules = [
+                            'id'     => fn($v) => (int) $v['physical id'],
+                            'bit'    => fn($v) => (int) $v['clflush size'],
+                            'clock'  => fn($v) => $v['cpu MHz'] * 1024 * 1024,
+                            'core'   => fn($v) => (int) $v['cpu cores'],
+                            'thread' => fn($v) => (int) $v['siblings'],
+                            'cache'  => fn($v) => si_unprefix($v['cache size'], 1024, '%d %sB'),
+                            'name'   => fn($v) => trim($v['model name']),
+                            'vendor' => fn($v) => trim($v['vendor_id']),
+                        ];
+                        $cpu_info = preg_split("#\R\R#u", trim(file_get_contents('/proc/cpuinfo')));
+
+                        $cpus = [];
+                        foreach ($cpu_info as $info) {
+                            $info = str_array($info, ':', true);
+                            $cpu = array_map(fn($rule) => $rule($info), $rules);
+                            $cpus[$cpu['id']] = $cpu;
+                        }
+                        return [$cpus, $times];
+                    };
+                }
+
+                return function () use ($provide, $unitize) {
+                    [$cpus, $times] = $provide();
+
+                    foreach ($cpus as $n => $cpu) {
+                        $cpus[$n]['clock'] = $unitize($cpu['clock']);
+                        $cpus[$n]['cache'] = $unitize($cpu['cache']);
+
+                        $usages = array_splice($times, 0, $cpu['thread'], []);
+                        $cpus[$n]['usage'] = array_sum($usages) / $cpu['thread'];
+                        $cpus[$n]['usages'] = $usages;
+                    }
+                    return $cpus;
+                };
+            })(),
+            'memory'     => (function () use ($unitize) {
+                if (DIRECTORY_SEPARATOR === '\\') {
+                    $provide = process_async('powershell', ['-Command', 'ConvertTo-Json (Get-WmiObject win32_operatingsystem | Select-Object *)']);
+                    $provide->setCompleteAction(function () {
+                        /** @var \ProcessAsync $this */
+                        $memory_info = json_decode($this->stdout, true);
+
+                        $memory_total = $memory_info['TotalVisibleMemorySize'] * 1024;
+                        $memory_free = $memory_info['FreePhysicalMemory'] * 1024;
+                        $memory_available = $memory_info['FreePhysicalMemory'] * 1024;
+
+                        $swap_total = ($memory_info['TotalVirtualMemorySize'] - $memory_info['TotalVisibleMemorySize']) * 1024;
+                        $swap_free = $memory_info['FreeVirtualMemory'] * 1024;
+
+                        return [$memory_total, $memory_free, $memory_available, $swap_total, $swap_free];
+                    });
+                }
+                else {
+                    $provide = function () {
+                        $memory_info = str_array(trim(file_get_contents('/proc/meminfo')), ':', true);
+
+                        $memory_total = si_unprefix($memory_info['MemTotal'], 1024, '%d %sB');
+                        $memory_free = si_unprefix($memory_info['MemFree'], 1024, '%d %sB');
+                        $memory_available = si_unprefix($memory_info['MemAvailable'], 1024, '%d %sB');
+
+                        $swap_total = si_unprefix($memory_info['SwapTotal'], 1024, '%d %sB');
+                        $swap_free = si_unprefix($memory_info['SwapFree'], 1024, '%d %sB');
+
+                        return [$memory_total, $memory_free, $memory_available, $swap_total, $swap_free];
+                    };
+                }
+
+                return function () use ($unitize, $provide) {
+                    [$memory_total, $memory_free, $memory_available, $swap_total, $swap_free] = $provide();
+
+                    $memory = [
+                        'total'     => $memory_total,
+                        'free'      => $memory_free,
+                        'usage'     => $memory_total - $memory_free,
+                        'available' => $memory_available,
+                    ];
+                    $swap = [
+                        'total'     => $swap_total,
+                        'free'      => $swap_free,
+                        'usage'     => $swap_total - $swap_free,
+                        'available' => $swap_free, // ミスではない。swap に available など存在せず free に等しいので利便性を考慮して free を返す
+                    ];
+
+                    return [
+                        'memory'      => array_map($unitize, $memory),
+                        'swap'        => array_map($unitize, $swap),
+                        'memory+swap' => array_map($unitize, [
+                            'total'     => $memory['total'] + $swap['total'],
+                            'free'      => $memory['free'] + $swap['free'],
+                            'usage'     => $memory['usage'] + $swap['usage'],
+                            'available' => $memory['available'] + $swap['available'],
+                        ]),
+                    ];
+                };
+            })(),
+            'filesystem' => (function () use ($unitize) {
+                if (DIRECTORY_SEPARATOR === '\\') {
+                    $provide = process_async('powershell', ['-Command', 'ConvertTo-Json @(Get-WmiObject win32_logicaldisk | Select-Object *)']);
+                    $provide->setCompleteAction(function () {
+                        /** @var \ProcessAsync $this */
+                        $mounts = json_decode($this->stdout, true);
+                        $result = [];
+                        foreach ($mounts as $mount) {
+                            $result[] = [
+                                'path' => $mount['DeviceID'],
+                                'type' => $mount['FileSystem'],
+                            ];
+                        }
+                        return $result;
+                    });
+                }
+                else {
+                    $provide = function () {
+                        preg_match_all('#^(/.*?)\s+(/.*?)\s+(.*?)\s+#um', file_get_contents('/proc/mounts'), $matches, PREG_SET_ORDER);
+                        $mounts = [];
+                        foreach ($matches as [, $device, $path, $fstype]) {
+                            if (!isset($mounts[$device])) {
+                                $mounts[$device] = [
+                                    'path' => $path,
+                                    'type' => $fstype,
+                                ];
+                            }
+                        }
+                        return $mounts;
+                    };
+                }
+
+                return function () use ($provide, $unitize) {
+                    $mounts = $provide();
+
+                    $result = [];
+                    foreach ($mounts as $mount) {
+                        $total = @disk_total_space($mount['path']);
+                        if ($total === false) {
+                            $result[$mount['path']] = [
+                                'path'  => $mount['path'],
+                                'type'  => $mount['type'],
+                                'total' => null,
+                                'free'  => null,
+                                'usage' => null,
+                            ];
+                            continue;
+                        }
+                        $free = disk_free_space($mount['path']);
+                        $result[$mount['path']] = [
+                            'path'  => $mount['path'],
+                            'type'  => $mount['type'],
+                            'total' => $unitize((int) $total),
+                            'free'  => $unitize((int) $free),
+                            'usage' => $unitize((int) ($total - $free)),
+                        ];
+                    }
+                    return $result;
+                };
+            })(),
+            'network'    => (function () {
+                if (DIRECTORY_SEPARATOR === '\\') {
+                    $provide = process_async('powershell', [
+                        '-Command',
+                        'ConvertTo-Json @{
+                      tcp = (Get-NetTCPConnection | Select-Object State,LocalAddress,LocalPort)
+                      udp = (Get-NetUDPEndpoint   | Select-Object State,LocalAddress,LocalPort)
+                    }',
+                    ]);
+                    $provide->setCompleteAction(function () {
+                        /** @var \ProcessAsync $this */
+                        $parse = function ($rows, $st) {
+                            $result = [4 => [], 6 => []];
+                            foreach ($rows as $row) {
+                                if ($row['State'] === $st) {
+                                    $address = $row['LocalAddress'];
+                                    if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                                        if ($address === '0.0.0.0') {
+                                            $address = '*';
+                                        }
+                                        $result[4][$address][] = $row['LocalPort'];
+                                    }
+                                    if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+                                        if ($address === '::') {
+                                            $address = '*';
+                                        }
+                                        $result[6][$address][] = $row['LocalPort'];
+                                    }
+                                }
+                            }
+                            return $result;
+                        };
+                        $netstat = json_decode($this->stdout, true);
+
+                        $binds = array_merge(
+                            array_combine(['tcp4', 'tcp6'], $parse($netstat['tcp'], 2)),
+                            array_combine(['udp4', 'udp6'], $parse($netstat['udp'], null)), // @todo 取れない？
+                        );
+                        return [[], $binds];
+                    });
+                }
+                else {
+                    $provide = function () {
+                        $nicdata = [];
+                        foreach (glob('/sys/class/net/*') as $nic) {
+                            $nicdata[basename($nic)] = [
+                                'mtu' => (int) trim(file_get_contents("$nic/mtu")),
+                                'mac' => trim(file_get_contents("$nic/address")),
+                            ];
+                        }
+
+                        $parseV4 = function ($filename, $st) {
+                            $result = [];
+                            $rows = str_array(file_get_contents($filename), ' ', false, false);
+                            foreach ($rows as $row) {
+                                if ($row['st'] === $st) {
+                                    [$address, $port] = explode(':', $row['local_address']);
+                                    $address = implode('.', array_map('hexdec', array_reverse(str_split($address, 2))));
+                                    if ($address === '0.0.0.0') {
+                                        $address = '*';
+                                    }
+                                    $result[$address][] = hexdec($port);
+                                }
+                            }
+                            return $result;
+                        };
+                        $parseV6 = function ($filename, $st) {
+                            $result = [];
+                            $rows = str_array(file_get_contents($filename), ' ', false, false);
+                            foreach ($rows as $row) {
+                                if ($row['st'] === $st) {
+                                    [$address, $port] = explode(':', $row['local_address']);
+                                    $segments = str_split($address, 8);
+                                    foreach ($segments as $n => $segment) {
+                                        $segments[$n] = vsprintf("%s%s:%s%s", array_map('strtolower', array_reverse(str_split($segment, 2))));
+                                    }
+                                    $address = implode(':', $segments);
+                                    if ($address === '0000:0000:0000:0000:0000:0000:0000:0000') {
+                                        $address = '*';
+                                    }
+                                    $result[$address][] = hexdec($port);
+                                }
+                            }
+                            return $result;
+                        };
+
+                        $binds = [
+                            'tcp4' => $parseV4('/proc/net/tcp', '0A'),
+                            'tcp6' => $parseV6('/proc/net/tcp6', '0A'),
+                            'udp4' => $parseV4('/proc/net/udp', '07'),
+                            'udp6' => $parseV6('/proc/net/udp6', '07'),
+                        ];
+
+                        return [$nicdata, $binds];
+                    };
+                }
+
+                return function () use ($provide) {
+                    [$nicdata, $binds] = $provide();
+
+                    $result = [];
+                    foreach (net_get_interfaces() as $name => $interface) {
+                        foreach ($interface['unicast'] as $unicast) {
+                            if (in_array($unicast['family'], [AF_INET, AF_INET6])) {
+                                $version = $unicast['family'] === AF_INET ? 4 : 6;
+                                $address = ip_normalize($unicast['address']);
+                                $result[$unicast['address']] = [
+                                    'address'   => $unicast['address'],
+                                    'netmask'   => $unicast['netmask'],
+                                    'version'   => $version,
+                                    'tcp-ports' => array_merge($binds["tcp$version"][$address] ?? [], $binds["tcp$version"]['*'] ?? []),
+                                    'udp-ports' => array_merge($binds["udp$version"][$address] ?? [], $binds["udp$version"]['*'] ?? []),
+                                    'name'      => $name,
+                                    'mac'       => $interface['mac'] ?? $nicdata[$name]['mac'] ?? null,
+                                    'mtu'       => $interface['mtu'] ?? $nicdata[$name]['mtu'] ?? null,
+                                ];
+                            }
+                        }
+                    }
+                    return $result;
+                };
+            })(),
+        ]);
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\iterator_chunk') || (new \ReflectionFunction('ryunosuke\\DbMigration\\iterator_chunk'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\iterator_chunk')) {
     /**
@@ -17794,6 +17972,7 @@ if (!function_exists('ryunosuke\\DbMigration\\iterator_chunk')) {
 
         // Generator は Iterator であるが Iterator は Generator ではないので変換する
         if (is_iterable($iterator)) {
+            /** @var \Iterator $iterator */
             $iterator = (fn() => yield from $iterator)();
         }
 
@@ -17858,6 +18037,8 @@ if (!function_exists('ryunosuke\\DbMigration\\iterator_combine')) {
      */
     function iterator_combine($keys, $values)
     {
+        /** @var \Iterator $itK */
+        /** @var \Iterator $itV */
         $itK = is_array($keys) ? (fn() => yield from $keys)() : $keys;
         $itV = is_array($values) ? (fn() => yield from $values)() : $values;
 
@@ -17871,8 +18052,7 @@ if (!function_exists('ryunosuke\\DbMigration\\iterator_combine')) {
 
         // どちらかが回し切れていない≒数が一致していない
         if ($itK->valid() || $itV->valid()) {
-            // throw new \ValueError("Both parameters should have an equal number of iterators");
-            throw new \InvalidArgumentException("Both parameters should have an equal number of iterators");
+            throw new \ValueError("Both parameters should have an equal number of iterators");
         }
     }
 }
@@ -18212,41 +18392,34 @@ if (!function_exists('ryunosuke\\DbMigration\\calculate_formula')) {
     function calculate_formula($formula)
     {
         // TOKEN_PARSE を渡せばシンタックスチェックも行ってくれる
-        $tokens = parse_php("<?php ($formula);", [
-            'phptag' => false,
-            'flags'  => TOKEN_PARSE,
+        $tokens = php_parse("<?php ($formula);", [
+            'flags' => TOKEN_PARSE,
         ]);
         array_shift($tokens);
         array_pop($tokens);
 
-        $constants = [T_STRING, T_DOUBLE_COLON, T_NS_SEPARATOR];
-        // @codeCoverageIgnoreStart
-        if (version_compare(PHP_VERSION, '8.0.0') >= 0) {
-            /** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
-            $constants = [T_STRING, T_DOUBLE_COLON, T_NS_SEPARATOR, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
-        }
-        // @codeCoverageIgnoreEnd
+        $constants = [T_STRING, T_DOUBLE_COLON, T_NS_SEPARATOR, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
         $operands = [T_LNUMBER, T_DNUMBER];
         $operators = ['(', ')', '+', '-', '*', '/', '%', '**'];
 
         $constant = '';
         $expression = '';
         foreach ($tokens as $token) {
-            if (in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+            if (in_array($token->id, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
                 continue;
             }
-            if (in_array($token[0], $constants, true)) {
-                $constant .= $token[1];
+            if (in_array($token->id, $constants, true)) {
+                $constant .= $token->text;
             }
-            elseif (in_array($token[0], $operands, true) || in_array($token[1], $operators, true)) {
+            elseif (in_array($token->id, $operands, true) || in_array($token->text, $operators, true)) {
                 if (strlen($constant)) {
                     $expression .= constant($constant) + 0;
                     $constant = '';
                 }
-                $expression .= $token[1];
+                $expression .= $token->text;
             }
             else {
-                throw new \ParseError(sprintf("syntax error, unexpected '%s' in  on line %d", $token[1], $token[2]));
+                throw new \ParseError(sprintf("syntax error, unexpected '%s' in  on line %d", $token->text, $token->line));
             }
         }
         return evaluate("return $expression;");
@@ -18393,7 +18566,7 @@ if (!function_exists('ryunosuke\\DbMigration\\maximum')) {
      */
     function maximum(...$variadic)
     {
-        $args = array_flatten($variadic) or throws(new \LengthException("argument's length is 0."));
+        $args = array_flatten($variadic) or throw new \LengthException("argument's length is 0.");
         return max($args);
     }
 }
@@ -18420,8 +18593,8 @@ if (!function_exists('ryunosuke\\DbMigration\\mean')) {
      */
     function mean(...$variadic)
     {
-        $args = array_flatten($variadic) or throws(new \LengthException("argument's length is 0."));
-        $args = array_filter($args, 'is_numeric') or throws(new \LengthException("argument's must be contain munber."));
+        $args = array_flatten($variadic) or throw new \LengthException("argument's length is 0.");
+        $args = array_filter($args, 'is_numeric') or throw new \LengthException("argument's must be contain munber.");
         return array_sum($args) / count($args);
     }
 }
@@ -18452,7 +18625,7 @@ if (!function_exists('ryunosuke\\DbMigration\\median')) {
      */
     function median(...$variadic)
     {
-        $args = array_flatten($variadic) or throws(new \LengthException("argument's length is 0."));
+        $args = array_flatten($variadic) or throw new \LengthException("argument's length is 0.");
         $count = count($args);
         $center = (int) ($count / 2);
         sort($args);
@@ -18487,7 +18660,7 @@ if (!function_exists('ryunosuke\\DbMigration\\minimum')) {
      */
     function minimum(...$variadic)
     {
-        $args = array_flatten($variadic) or throws(new \LengthException("argument's length is 0."));
+        $args = array_flatten($variadic) or throw new \LengthException("argument's length is 0.");
         return min($args);
     }
 }
@@ -18514,7 +18687,7 @@ if (!function_exists('ryunosuke\\DbMigration\\mode')) {
      */
     function mode(...$variadic)
     {
-        $args = array_flatten($variadic) or throws(new \LengthException("argument's length is 0."));
+        $args = array_flatten($variadic) or throw new \LengthException("argument's length is 0.");
         $vals = array_map(function ($v) {
             if (is_object($v)) {
                 // ここに特別扱いのオブジェクトを列挙していく
@@ -18555,9 +18728,207 @@ if (!function_exists('ryunosuke\\DbMigration\\sum')) {
      */
     function sum(...$variadic)
     {
-        $args = array_flatten($variadic) or throws(new \LengthException("argument's length is 0."));
-        $args = array_filter($args, 'is_numeric') or throws(new \LengthException("argument's must be contain munber."));
+        $args = array_flatten($variadic) or throw new \LengthException("argument's length is 0.");
+        $args = array_filter($args, 'is_numeric') or throw new \LengthException("argument's must be contain munber.");
         return array_sum($args);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\annotation_parse') || (new \ReflectionFunction('ryunosuke\\DbMigration\\annotation_parse'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\annotation_parse')) {
+    /**
+     * アノテーションっぽい文字列をそれっぽくパースして返す
+     *
+     * $annotation にはリフレクションオブジェクトも渡せる。
+     * その場合、getDocComment や getFilename, getNamespaceName などを用いてある程度よしなに名前解決する。
+     * もっとも、@Class(args) 形式を使わないのであれば特に意味はない。
+     *
+     * $schame で「どのように取得するか？」のスキーマ定義が渡せる。
+     * スキーマ定義は連想配列で各アノテーションごとに下記のような定義を指定でき、連想配列でない場合はすべてのアノテーションにおいて指定したとみなされる。
+     *
+     * - true: 余計なことはせず、アノテーションの文字列をそのまま返す
+     * - false: 下記にようによしなに変換して返す
+     * - []: 複数値モードを強制する
+     * - null: 単一値モードを強制する
+     *
+     * アノテーションの仕様は下記（すべて $schema が false であるとする）。
+     *
+     * - @から行末まで（1行に複数のアノテーションは含められない）
+     *     - ただし行末が `({[` のいずれかであれば次の `]})` までブロックを記載する機会が与えられる
+     *     - ブロックを見つけたときは本来値となるべき値がキーに、ブロックが値となり、結果は必ず配列化される
+     * - 同じアノテーションを複数見つけたときは配列化される
+     * - `@hogera`: 値なしは null を返す
+     * - `@hogera v1 "v2 v3"`: ["v1", "v2 v3"] という配列として返す
+     * - `@hogera {key: 123}`: ["key" => 123] という（連想）配列として返す
+     * - `@hogera [123, 456]`: [123, 456] という連番配列として返す
+     * - `@hogera ("2019/12/23")`: hogera で解決できるクラス名で new して返す（$filename 引数の指定が必要）
+     * - 下3つの形式はアノテーション区切りのスペースはあってもなくても良い
+     *
+     * $schema が true だと上記のような変換は一切行わず、素朴な文字列で返す。
+     * あくまで簡易実装であり、本格的に何かをしたいなら専用のパッケージを導入したほうが良い。
+     *
+     * Example:
+     * ```php
+     * $annotations = annotation_parse('
+     *
+     * @noval
+     * @single this is value
+     * @closure this is value
+     * @array this is value
+     * @hash {key: 123}
+     * @list [1, 2, 3]
+     * @ArrayObject([1, 2, 3])
+     * @block message {
+     *     this is message1
+     *     this is message2
+     * }
+     * @same this is same value1
+     * @same this is same value2
+     * @same this is same value3
+     * ', [
+     *     'single'  => true,
+     *     'closure' => fn($value) => explode(' ', strtoupper($value)),
+     * ]);
+     * that($annotations)->is([
+     *     'noval'       => null,                        // 値なしは null になる
+     *     'single'      => 'this is value',             // $schema 指定してるので文字列になる
+     *     'closure'     => ['THIS', 'IS', 'VALUE'],     // $schema 指定してそれがクロージャだとコールバックされる
+     *     'array'       => ['this', 'is', 'value'],     // $schema 指定していないので配列になる
+     *     'hash'        => ['key' => '123'],            // 連想配列になる
+     *     'list'        => [1, 2, 3],                   // 連番配列になる
+     *     'ArrayObject' => new \ArrayObject([1, 2, 3]), // new されてインスタンスになる
+     *     "block"       => [                            // ブロックはブロック外をキーとした連想配列になる（複数指定でキーは指定できるイメージ）
+     *         "message" => ["this is message1\n    this is message2"],
+     *     ],
+     *     'same'        => [                            // 複数あるのでそれぞれの配列になる
+     *         ['this', 'is', 'same', 'value1'],
+     *         ['this', 'is', 'same', 'value2'],
+     *         ['this', 'is', 'same', 'value3'],
+     *     ],
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\misc
+     *
+     * @param string|\Reflector $annotation アノテーション文字列
+     * @param array|mixed $schema スキーマ定義
+     * @param string|array $nsfiles ファイル名 or [ファイル名 => 名前空間名]
+     * @return array アノテーション配列
+     */
+    function annotation_parse($annotation, $schema = [], $nsfiles = [])
+    {
+        if ($annotation instanceof \Reflector) {
+            $reflector = $annotation;
+            /** @noinspection PhpPossiblePolymorphicInvocationInspection */
+            $annotation = $reflector->getDocComment();
+
+            // クラスメンバーリフレクションは getDeclaringClass しないと名前空間が取れない
+            if (false
+                || $reflector instanceof \ReflectionClassConstant
+                || $reflector instanceof \ReflectionProperty
+                || $reflector instanceof \ReflectionMethod
+            ) {
+                $reflector = $reflector->getDeclaringClass();
+            }
+
+            // 無名クラスに名前空間という概念はない（無くはないが普通に想起される名前空間ではない）
+            $namespaces = [];
+            if (!($reflector instanceof \ReflectionClass && $reflector->isAnonymous())) {
+                $namespaces[] = $reflector->getNamespaceName();
+            }
+            $nsfiles[$reflector->getFileName()] = $nsfiles[$reflector->getFileName()] ?? $namespaces;
+
+            // doccomment 特有のインデントを削除する
+            $annotation = preg_replace('#(\\R)[ \\t]+\\*[ \\t]?#u', '$1', str_chop($annotation, '/**', '*/'));
+        }
+
+        $result = [];
+        $multiples = [];
+
+        $brace = [
+            '(' => ')',
+            '{' => '}',
+            '[' => ']',
+        ];
+        for ($i = 0, $l = strlen($annotation); $i < $l; $i++) {
+            $i = strpos_quoted($annotation, '@', $i);
+            if ($i === null) {
+                break;
+            }
+
+            $seppos = min(strpos_array($annotation, [" ", "\t", "\n", '[', '{', '('], $i + 1) ?: [false]);
+            $name = substr($annotation, $i + 1, $seppos - $i - 1);
+            $i += strlen($name);
+            $name = trim($name);
+
+            $key = null;
+            $brkpos = strpos_quoted($annotation, "\n", $seppos) ?: strlen($annotation);
+            if (isset($brace[$annotation[$brkpos - 1]])) {
+                $s = $annotation[$brkpos - 1];
+                $e = $brace[$s];
+                $brkpos--;
+                $key = trim(substr($annotation, $seppos, $brkpos - $seppos));
+                $value = $s . str_between($annotation, $s, $e, $brkpos) . $e;
+                $i = $brkpos;
+            }
+            else {
+                $endpos = strpos_quoted($annotation, "@", $seppos) ?: strlen($annotation);
+                $value = substr($annotation, $seppos, $endpos - $seppos);
+                $i += strlen($value);
+                $value = trim($value);
+            }
+
+            $rawmode = $schema;
+            if (is_array($rawmode)) {
+                $rawmode = array_key_exists($name, $rawmode) ? $rawmode[$name] : false;
+            }
+            if ($rawmode instanceof \Closure) {
+                $value = $rawmode($value, $key);
+            }
+            elseif ($rawmode) {
+                if (is_string($key)) {
+                    $value = substr($value, 1, -1);
+                }
+            }
+            else {
+                if (is_array($rawmode)) {
+                    $multiples[$name] = true;
+                }
+                if (is_null($rawmode)) {
+                    $multiples[$name] = false;
+                }
+                if ($value === '') {
+                    $value = null;
+                }
+                elseif (in_array($value[0] ?? null, ['('], true)) {
+                    $class = namespace_resolve($name, $nsfiles, 'alias') ?? $name;
+                    $value = new $class(...paml_import(substr($value, 1, -1)));
+                }
+                elseif (in_array($value[0] ?? null, ['{', '['], true)) {
+                    $value = (array) paml_import($value)[0];
+                }
+                else {
+                    $value = array_values(array_filter(quoteexplode([" ", "\t"], $value), "strlen"));
+                }
+            }
+
+            if (array_key_exists($name, $result) && !isset($multiples[$name])) {
+                $multiples[$name] = true;
+                $result[$name] = [$result[$name]];
+            }
+            if (strlen($key ?? '')) {
+                $multiples[$name] = true;
+                $result[$name][$key] = $value;
+            }
+            elseif (isset($multiples[$name]) && $multiples[$name] === true) {
+                $result[$name][] = $value;
+            }
+            else {
+                $result[$name] = $value;
+            }
+        }
+
+        return $result;
     }
 }
 
@@ -18589,11 +18960,11 @@ if (!function_exists('ryunosuke\\DbMigration\\console_log')) {
             // header_register_callback はグローバルで1度しか登録できないのでライブラリ内部で使うべきではない
             // ob_start にコールバックを渡すと ob_end～ の時に呼ばれるので、擬似的に header_register_callback 的なことができる
             ob_start(function () use (&$rows) {
-                $header = base64_encode(utf8_encode(json_encode([
+                $header = base64_encode(mb_convert_encoding(json_encode([
                     'version' => '1.0.0',
                     'columns' => ['log', 'backtrace', 'type'],
                     'rows'    => $rows,
-                ])));
+                ]), 'UTF-8', 'ISO-8859-1'));
                 header('X-ChromeLogger-Data: ' . $header);
                 return false;
             });
@@ -18680,8 +19051,271 @@ if (!function_exists('ryunosuke\\DbMigration\\evaluate')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\highlight_php') || (new \ReflectionFunction('ryunosuke\\DbMigration\\highlight_php'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\highlight_php')) {
+assert(!function_exists('ryunosuke\\DbMigration\\namespace_parse') || (new \ReflectionFunction('ryunosuke\\DbMigration\\namespace_parse'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\namespace_parse')) {
+    /**
+     * php ファイルをパースして名前空間配列を返す
+     *
+     * ファイル内で use/use const/use function していたり、シンボルを定義していたりする箇所を検出して名前空間単位で返す。
+     *
+     * Example:
+     * ```php
+     * // このような php ファイルをパースすると・・・
+     * file_set_contents(sys_get_temp_dir() . '/namespace.php', '
+     * <?php
+     * namespace NS1;
+     * use ArrayObject as AO;
+     * use function strlen as SL;
+     * function InnerFunc(){}
+     * class InnerClass{}
+     * define("OUTER\\\\CONST", "OuterConst");
+     *
+     * namespace NS2;
+     * use RuntimeException as RE;
+     * use const COUNT_RECURSIVE as CR;
+     * class InnerClass{}
+     * const InnerConst = 123;
+     * ');
+     * // このような名前空間配列が得られる
+     * that(namespace_parse(sys_get_temp_dir() . '/namespace.php'))->isSame([
+     *     'NS1' => [
+     *         'const'    => [],
+     *         'function' => [
+     *             'SL'        => 'strlen',
+     *             'InnerFunc' => 'NS1\\InnerFunc',
+     *         ],
+     *         'alias'    => [
+     *             'AO'         => 'ArrayObject',
+     *             'InnerClass' => 'NS1\\InnerClass',
+     *         ],
+     *     ],
+     *     'OUTER' => [
+     *         'const'    => [
+     *             'CONST' => 'OUTER\\CONST',
+     *         ],
+     *         'function' => [],
+     *         'alias'    => [],
+     *     ],
+     *     'NS2' => [
+     *         'const'    => [
+     *             'CR'         => 'COUNT_RECURSIVE',
+     *             'InnerConst' => 'NS2\\InnerConst',
+     *         ],
+     *         'function' => [],
+     *         'alias'    => [
+     *             'RE'         => 'RuntimeException',
+     *             'InnerClass' => 'NS2\\InnerClass',
+     *         ],
+     *     ],
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\misc
+     *
+     * @param string $filename ファイル名
+     * @param array $options オプション配列
+     * @return array 名前空間配列
+     */
+    function namespace_parse($filename, $options = [])
+    {
+        $filename = realpath($filename);
+        $filemtime = filemtime($filename);
+        $options += [
+            'cache' => null,
+        ];
+        if ($options['cache'] === null) {
+            $options['cache'] = cache($filename, fn() => $filemtime, 'filemtime') >= $filemtime;
+        }
+        if (!$options['cache']) {
+            cache($filename, null, 'filemtime');
+            cache($filename, null, __FUNCTION__);
+        }
+        return cache($filename, function () use ($filename) {
+            $stringify = function ($tokens) {
+                return trim(implode('', array_column(array_filter($tokens, function ($token) {
+                    return in_array($token->id, [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE, T_STRING], true);
+                }), 'text')), '\\');
+            };
+
+            $keys = [
+                null        => 'alias', // for use
+                T_CLASS     => 'alias',
+                T_INTERFACE => 'alias',
+                T_TRAIT     => 'alias',
+                T_STRING    => 'const', // for define
+                T_CONST     => 'const',
+                T_FUNCTION  => 'function',
+            ];
+
+            $contents = file_get_contents($filename);
+            $namespace = '';
+            $tokens = [-1 => null];
+            $result = [];
+            while (true) {
+                $tokens = php_parse($contents, [
+                    'flags'  => TOKEN_PARSE,
+                    'begin'  => ["define", T_NAMESPACE, T_USE, T_CONST, T_FUNCTION, T_CLASS, T_INTERFACE, T_TRAIT],
+                    'end'    => ['{', ';', '(', T_EXTENDS, T_IMPLEMENTS],
+                    'offset' => last_key($tokens) + 1,
+                ]);
+                if (!$tokens) {
+                    break;
+                }
+                $token = reset($tokens);
+                // define は現在の名前空間とは無関係に名前空間定数を宣言することができる
+                if ($token->id === T_STRING && $token->text === "define") {
+                    $tokens = php_parse($contents, [
+                        'flags'  => TOKEN_PARSE,
+                        'begin'  => [T_CONSTANT_ENCAPSED_STRING],
+                        'end'    => [T_CONSTANT_ENCAPSED_STRING],
+                        'offset' => last_key($tokens),
+                    ]);
+                    $cname = substr(implode('', array_column($tokens, 'text')), 1, -1);
+                    $define = trim(json_decode("\"$cname\""), '\\');
+                    [$ns, $nm] = namespace_split($define);
+                    if (!isset($result[$ns])) {
+                        $result[$ns] = [
+                            'const'    => [],
+                            'function' => [],
+                            'alias'    => [],
+                        ];
+                    }
+                    $result[$ns][$keys[$token->id]][$nm] = $define;
+                }
+                switch ($token->id) {
+                    case T_NAMESPACE:
+                        $namespace = $stringify($tokens);
+                        $result[$namespace] = [
+                            'const'    => [],
+                            'function' => [],
+                            'alias'    => [],
+                        ];
+                        break;
+                    case T_USE:
+                        $tokenCorF = array_find_first($tokens, fn($token) => ($token->id === T_CONST || $token->id === T_FUNCTION) ? $token->id : 0, false);
+
+                        $prefix = '';
+                        if (end($tokens)->text === '{') {
+                            $prefix = $stringify($tokens);
+                            $tokens = php_parse($contents, [
+                                'flags'  => TOKEN_PARSE,
+                                'begin'  => ['{'],
+                                'end'    => ['}'],
+                                'offset' => last_key($tokens),
+                            ]);
+                        }
+
+                        $multi = array_explode($tokens, fn($token) => $token->text === ',');
+                        foreach ($multi as $ttt) {
+                            $as = array_explode($ttt, fn($token) => $token->id === T_AS);
+
+                            $alias = $stringify($as[0]);
+                            if (isset($as[1])) {
+                                $result[$namespace][$keys[$tokenCorF]][$stringify($as[1])] = concat($prefix, '\\') . $alias;
+                            }
+                            else {
+                                $result[$namespace][$keys[$tokenCorF]][namespace_split($alias)[1]] = concat($prefix, '\\') . $alias;
+                            }
+                        }
+                        break;
+                    case T_CONST:
+                    case T_FUNCTION:
+                    case T_CLASS:
+                    case T_INTERFACE:
+                    case T_TRAIT:
+                        $alias = $stringify($tokens);
+                        if (strlen($alias)) {
+                            $result[$namespace][$keys[$token->id]][$alias] = concat($namespace, '\\') . $alias;
+                        }
+                        // ブロック内に興味はないので進めておく（function 内 function などはあり得るが考慮しない）
+                        if ($token->id !== T_CONST) {
+                            $tokens = php_parse($contents, [
+                                'flags'  => TOKEN_PARSE,
+                                'begin'  => ['{'],
+                                'end'    => ['}'],
+                                'offset' => last_key($tokens),
+                            ]);
+                            break;
+                        }
+                }
+            }
+            return $result;
+        }, __FUNCTION__);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\namespace_resolve') || (new \ReflectionFunction('ryunosuke\\DbMigration\\namespace_resolve'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\namespace_resolve')) {
+    /**
+     * エイリアス名を完全修飾名に解決する
+     *
+     * 例えばあるファイルのある名前空間で `use Hoge\Fuga\Piyo;` してるときの `Piyo` を `Hoge\Fuga\Piyo` に解決する。
+     *
+     * Example:
+     * ```php
+     * // このような php ファイルがあるとして・・・
+     * file_set_contents(sys_get_temp_dir() . '/symbol.php', '
+     * <?php
+     * namespace vendor\NS;
+     *
+     * use ArrayObject as AO;
+     * use function strlen as SL;
+     *
+     * function InnerFunc(){}
+     * class InnerClass{}
+     * ');
+     * // 下記のように解決される
+     * that(namespace_resolve('AO', sys_get_temp_dir() . '/symbol.php'))->isSame('ArrayObject');
+     * that(namespace_resolve('SL', sys_get_temp_dir() . '/symbol.php'))->isSame('strlen');
+     * that(namespace_resolve('InnerFunc', sys_get_temp_dir() . '/symbol.php'))->isSame('vendor\\NS\\InnerFunc');
+     * that(namespace_resolve('InnerClass', sys_get_temp_dir() . '/symbol.php'))->isSame('vendor\\NS\\InnerClass');
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\misc
+     *
+     * @param string $shortname エイリアス名
+     * @param string|array $nsfiles ファイル名 or [ファイル名 => 名前空間名]
+     * @param array $targets エイリアスタイプ（'const', 'function', 'alias' のいずれか）
+     * @return string|null 完全修飾名。解決できなかった場合は null
+     */
+    function namespace_resolve(string $shortname, $nsfiles, $targets = ['const', 'function', 'alias'])
+    {
+        // 既に完全修飾されている場合は何もしない
+        if (($shortname[0] ?? null) === '\\') {
+            return $shortname;
+        }
+
+        // use Inner\Space のような名前空間の use の場合を考慮する
+        $parts = explode('\\', $shortname, 2);
+        $prefix = isset($parts[1]) ? array_shift($parts) : null;
+
+        if (is_string($nsfiles)) {
+            $nsfiles = [$nsfiles => []];
+        }
+
+        $targets = (array) $targets;
+        foreach ($nsfiles as $filename => $namespaces) {
+            $namespaces = array_flip(array_map(fn($n) => trim($n, '\\'), (array) $namespaces));
+            foreach (namespace_parse($filename) as $namespace => $ns) {
+                /** @noinspection PhpIllegalArrayKeyTypeInspection */
+                if (!$namespaces || isset($namespaces[$namespace])) {
+                    if (isset($ns['alias'][$prefix])) {
+                        return $ns['alias'][$prefix] . '\\' . implode('\\', $parts);
+                    }
+                    foreach ($targets as $target) {
+                        if (isset($ns[$target][$shortname])) {
+                            return $ns[$target][$shortname];
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\php_highlight') || (new \ReflectionFunction('ryunosuke\\DbMigration\\php_highlight'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\php_highlight')) {
     /**
      * php のコードをハイライトする
      *
@@ -18694,7 +19328,7 @@ if (!function_exists('ryunosuke\\DbMigration\\highlight_php')) {
      * @param array|int $options オプション
      * @return string ハイライトされた php コード
      */
-    function highlight_php($phpcode, $options = [])
+    function php_highlight($phpcode, $options = [])
     {
         $options += [
             'context' => null,
@@ -18845,24 +19479,20 @@ if (!function_exists('ryunosuke\\DbMigration\\highlight_php')) {
             T_DOC_COMMENT              => $comment,
         ];
 
-        $tokens = token_get_all($phpcode, TOKEN_PARSE);
+        $tokens = \PhpToken::tokenize($phpcode, TOKEN_PARSE);
         foreach ($tokens as $n => $token) {
-            if (is_string($token)) {
-                $token = [null, $token, null];
-            }
-
-            $style = $rules[strtolower($token[1])] ?? $rules[$token[0]] ?? null;
+            $style = $rules[strtolower($token->text)] ?? $rules[$token->id] ?? null;
             if ($style !== null) {
-                $token[1] = $colorize($token[1], $style);
+                $token->text = $colorize($token->text, $style);
             }
             $tokens[$n] = $token;
         }
-        return implode('', array_column($tokens, 1));
+        return implode('', array_column($tokens, 'text'));
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\indent_php') || (new \ReflectionFunction('ryunosuke\\DbMigration\\indent_php'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\indent_php')) {
+assert(!function_exists('ryunosuke\\DbMigration\\php_indent') || (new \ReflectionFunction('ryunosuke\\DbMigration\\php_indent'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\php_indent')) {
     /**
      * php のコードのインデントを調整する
      *
@@ -18879,7 +19509,7 @@ if (!function_exists('ryunosuke\\DbMigration\\indent_php')) {
      *     }
      * ';
      * // 数値指定は空白換算
-     * that(indent_php($phpcode, 8))->isSame('
+     * that(php_indent($phpcode, 8))->isSame('
      *         echo 123;
      *
      *         if (true) {
@@ -18887,7 +19517,7 @@ if (!function_exists('ryunosuke\\DbMigration\\indent_php')) {
      *         }
      * ');
      * // 文字列を指定すればそれが使用される
-     * that(indent_php($phpcode, "  "))->isSame('
+     * that(php_indent($phpcode, "  "))->isSame('
      *   echo 123;
      *
      *   if (true) {
@@ -18895,7 +19525,7 @@ if (!function_exists('ryunosuke\\DbMigration\\indent_php')) {
      *   }
      * ');
      * // オプション指定
-     * that(indent_php($phpcode, [
+     * that(php_indent($phpcode, [
      *     'baseline'  => 1,    // 基準インデントの行番号（負数で下からの指定になる）
      *     'indent'    => 4,    // インデント指定（上記の数値・文字列指定はこれの糖衣構文）
      *     'trimempty' => true, // 空行を trim するか
@@ -18915,7 +19545,7 @@ if (!function_exists('ryunosuke\\DbMigration\\indent_php')) {
      * @param array|int|string $options オプション
      * @return string インデントされた php コード
      */
-    function indent_php($phpcode, $options = [])
+    function php_indent($phpcode, $options = [])
     {
         if (!is_array($options)) {
             $options = ['indent' => $options];
@@ -18938,698 +19568,58 @@ if (!function_exists('ryunosuke\\DbMigration\\indent_php')) {
         preg_match('@^[ \t]*@u', $lines[$baseline] ?? '', $matches);
         $indent = $matches[0] ?? '';
 
-        $tmp = token_get_all("<?php $phpcode");
+        $tmp = \PhpToken::tokenize("<?php $phpcode");
         array_shift($tmp);
 
         // トークンの正規化
         $tokens = [];
         for ($i = 0; $i < count($tmp); $i++) {
-            if (is_string($tmp[$i])) {
-                $tmp[$i] = [-1, $tmp[$i], null];
-            }
-
-            // 行コメントの分割（T_COMMENT には改行が含まれている）
-            if ($tmp[$i][0] === T_COMMENT && preg_match('@^(#|//).*?(\\R)@um', $tmp[$i][1], $matches)) {
-                $tmp[$i][1] = trim($tmp[$i][1]);
-                if (($tmp[$i + 1][0] ?? null) === T_WHITESPACE) {
-                    $tmp[$i + 1][1] = $matches[2] . $tmp[$i + 1][1];
-                }
-                else {
-                    array_splice($tmp, $i + 1, 0, [[T_WHITESPACE, $matches[2], null]]);
-                }
-            }
-
             if ($options['heredoc']) {
                 // 行コメントと同じ（T_START_HEREDOC には改行が含まれている）
-                if ($tmp[$i][0] === T_START_HEREDOC && preg_match('@^(<<<).*?(\\R)@um', $tmp[$i][1], $matches)) {
-                    $tmp[$i][1] = trim($tmp[$i][1]);
-                    if (($tmp[$i + 1][0] ?? null) === T_ENCAPSED_AND_WHITESPACE) {
-                        $tmp[$i + 1][1] = $matches[2] . $tmp[$i + 1][1];
+                if ($tmp[$i]->id === T_START_HEREDOC && preg_match('@^(<<<).*?(\\R)@um', $tmp[$i]->text, $matches)) {
+                    $tmp[$i]->text = trim($tmp[$i]->text);
+                    if (($tmp[$i + 1]->id ?? null) === T_ENCAPSED_AND_WHITESPACE) {
+                        $tmp[$i + 1]->text = $matches[2] . $tmp[$i + 1]->text;
                     }
                     else {
-                        array_splice($tmp, $i + 1, 0, [[T_ENCAPSED_AND_WHITESPACE, $matches[2], null]]);
+                        array_splice($tmp, $i + 1, 0, [new \PhpToken(T_ENCAPSED_AND_WHITESPACE, $matches[2])]);
                     }
                 }
                 // php 7.3 において T_END_HEREDOC は必ず単一行になる
-                if ($tmp[$i][0] === T_ENCAPSED_AND_WHITESPACE) {
-                    if (($tmp[$i + 1][0] ?? null) === T_END_HEREDOC && preg_match('@^(\\s+)(.*)@um', $tmp[$i + 1][1], $matches)) {
-                        $tmp[$i][1] = $tmp[$i][1] . $matches[1];
-                        $tmp[$i + 1][1] = $matches[2];
+                if ($tmp[$i]->id === T_ENCAPSED_AND_WHITESPACE) {
+                    if (($tmp[$i + 1]->id ?? null) === T_END_HEREDOC && preg_match('@^(\\s+)(.*)@um', $tmp[$i + 1]->text, $matches)) {
+                        $tmp[$i]->text = $tmp[$i]->text . $matches[1];
+                        $tmp[$i + 1]->text = $matches[2];
                     }
                 }
             }
 
-            $tokens[] = $tmp[$i] + [3 => token_name($tmp[$i][0])];
+            $tokens[] = $tmp[$i];
         }
 
         // 改行を置換してインデント
         $hereing = false;
         foreach ($tokens as $i => $token) {
             if ($options['heredoc']) {
-                if ($token[0] === T_START_HEREDOC) {
+                if ($token->id === T_START_HEREDOC) {
                     $hereing = true;
                 }
-                if ($token[0] === T_END_HEREDOC) {
+                if ($token->id === T_END_HEREDOC) {
                     $hereing = false;
                 }
             }
-            if (in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true) || ($hereing && $token[0] === T_ENCAPSED_AND_WHITESPACE)) {
-                $token[1] = preg_replace("@(\\R)$indent@um", '$1' . $options['indent'], $token[1]);
+            if (in_array($token->id, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true) || ($hereing && $token->id === T_ENCAPSED_AND_WHITESPACE)) {
+                $token->text = preg_replace("@(\\R)$indent@um", '$1' . $options['indent'], $token->text);
             }
             if ($options['trimempty']) {
-                if ($token[0] === T_WHITESPACE) {
-                    $token[1] = preg_replace("@(\\R)[ \\t]+(\\R)@um", '$1$2', $token[1]);
+                if ($token->id === T_WHITESPACE) {
+                    $token->text = preg_replace("@(\\R)[ \\t]+(\\R)@um", '$1$2', $token->text);
                 }
             }
 
             $tokens[$i] = $token;
         }
-        return implode('', array_column($tokens, 1));
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\parse_annotation') || (new \ReflectionFunction('ryunosuke\\DbMigration\\parse_annotation'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\parse_annotation')) {
-    /**
-     * アノテーションっぽい文字列をそれっぽくパースして返す
-     *
-     * $annotation にはリフレクションオブジェクトも渡せる。
-     * その場合、getDocComment や getFilename, getNamespaceName などを用いてある程度よしなに名前解決する。
-     * もっとも、@Class(args) 形式を使わないのであれば特に意味はない。
-     *
-     * $schame で「どのように取得するか？」のスキーマ定義が渡せる。
-     * スキーマ定義は連想配列で各アノテーションごとに下記のような定義を指定でき、連想配列でない場合はすべてのアノテーションにおいて指定したとみなされる。
-     *
-     * - true: 余計なことはせず、アノテーションの文字列をそのまま返す
-     * - false: 下記にようによしなに変換して返す
-     * - []: 複数値モードを強制する
-     * - null: 単一値モードを強制する
-     *
-     * アノテーションの仕様は下記（すべて $schema が false であるとする）。
-     *
-     * - @から行末まで（1行に複数のアノテーションは含められない）
-     *     - ただし行末が `({[` のいずれかであれば次の `]})` までブロックを記載する機会が与えられる
-     *     - ブロックを見つけたときは本来値となるべき値がキーに、ブロックが値となり、結果は必ず配列化される
-     * - 同じアノテーションを複数見つけたときは配列化される
-     * - `@hogera`: 値なしは null を返す
-     * - `@hogera v1 "v2 v3"`: ["v1", "v2 v3"] という配列として返す
-     * - `@hogera {key: 123}`: ["key" => 123] という（連想）配列として返す
-     * - `@hogera [123, 456]`: [123, 456] という連番配列として返す
-     * - `@hogera ("2019/12/23")`: hogera で解決できるクラス名で new して返す（$filename 引数の指定が必要）
-     * - 下3つの形式はアノテーション区切りのスペースはあってもなくても良い
-     *
-     * $schema が true だと上記のような変換は一切行わず、素朴な文字列で返す。
-     * あくまで簡易実装であり、本格的に何かをしたいなら専用のパッケージを導入したほうが良い。
-     *
-     * Example:
-     * ```php
-     * $annotations = parse_annotation('
-     *
-     * @noval
-     * @single this is value
-     * @closure this is value
-     * @array this is value
-     * @hash {key: 123}
-     * @list [1, 2, 3]
-     * @ArrayObject([1, 2, 3])
-     * @block message {
-     *     this is message1
-     *     this is message2
-     * }
-     * @same this is same value1
-     * @same this is same value2
-     * @same this is same value3
-     * ', [
-     *     'single'  => true,
-     *     'closure' => fn($value) => explode(' ', strtoupper($value)),
-     * ]);
-     * that($annotations)->is([
-     *     'noval'       => null,                        // 値なしは null になる
-     *     'single'      => 'this is value',             // $schema 指定してるので文字列になる
-     *     'closure'     => ['THIS', 'IS', 'VALUE'],     // $schema 指定してそれがクロージャだとコールバックされる
-     *     'array'       => ['this', 'is', 'value'],     // $schema 指定していないので配列になる
-     *     'hash'        => ['key' => '123'],            // 連想配列になる
-     *     'list'        => [1, 2, 3],                   // 連番配列になる
-     *     'ArrayObject' => new \ArrayObject([1, 2, 3]), // new されてインスタンスになる
-     *     "block"       => [                            // ブロックはブロック外をキーとした連想配列になる（複数指定でキーは指定できるイメージ）
-     *         "message" => ["this is message1\n    this is message2"],
-     *     ],
-     *     'same'        => [                            // 複数あるのでそれぞれの配列になる
-     *         ['this', 'is', 'same', 'value1'],
-     *         ['this', 'is', 'same', 'value2'],
-     *         ['this', 'is', 'same', 'value3'],
-     *     ],
-     * ]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\misc
-     *
-     * @param string|\Reflector $annotation アノテーション文字列
-     * @param array|mixed $schema スキーマ定義
-     * @param string|array $nsfiles ファイル名 or [ファイル名 => 名前空間名]
-     * @return array アノテーション配列
-     */
-    function parse_annotation($annotation, $schema = [], $nsfiles = [])
-    {
-        if ($annotation instanceof \Reflector) {
-            $reflector = $annotation;
-            /** @noinspection PhpPossiblePolymorphicInvocationInspection */
-            $annotation = $reflector->getDocComment();
-
-            // クラスメンバーリフレクションは getDeclaringClass しないと名前空間が取れない
-            if (false
-                || $reflector instanceof \ReflectionClassConstant
-                || $reflector instanceof \ReflectionProperty
-                || $reflector instanceof \ReflectionMethod
-            ) {
-                $reflector = $reflector->getDeclaringClass();
-            }
-
-            // 無名クラスに名前空間という概念はない（無くはないが普通に想起される名前空間ではない）
-            $namespaces = [];
-            if (!($reflector instanceof \ReflectionClass && $reflector->isAnonymous())) {
-                $namespaces[] = $reflector->getNamespaceName();
-            }
-            $nsfiles[$reflector->getFileName()] = $nsfiles[$reflector->getFileName()] ?? $namespaces;
-
-            // doccomment 特有のインデントを削除する
-            $annotation = preg_replace('#(\\R)[ \\t]+\\*[ \\t]?#u', '$1', str_chop($annotation, '/**', '*/'));
-        }
-
-        $result = [];
-        $multiples = [];
-
-        $brace = [
-            '(' => ')',
-            '{' => '}',
-            '[' => ']',
-        ];
-        for ($i = 0, $l = strlen($annotation); $i < $l; $i++) {
-            $i = strpos_quoted($annotation, '@', $i);
-            if ($i === false) {
-                break;
-            }
-
-            $seppos = min(strpos_array($annotation, [" ", "\t", "\n", '[', '{', '('], $i + 1) ?: [false]);
-            $name = substr($annotation, $i + 1, $seppos - $i - 1);
-            $i += strlen($name);
-            $name = trim($name);
-
-            $key = null;
-            $brkpos = strpos_quoted($annotation, "\n", $seppos) ?: strlen($annotation);
-            if (isset($brace[$annotation[$brkpos - 1]])) {
-                $s = $annotation[$brkpos - 1];
-                $e = $brace[$s];
-                $brkpos--;
-                $key = trim(substr($annotation, $seppos, $brkpos - $seppos));
-                $value = $s . str_between($annotation, $s, $e, $brkpos) . $e;
-                $i = $brkpos;
-            }
-            else {
-                $endpos = strpos_quoted($annotation, "@", $seppos) ?: strlen($annotation);
-                $value = substr($annotation, $seppos, $endpos - $seppos);
-                $i += strlen($value);
-                $value = trim($value);
-            }
-
-            $rawmode = $schema;
-            if (is_array($rawmode)) {
-                $rawmode = array_key_exists($name, $rawmode) ? $rawmode[$name] : false;
-            }
-            if ($rawmode instanceof \Closure) {
-                $value = $rawmode($value, $key);
-            }
-            elseif ($rawmode) {
-                if (is_string($key)) {
-                    $value = substr($value, 1, -1);
-                }
-            }
-            else {
-                if (is_array($rawmode)) {
-                    $multiples[$name] = true;
-                }
-                if (is_null($rawmode)) {
-                    $multiples[$name] = false;
-                }
-                if ($value === '') {
-                    $value = null;
-                }
-                elseif (in_array($value[0] ?? null, ['('], true)) {
-                    $class = resolve_symbol($name, $nsfiles, 'alias') ?? $name;
-                    $value = new $class(...paml_import(substr($value, 1, -1)));
-                }
-                elseif (in_array($value[0] ?? null, ['{', '['], true)) {
-                    $value = (array) paml_import($value)[0];
-                }
-                else {
-                    $value = array_values(array_filter(quoteexplode([" ", "\t"], $value), "strlen"));
-                }
-            }
-
-            if (array_key_exists($name, $result) && !isset($multiples[$name])) {
-                $multiples[$name] = true;
-                $result[$name] = [$result[$name]];
-            }
-            if (strlen($key ?? '')) {
-                $multiples[$name] = true;
-                $result[$name][$key] = $value;
-            }
-            elseif (isset($multiples[$name]) && $multiples[$name] === true) {
-                $result[$name][] = $value;
-            }
-            else {
-                $result[$name] = $value;
-            }
-        }
-
-        return $result;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\parse_namespace') || (new \ReflectionFunction('ryunosuke\\DbMigration\\parse_namespace'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\parse_namespace')) {
-    /**
-     * php ファイルをパースして名前空間配列を返す
-     *
-     * ファイル内で use/use const/use function していたり、シンボルを定義していたりする箇所を検出して名前空間単位で返す。
-     *
-     * Example:
-     * ```php
-     * // このような php ファイルをパースすると・・・
-     * file_set_contents(sys_get_temp_dir() . '/namespace.php', '
-     * <?php
-     * namespace NS1;
-     * use ArrayObject as AO;
-     * use function strlen as SL;
-     * function InnerFunc(){}
-     * class InnerClass{}
-     * define("OUTER\\\\CONST", "OuterConst");
-     *
-     * namespace NS2;
-     * use RuntimeException as RE;
-     * use const COUNT_RECURSIVE as CR;
-     * class InnerClass{}
-     * const InnerConst = 123;
-     * ');
-     * // このような名前空間配列が得られる
-     * that(parse_namespace(sys_get_temp_dir() . '/namespace.php'))->isSame([
-     *     'NS1' => [
-     *         'const'    => [],
-     *         'function' => [
-     *             'SL'        => 'strlen',
-     *             'InnerFunc' => 'NS1\\InnerFunc',
-     *         ],
-     *         'alias'    => [
-     *             'AO'         => 'ArrayObject',
-     *             'InnerClass' => 'NS1\\InnerClass',
-     *         ],
-     *     ],
-     *     'OUTER' => [
-     *         'const'    => [
-     *             'CONST' => 'OUTER\\CONST',
-     *         ],
-     *         'function' => [],
-     *         'alias'    => [],
-     *     ],
-     *     'NS2' => [
-     *         'const'    => [
-     *             'CR'         => 'COUNT_RECURSIVE',
-     *             'InnerConst' => 'NS2\\InnerConst',
-     *         ],
-     *         'function' => [],
-     *         'alias'    => [
-     *             'RE'         => 'RuntimeException',
-     *             'InnerClass' => 'NS2\\InnerClass',
-     *         ],
-     *     ],
-     * ]);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\misc
-     *
-     * @param string $filename ファイル名
-     * @param array $options オプション配列
-     * @return array 名前空間配列
-     */
-    function parse_namespace($filename, $options = [])
-    {
-        $filename = realpath($filename);
-        $filemtime = filemtime($filename);
-        $options += [
-            'cache' => null,
-        ];
-        if ($options['cache'] === null) {
-            $options['cache'] = cache($filename, fn() => $filemtime, 'filemtime') >= $filemtime;
-        }
-        if (!$options['cache']) {
-            cache($filename, null, 'filemtime');
-            cache($filename, null, __FUNCTION__);
-        }
-        return cache($filename, function () use ($filename) {
-            $stringify = function ($tokens) {
-                // @codeCoverageIgnoreStart
-                if (version_compare(PHP_VERSION, '8.0.0') >= 0) {
-                    return trim(implode('', array_column(array_filter($tokens, function ($token) {
-                        /** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
-                        return in_array($token[0], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE, T_STRING], true);
-                    }), 1)), '\\');
-                }
-                // @codeCoverageIgnoreEnd
-                return trim(implode('', array_column(array_filter($tokens, function ($token) {
-                    return $token[0] === T_NS_SEPARATOR || $token[0] === T_STRING;
-                }), 1)), '\\');
-            };
-
-            $keys = [
-                0           => 'alias', // for use
-                T_CLASS     => 'alias',
-                T_INTERFACE => 'alias',
-                T_TRAIT     => 'alias',
-                T_STRING    => 'const', // for define
-                T_CONST     => 'const',
-                T_FUNCTION  => 'function',
-            ];
-
-            $contents = "?>" . file_get_contents($filename);
-            $namespace = '';
-            $tokens = [-1 => null];
-            $result = [];
-            while (true) {
-                $tokens = parse_php($contents, [
-                    'flags'  => TOKEN_PARSE,
-                    'begin'  => ["define", T_NAMESPACE, T_USE, T_CONST, T_FUNCTION, T_CLASS, T_INTERFACE, T_TRAIT],
-                    'end'    => ['{', ';', '(', T_EXTENDS, T_IMPLEMENTS],
-                    'offset' => last_key($tokens) + 1,
-                ]);
-                if (!$tokens) {
-                    break;
-                }
-                $token = reset($tokens);
-                // define は現在の名前空間とは無関係に名前空間定数を宣言することができる
-                if ($token[0] === T_STRING && $token[1] === "define") {
-                    $tokens = parse_php($contents, [
-                        'flags'  => TOKEN_PARSE,
-                        'begin'  => [T_CONSTANT_ENCAPSED_STRING],
-                        'end'    => [T_CONSTANT_ENCAPSED_STRING],
-                        'offset' => last_key($tokens),
-                    ]);
-                    $cname = substr(implode('', array_column($tokens, 1)), 1, -1);
-                    $define = trim(json_decode("\"$cname\""), '\\');
-                    [$ns, $nm] = namespace_split($define);
-                    if (!isset($result[$ns])) {
-                        $result[$ns] = [
-                            'const'    => [],
-                            'function' => [],
-                            'alias'    => [],
-                        ];
-                    }
-                    $result[$ns][$keys[$token[0]]][$nm] = $define;
-                }
-                switch ($token[0]) {
-                    case T_NAMESPACE:
-                        $namespace = $stringify($tokens);
-                        $result[$namespace] = [
-                            'const'    => [],
-                            'function' => [],
-                            'alias'    => [],
-                        ];
-                        break;
-                    case T_USE:
-                        $tokenCorF = array_find($tokens, fn($token) => ($token[0] === T_CONST || $token[0] === T_FUNCTION) ? $token[0] : 0, false);
-
-                        $prefix = '';
-                        if (end($tokens)[1] === '{') {
-                            $prefix = $stringify($tokens);
-                            $tokens = parse_php($contents, [
-                                'flags'  => TOKEN_PARSE,
-                                'begin'  => ['{'],
-                                'end'    => ['}'],
-                                'offset' => last_key($tokens),
-                            ]);
-                        }
-
-                        $multi = array_explode($tokens, fn($token) => $token[1] === ',');
-                        foreach ($multi as $ttt) {
-                            $as = array_explode($ttt, fn($token) => $token[0] === T_AS);
-
-                            $alias = $stringify($as[0]);
-                            if (isset($as[1])) {
-                                $result[$namespace][$keys[$tokenCorF]][$stringify($as[1])] = concat($prefix, '\\') . $alias;
-                            }
-                            else {
-                                $result[$namespace][$keys[$tokenCorF]][namespace_split($alias)[1]] = concat($prefix, '\\') . $alias;
-                            }
-                        }
-                        break;
-                    case T_CONST:
-                    case T_FUNCTION:
-                    case T_CLASS:
-                    case T_INTERFACE:
-                    case T_TRAIT:
-                        $alias = $stringify($tokens);
-                        if (strlen($alias)) {
-                            $result[$namespace][$keys[$token[0]]][$alias] = concat($namespace, '\\') . $alias;
-                        }
-                        // ブロック内に興味はないので進めておく（function 内 function などはあり得るが考慮しない）
-                        if ($token[0] !== T_CONST) {
-                            $tokens = parse_php($contents, [
-                                'flags'  => TOKEN_PARSE,
-                                'begin'  => ['{'],
-                                'end'    => ['}'],
-                                'offset' => last_key($tokens),
-                            ]);
-                            break;
-                        }
-                }
-            }
-            return $result;
-        }, __FUNCTION__);
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\parse_php') || (new \ReflectionFunction('ryunosuke\\DbMigration\\parse_php'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\parse_php')) {
-    /**
-     * php のコード断片をパースする
-     *
-     * 結果配列は token_get_all したものだが、「字句の場合に文字列で返す」仕様は適用されずすべて配列で返す。
-     * つまり必ず `[TOKENID, TOKEN, LINE, POS]` で返す。
-     *
-     * @todo 現在の仕様では php タグが自動で付与されるが、標準と異なり直感的ではないのでその仕様は除去する
-     * @todo そもそも何がしたいのかよくわからない関数になってきたので動作の洗い出しが必要
-     *
-     * Example:
-     * ```php
-     * $phpcode = 'namespace Hogera;
-     * class Example
-     * {
-     *     // something
-     * }';
-     *
-     * // namespace ～ ; を取得
-     * $part = parse_php($phpcode, [
-     *     'begin' => T_NAMESPACE,
-     *     'end'   => ';',
-     * ]);
-     * that(implode('', array_column($part, 1)))->isSame('namespace Hogera;');
-     *
-     * // class ～ { を取得
-     * $part = parse_php($phpcode, [
-     *     'begin' => T_CLASS,
-     *     'end'   => '{',
-     * ]);
-     * that(implode('', array_column($part, 1)))->isSame("class Example\n{");
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\misc
-     *
-     * @param string $phpcode パースする php コード
-     * @param array|int $option パースオプション
-     * @return array トークン配列
-     */
-    function parse_php($phpcode, $option = [])
-    {
-        if (is_int($option)) {
-            $option = ['flags' => $option];
-        }
-
-        $default = [
-            'phptag'         => true, // 初めに php タグを付けるか
-            'short_open_tag' => null, // ショートオープンタグを扱うか（null だと余計なことはせず ini に従う）
-            'line'           => [],   // 行の範囲（以上以下）
-            'position'       => [],   // 文字位置の範囲（以上以下）
-            'begin'          => [],   // 開始トークン
-            'end'            => [],   // 終了トークン
-            'offset'         => 0,    // 開始トークン位置
-            'flags'          => 0,    // token_get_all の $flags. TOKEN_PARSE を与えると ParseError が出ることがあるのでデフォルト 0
-            'cache'          => true, // キャッシュするか否か
-            'greedy'         => false,// end と nest か一致したときに処理を継続するか
-            'backtick'       => true, // `` もパースするか
-            'nest_token'     => [
-                ')' => '(',
-                '}' => '{',
-                ']' => '[',
-            ],
-        ];
-        $option += $default;
-
-        $cachekey = var_hash($phpcode) . $option['flags'] . '-' . $option['phptag'] . '-' . var_export($option['short_open_tag'], true);
-        static $cache = [];
-        if (!($option['cache'] && isset($cache[$cachekey]))) {
-            $phptag = $option['phptag'] ? '<?php ' : '';
-            $phpcode = $phptag . $phpcode;
-            $position = -strlen($phptag);
-
-            $backtick = '';
-            $backticking = false;
-
-            $tokens = [];
-            $tmp = token_get_all($phpcode, $option['flags']);
-            for ($i = 0; $i < count($tmp); $i++) {
-                $token = $tmp[$i];
-
-                // token_get_all の結果は微妙に扱いづらいので少し調整する（string/array だったり、名前変換の必要があったり）
-                if (!is_array($token)) {
-                    $last = $tokens[count($tokens) - 1] ?? [null, 1, 0];
-                    $token = [ord($token), $token, $last[2] + preg_match_all('/(?:\r\n|\r|\n)/', $last[1])];
-                }
-
-                // @codeCoverageIgnoreStart
-                if ($option['short_open_tag'] === true && $token[0] === T_INLINE_HTML && ($p = strpos($token[1], '<?')) !== false) {
-                    $newtokens = [];
-                    $nlcount = 0;
-
-                    if ($p !== 0) {
-                        $html = substr($token[1], 0, $p);
-                        $nlcount = preg_match_all('#\r\n|\r|\n#u', $html);
-                        $newtokens[] = [T_INLINE_HTML, $html, $token[2]];
-                    }
-
-                    $code = substr($token[1], $p + 2);
-                    $subtokens = token_get_all("<?php $code");
-                    $subtokens[0][1] = '<?';
-                    foreach ($subtokens as $subtoken) {
-                        if (is_array($subtoken)) {
-                            $subtoken[2] += $token[2] + $nlcount - 1;
-                        }
-                        $newtokens[] = $subtoken;
-                    }
-
-                    array_splice($tmp, $i + 1, 0, $newtokens);
-                    continue;
-                }
-                if ($option['short_open_tag'] === false && $token[0] === T_OPEN_TAG && $token[1] === '<?') {
-                    for ($j = $i + 1; $j < count($tmp); $j++) {
-                        if ($tmp[$j][0] === T_CLOSE_TAG) {
-                            break;
-                        }
-                    }
-                    $html = implode('', array_map(fn($token) => is_array($token) ? $token[1] : $token, array_slice($tmp, $i, $j - $i + 1)));
-                    array_splice($tmp, $i + 1, $j - $i, [[T_INLINE_HTML, $html, $token[2]]]);
-                    continue;
-                }
-                // @codeCoverageIgnoreEnd
-
-                if (!$option['backtick']) {
-                    if ($token[1] === '`') {
-                        if ($backticking) {
-                            $token[1] = $backtick . $token[1];
-                            $backtick = '';
-                        }
-                        $backticking = !$backticking;
-                    }
-                    if ($backticking) {
-                        $backtick .= $token[1];
-                        continue;
-                    }
-                }
-
-                $token[] = $position;
-                if ($option['flags'] & TOKEN_NAME) {
-                    $token[] = !$option['backtick'] && $token[0] === 96 ? 'T_BACKTICK' : token_name($token[0]);
-                }
-
-                $position += strlen($token[1]);
-                $tokens[] = $token;
-            }
-            // @codeCoverageIgnoreStart
-            if ($option['short_open_tag'] === false) {
-                for ($i = 0; $i < count($tokens); $i++) {
-                    if ($tokens[$i][0] === T_INLINE_HTML && isset($tokens[$i + 1]) && $tokens[$i + 1][0] === T_INLINE_HTML) {
-                        $tokens[$i][1] .= $tokens[$i + 1][1];
-                        array_splice($tokens, $i + 1, 1, []);
-                        $i--;
-                    }
-                }
-            }
-            // @codeCoverageIgnoreEnd
-            $cache[$cachekey] = $tokens;
-        }
-        $tokens = $cache[$cachekey];
-
-        $lines = $option['line'] + [-PHP_INT_MAX, PHP_INT_MAX];
-        $positions = $option['position'] + [-PHP_INT_MAX, PHP_INT_MAX];
-        $begin_tokens = (array) $option['begin'];
-        $end_tokens = (array) $option['end'];
-        $nest_tokens = $option['nest_token'];
-        $greedy = $option['greedy'];
-
-        $result = [];
-        $starting = !$begin_tokens;
-        $nesting = 0;
-        $offset = is_array($option['offset']) ? ($option['offset'][0] ?? 0) : $option['offset'];
-        $endset = is_array($option['offset']) ? ($option['offset'][1] ?? count($tokens)) : count($tokens);
-
-        for ($i = $offset; $i < $endset; $i++) {
-            $token = $tokens[$i];
-
-            if ($lines[0] > $token[2]) {
-                continue;
-            }
-            if ($lines[1] < $token[2]) {
-                continue;
-            }
-            if ($positions[0] > $token[3]) {
-                continue;
-            }
-            if ($positions[1] < $token[3]) {
-                continue;
-            }
-
-            foreach ($begin_tokens as $t) {
-                if ($t === $token[0] || $t === $token[1]) {
-                    $starting = true;
-                    break;
-                }
-            }
-            if (!$starting) {
-                continue;
-            }
-
-            $result[$i] = $token;
-
-            foreach ($nest_tokens as $end_nest => $start_nest) {
-                if ($token[0] === $start_nest || $token[1] === $start_nest) {
-                    $nesting++;
-                }
-                if ($token[0] === $end_nest || $token[1] === $end_nest) {
-                    $nesting--;
-                }
-            }
-
-            foreach ($end_tokens as $t) {
-                if ($t === $token[0] || $t === $token[1]) {
-                    if ($nesting <= 0 || ($nesting === 1 && in_array($t, $nest_tokens, true))) {
-                        if ($nesting === 0 && $greedy && isset($nest_tokens[$t])) {
-                            break;
-                        }
-                        break 2;
-                    }
-                    break;
-                }
-            }
-        }
-        return $result;
+        return implode('', array_column($tokens, 'text'));
     }
 }
 
@@ -19675,78 +19665,251 @@ if (!function_exists('ryunosuke\\DbMigration\\php_opcode')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\resolve_symbol') || (new \ReflectionFunction('ryunosuke\\DbMigration\\resolve_symbol'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\resolve_symbol')) {
+assert(!function_exists('ryunosuke\\DbMigration\\php_parse') || (new \ReflectionFunction('ryunosuke\\DbMigration\\php_parse'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\php_parse')) {
     /**
-     * エイリアス名を完全修飾名に解決する
+     * php のコード断片をパースする
      *
-     * 例えばあるファイルのある名前空間で `use Hoge\Fuga\Piyo;` してるときの `Piyo` を `Hoge\Fuga\Piyo` に解決する。
+     * @todo そもそも何がしたいのかよくわからない関数になってきたので動作の洗い出しが必要
      *
      * Example:
      * ```php
-     * // このような php ファイルがあるとして・・・
-     * file_set_contents(sys_get_temp_dir() . '/symbol.php', '
-     * <?php
-     * namespace vendor\NS;
+     * $phpcode = '<?php
+     * namespace Hogera;
+     * class Example
+     * {
+     *     // something
+     * }';
      *
-     * use ArrayObject as AO;
-     * use function strlen as SL;
+     * // namespace ～ ; を取得
+     * $part = php_parse($phpcode, [
+     *     'begin' => T_NAMESPACE,
+     *     'end'   => ';',
+     * ]);
+     * that(implode('', array_column($part, 'text')))->isSame('namespace Hogera;');
      *
-     * function InnerFunc(){}
-     * class InnerClass{}
-     * ');
-     * // 下記のように解決される
-     * that(resolve_symbol('AO', sys_get_temp_dir() . '/symbol.php'))->isSame('ArrayObject');
-     * that(resolve_symbol('SL', sys_get_temp_dir() . '/symbol.php'))->isSame('strlen');
-     * that(resolve_symbol('InnerFunc', sys_get_temp_dir() . '/symbol.php'))->isSame('vendor\\NS\\InnerFunc');
-     * that(resolve_symbol('InnerClass', sys_get_temp_dir() . '/symbol.php'))->isSame('vendor\\NS\\InnerClass');
+     * // class ～ { を取得
+     * $part = php_parse($phpcode, [
+     *     'begin' => T_CLASS,
+     *     'end'   => '{',
+     * ]);
+     * that(implode('', array_column($part, 'text')))->isSame("class Example\n{");
      * ```
      *
      * @package ryunosuke\Functions\Package\misc
      *
-     * @param string $shortname エイリアス名
-     * @param string|array $nsfiles ファイル名 or [ファイル名 => 名前空間名]
-     * @param array $targets エイリアスタイプ（'const', 'function', 'alias' のいずれか）
-     * @return string|null 完全修飾名。解決できなかった場合は null
+     * @param string $phpcode パースする php コード
+     * @param array|int $option パースオプション
+     * @return \PhpToken[] トークン配列
      */
-    function resolve_symbol(string $shortname, $nsfiles, $targets = ['const', 'function', 'alias'])
+    function php_parse($phpcode, $option = [])
     {
-        // 既に完全修飾されている場合は何もしない
-        if (($shortname[0] ?? null) === '\\') {
-            return $shortname;
+        if (is_int($option)) {
+            $option = ['flags' => $option];
         }
 
-        // use Inner\Space のような名前空間の use の場合を考慮する
-        $parts = explode('\\', $shortname, 2);
-        $prefix = isset($parts[1]) ? array_shift($parts) : null;
+        $default = [
+            'short_open_tag' => null, // ショートオープンタグを扱うか（null だと余計なことはせず ini に従う）
+            'line'           => [],   // 行の範囲（以上以下）
+            'position'       => [],   // 文字位置の範囲（以上以下）
+            'begin'          => [],   // 開始トークン
+            'end'            => [],   // 終了トークン
+            'offset'         => 0,    // 開始トークン位置
+            'flags'          => 0,    // PHPToken の $flags. TOKEN_PARSE を与えると ParseError が出ることがあるのでデフォルト 0
+            'cache'          => true, // キャッシュするか否か
+            'greedy'         => false,// end と nest か一致したときに処理を継続するか
+            'backtick'       => true, // `` もパースするか
+            'nest_token'     => [
+                ')' => '(',
+                '}' => '{',
+                ']' => '[',
+            ],
+        ];
+        $option += $default;
 
-        if (is_string($nsfiles)) {
-            $nsfiles = [$nsfiles => []];
-        }
+        $cachekey = var_hash($phpcode) . $option['flags'] . '-' . $option['backtick'] . '-' . var_export($option['short_open_tag'], true);
+        static $cache = [];
+        if (!($option['cache'] && isset($cache[$cachekey]))) {
+            $position = 0;
+            $backtick = '';
+            $backticktoken = null;
+            $backticking = false;
 
-        $targets = (array) $targets;
-        foreach ($nsfiles as $filename => $namespaces) {
-            $namespaces = array_flip(array_map(fn($n) => trim($n, '\\'), (array) $namespaces));
-            foreach (parse_namespace($filename) as $namespace => $ns) {
-                /** @noinspection PhpIllegalArrayKeyTypeInspection */
-                if (!$namespaces || isset($namespaces[$namespace])) {
-                    if (isset($ns['alias'][$prefix])) {
-                        return $ns['alias'][$prefix] . '\\' . implode('\\', $parts);
+            $tokens = [];
+            $tmp = \PhpToken::tokenize($phpcode, $option['flags']);
+            for ($i = 0; $i < count($tmp); $i++) {
+                $token = $tmp[$i];
+
+                // @codeCoverageIgnoreStart
+                if ($option['short_open_tag'] === true && $token->id === T_INLINE_HTML && ($p = strpos($token->text, '<?')) !== false) {
+                    $newtokens = [];
+                    $nlcount = 0;
+
+                    if ($p !== 0) {
+                        $html = substr($token->text, 0, $p);
+                        $nlcount = preg_match_all('#\r\n|\r|\n#u', $html);
+                        $newtokens[] = new \PhpToken(T_INLINE_HTML, $html, $token->line);
                     }
-                    foreach ($targets as $target) {
-                        if (isset($ns[$target][$shortname])) {
-                            return $ns[$target][$shortname];
+
+                    $code = substr($token->text, $p + 2);
+                    $subtokens = \PhpToken::tokenize("<?php $code");
+                    $subtokens[0]->text = '<?';
+                    foreach ($subtokens as $subtoken) {
+                        $subtoken->line += $token->line + $nlcount - 1;
+                        $newtokens[] = $subtoken;
+                    }
+
+                    array_splice($tmp, $i + 1, 0, $newtokens);
+                    continue;
+                }
+                if ($option['short_open_tag'] === false && $token->id === T_OPEN_TAG && $token->text === '<?') {
+                    for ($j = $i + 1; $j < count($tmp); $j++) {
+                        if ($tmp[$j]->id === T_CLOSE_TAG) {
+                            break;
                         }
+                    }
+                    $html = implode('', array_map(fn($token) => $token->text, array_slice($tmp, $i, $j - $i + 1)));
+                    array_splice($tmp, $i + 1, $j - $i, [new \PhpToken(T_INLINE_HTML, $html, $token->line)]);
+                    continue;
+                }
+                // @codeCoverageIgnoreEnd
+
+                if (!$option['backtick']) {
+                    if ($token->text === '`') {
+                        if ($backticking) {
+                            $token->text = $backtick . $token->text;
+                            $token->line = $backticktoken->line;
+                            $token->pos = $backticktoken->pos;
+                            $backtick = '';
+                        }
+                        else {
+                            $backticktoken = $token;
+                        }
+                        $backticking = !$backticking;
+                    }
+                    if ($backticking) {
+                        $backtick .= $token->text;
+                        continue;
+                    }
+                }
+
+                $token->pos = $position;
+                $position += strlen($token->text);
+
+                /* PhpToken になりコピーオンライトが効かなくなったので時々書き換えをチェックした方が良い
+                $token = new class($token->id, $token->text, $token->line, $token->pos) extends \PhpToken {
+                    private array $backup = [];
+    
+                    public function backup()
+                    {
+                        $this->backup = [
+                            'id'   => $this->id,
+                            'text' => $this->text,
+                            'line' => $this->line,
+                            'pos'  => $this->pos,
+                        ];
+                    }
+    
+                    public function __clone(): void
+                    {
+                        $this->backup = [];
+                    }
+    
+                    public function __destruct()
+                    {
+                        foreach ($this->backup as $name => $value) {
+                            assert($this->$name === $value);
+                        }
+                    }
+                };
+                $token->backup();
+                 */
+
+                $tokens[] = $token;
+            }
+            // @codeCoverageIgnoreStart
+            if ($option['short_open_tag'] === false) {
+                for ($i = 0; $i < count($tokens); $i++) {
+                    if ($tokens[$i]->id === T_INLINE_HTML && isset($tokens[$i + 1]) && $tokens[$i + 1]->id === T_INLINE_HTML) {
+                        $tokens[$i]->text .= $tokens[$i + 1]->text;
+                        array_splice($tokens, $i + 1, 1, []);
+                        $i--;
                     }
                 }
             }
+            // @codeCoverageIgnoreEnd
+            $cache[$cachekey] = $tokens;
         }
-        return null;
+        $tokens = $cache[$cachekey];
+
+        $lines = $option['line'] + [-PHP_INT_MAX, PHP_INT_MAX];
+        $positions = $option['position'] + [-PHP_INT_MAX, PHP_INT_MAX];
+        $begin_tokens = (array) $option['begin'];
+        $end_tokens = (array) $option['end'];
+        $nest_tokens = $option['nest_token'];
+        $greedy = $option['greedy'];
+
+        $result = [];
+        $starting = !$begin_tokens;
+        $nesting = 0;
+        $offset = is_array($option['offset']) ? ($option['offset'][0] ?? 0) : $option['offset'];
+        $endset = is_array($option['offset']) ? ($option['offset'][1] ?? count($tokens)) : count($tokens);
+
+        for ($i = $offset; $i < $endset; $i++) {
+            $token = $tokens[$i];
+
+            if ($lines[0] > $token->line) {
+                continue;
+            }
+            if ($lines[1] < $token->line) {
+                continue;
+            }
+            if ($positions[0] > $token->pos) {
+                continue;
+            }
+            if ($positions[1] < $token->pos) {
+                continue;
+            }
+
+            foreach ($begin_tokens as $t) {
+                if ($t === $token->id || $t === $token->text) {
+                    $starting = true;
+                    break;
+                }
+            }
+            if (!$starting) {
+                continue;
+            }
+
+            $result[$i] = $token;
+
+            foreach ($nest_tokens as $end_nest => $start_nest) {
+                if ($token->id === $start_nest || $token->text === $start_nest) {
+                    $nesting++;
+                }
+                if ($token->id === $end_nest || $token->text === $end_nest) {
+                    $nesting--;
+                }
+            }
+
+            foreach ($end_tokens as $t) {
+                if ($t === $token->id || $t === $token->text) {
+                    if ($nesting <= 0 || ($nesting === 1 && in_array($t, $nest_tokens, true))) {
+                        if ($nesting === 0 && $greedy && isset($nest_tokens[$t])) {
+                            break;
+                        }
+                        break 2;
+                    }
+                    break;
+                }
+            }
+        }
+        return $result;
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\strip_php') || (new \ReflectionFunction('ryunosuke\\DbMigration\\strip_php'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\strip_php')) {
+assert(!function_exists('ryunosuke\\DbMigration\\php_strip') || (new \ReflectionFunction('ryunosuke\\DbMigration\\php_strip'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\php_strip')) {
     /**
      * 文字列から php コードを取り除く
      *
@@ -19761,9 +19924,9 @@ if (!function_exists('ryunosuke\\DbMigration\\strip_php')) {
      * ```php
      * $phtml = 'begin php code <?php echo 123 ?> end';
      * // php コードが消えている
-     * that(strip_php($phtml))->is('begin php code  end');
+     * that(php_strip($phtml))->is('begin php code  end');
      * // $mapping を使用すると元の文字列に復元できる
-     * $html = strip_php($phtml, [], $mapping);
+     * $html = php_strip($phtml, [], $mapping);
      * that(strtr($html, $mapping))->is($phtml);
      * ```
      *
@@ -19774,17 +19937,13 @@ if (!function_exists('ryunosuke\\DbMigration\\strip_php')) {
      * @param array $mapping 変換表が格納される参照変数
      * @return string php コードが除かれた文字列
      */
-    function strip_php($phtml, $option = [], &$mapping = [])
+    function php_strip($phtml, $option = [], &$mapping = [])
     {
         $option = array_replace([
             'short_open_tag' => true,
             'trailing_break' => true,
             'replacer'       => func_num_args() === 3 ? null : '',
-        ], $option, [
-            //'flags'  => Syntax::TOKEN_NAME,
-            //'cache'  => false,
-            'phptag' => false,
-        ]);
+        ], $option);
 
         $replacer = $option['replacer'];
         if ($replacer === '') {
@@ -19794,7 +19953,7 @@ if (!function_exists('ryunosuke\\DbMigration\\strip_php')) {
             $replacer = unique_string($phtml, 64);
         }
 
-        $tmp = parse_php($phtml, $option);
+        $tmp = php_parse($phtml, $option);
 
         if ($option['trailing_break']) {
             $tokens = $tmp;
@@ -19804,24 +19963,24 @@ if (!function_exists('ryunosuke\\DbMigration\\strip_php')) {
             $echoopen = false;
             $taglength = strlen('?>');
             foreach ($tmp as $token) {
-                if ($token[0] === T_OPEN_TAG_WITH_ECHO) {
+                if ($token->id === T_OPEN_TAG_WITH_ECHO) {
                     $echoopen = true;
                 }
-                if ($echoopen && $token[0] === T_CLOSE_TAG && isset($token[1][$taglength])) {
+                if ($echoopen && $token->id === T_CLOSE_TAG && isset($token->text[$taglength])) {
                     $echoopen = false;
 
-                    $tokens[] = [
-                        $token[0],
-                        rtrim($token[1]),
-                        $token[2],
-                        $token[3],
-                    ];
-                    $tokens[] = [
+                    $tokens[] = new \PhpToken(
+                        $token->id,
+                        rtrim($token->text),
+                        $token->line,
+                        $token->pos,
+                    );
+                    $tokens[] = new \PhpToken(
                         T_INLINE_HTML,
-                        substr($token[1], $taglength),
-                        $token[2],
-                        $token[3] + $taglength,
-                    ];
+                        substr($token->text, $taglength),
+                        $token->line,
+                        $token->pos + $taglength,
+                    );
                 }
                 else {
                     $tokens[] = $token;
@@ -19831,12 +19990,12 @@ if (!function_exists('ryunosuke\\DbMigration\\strip_php')) {
 
         $offsets = [];
         foreach ($tokens as $token) {
-            if ($token[0] === T_OPEN_TAG || $token[0] === T_OPEN_TAG_WITH_ECHO) {
-                $offsets[] = [$token[3], null];
+            if ($token->id === T_OPEN_TAG || $token->id === T_OPEN_TAG_WITH_ECHO) {
+                $offsets[] = [$token->pos, null];
             }
-            elseif ($token[0] === T_CLOSE_TAG) {
+            elseif ($token->id === T_CLOSE_TAG) {
                 $lastkey = count($offsets) - 1;
-                $offsets[$lastkey][1] = $token[3] + strlen($token[1]) - $offsets[$lastkey][0];
+                $offsets[$lastkey][1] = $token->pos + strlen($token->text) - $offsets[$lastkey][0];
             }
         }
         if ($offsets) {
@@ -20766,7 +20925,7 @@ if (!function_exists('ryunosuke\\DbMigration\\http_requests')) {
      *     // さらに、このような [URL => CURL オプション] 形式も許容される（あまり用途はないだろうが）
      *     'http://127.0.0.1' => [
      *         CURLOPT_TIMEOUT => 5,
-     *         'callback'      => fn($key, $body) => strlen($body),
+     *         'callback'      => fn($key, $body) => $body,
      *     ],
      * ], [
      *     // 第2引数で各リクエストの共通オプションを指定できる（個別指定優先）
@@ -20836,19 +20995,6 @@ if (!function_exists('ryunosuke\\DbMigration\\http_requests')) {
             CURLOPT_HEADER         => true, // ヘッダを含める
         ];
 
-        $stringify_curl = function ($curl) {
-            // スクリプトの実行中 (ウェブのリクエストや CLI プロセスの処理中) は、指定したリソースに対してこの文字列が一意に割り当てられることが保証されます
-            if (is_resourcable($curl)) {
-                return (string) $curl;
-            }
-            // @codeCoverageIgnoreStart
-            if (is_object($curl)) {
-                return spl_object_id($curl);
-            }
-            return null;
-            // @codeCoverageIgnoreEnd
-        };
-
         $responses = [];
         $resultmap = [];
         $infos = [];
@@ -20872,7 +21018,7 @@ if (!function_exists('ryunosuke\\DbMigration\\http_requests')) {
                 $rheader = null;
                 $info = null;
                 $res = http_request($default + $opt, $rheader, $info);
-                if (is_array($res) && isset($res[0]) && $handle_id = $stringify_curl($res[0])) {
+                if (is_array($res) && isset($res[0]) && $handle_id = spl_object_id($res[0])) {
                     curl_multi_add_handle($mh, $res[0]);
                     $resultmap[$handle_id] = [$key, $res[1], $res[2], microtime(true), 0];
                 }
@@ -20897,7 +21043,7 @@ if (!function_exists('ryunosuke\\DbMigration\\http_requests')) {
                     }
 
                     $handle = $minfo['handle'];
-                    $handle_id = $stringify_curl($handle);
+                    $handle_id = spl_object_id($handle);
                     [$key, $responser, $retry, $now, $retry_count] = $resultmap[$handle_id];
 
                     $response = curl_multi_getcontent($handle);
@@ -21117,6 +21263,7 @@ if (!function_exists('ryunosuke\\DbMigration\\ip_info')) {
             'cachedir' => function_configure('storagedir') . '/' . rawurlencode(__FUNCTION__),
             'ttl'      => 60 * 60 * 24 + 120, // 120 は1日1回バッチで叩くことを前提としたバッファ
             'rir'      => [],
+            'throw'    => true, // テスト用で原則 true（例外が飛ばないと情報が膨大過ぎるので失敗しても気付けない）
         ];
         $options['rir'] += [
             'afrinic' => 'https://ftp.afrinic.net/pub/stats/afrinic/delegated-afrinic-latest',
@@ -21160,9 +21307,12 @@ if (!function_exists('ryunosuke\\DbMigration\\ip_info')) {
 
         http_requests($urls, [
             'cachedir' => $options['cachedir'],
-            'callback' => function ($rir, $body) use ($files) {
+            'callback' => function ($rir, $body, $header, $info) use ($files, $options) {
+                if ($options['throw'] && ($body === null || $info['http_code'] >= 400)) {
+                    throw new \UnexpectedValueException("request {$info['url']} failed. caused by {$info['http_code']}(error {$info['errno']})");
+                }
                 $tmpfile = tmpfile();
-                fwrite($tmpfile, $body);
+                fwrite($tmpfile, $body ?? '');
                 rewind($tmpfile);
 
                 $cidrs = [];
@@ -21180,16 +21330,30 @@ if (!function_exists('ryunosuke\\DbMigration\\ip_info')) {
                 }
 
                 $cachefile = $files[$rir];
+                @mkdir(dirname($cachefile));
                 file_put_contents($cachefile, "<?php\nreturn " . var_export($cidrs, true) . ";", LOCK_EX);
                 //file_put_contents($cachefile, php_strip_whitespace($cachefile));
                 opcache_invalidate($cachefile, true);
             },
         ]);
 
+        // サイズがでかいので static 等にはしない（opcache に完全に任せる）
         $all = [];
         foreach ($files as $file) {
-            // サイズがでかいので static 等にはしない（opcache に完全に任せる）
-            $rir = is_array($file) ? $file : include $file;
+            if (is_array($file)) {
+                $rir = $file;
+            }
+            elseif (file_exists($file)) {
+                $rir = include $file;
+            }
+            else {
+                // @codeCoverageIgnoreStart http が失敗したときなので基本的に到達しない（http が失敗したときは既に例外投げられている）
+                $rir = [];
+                if ($options['throw']) {
+                    throw new \UnexpectedValueException("failed to load $file");
+                }
+                // @codeCoverageIgnoreEnd
+            }
 
             if ($ipaddr === null) {
                 $all += $rir;
@@ -21213,6 +21377,85 @@ if (!function_exists('ryunosuke\\DbMigration\\ip_info')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\ip_normalize') || (new \ReflectionFunction('ryunosuke\\DbMigration\\ip_normalize'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\ip_normalize')) {
+    /**
+     * IP アドレスを正規化する
+     *
+     * IPv4 は（あまり有名ではないが）4 オクテット未満や 16,8 進数表記を標準的な 1.2.3.4 形式に正規化する。
+     * IPv6 は 0 の省略や :: 短縮表記を完全表記の 1111:2222:3333:4444:5555:6666:7777:8888 形式に正規化する。
+     * 完全におかしな形式については例外を投げる。
+     *
+     * Example:
+     * ```php
+     * // v4（RFC はないがこのような記法が許されている）
+     * that(ip_normalize('0xff.077.500'))->isSame('255.63.1.244');
+     * // v6（RFC 5952 の短縮表記を完全表記にする）
+     * that(ip_normalize('a::f'))->isSame('000a:0000:0000:0000:0000:0000:0000:000f');
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\network
+     */
+    function ip_normalize(string $ipaddr)
+    {
+        // v6 の RFC 5952 短縮表記は filter_var を通るので分岐できる
+        if (filter_var($ipaddr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            $colon = substr_count($ipaddr, ':');
+            $ipaddr = strtr($ipaddr, ['::' => ':' . implode(':', array_pad([], 8 - $colon, '0000')) . ':']);
+            $segments = explode(':', $ipaddr);
+            foreach ($segments as $n => $segment) {
+                $segment = strtolower($segment);
+                $segment = str_pad($segment, 4, '0', STR_PAD_LEFT);
+                $segments[$n] = $segment;
+            }
+            return implode(':', $segments);
+        }
+
+        $divmod = function (&$n, $d) {
+            $div = intdiv($n, $d);
+            $n = $n % $d;
+            return $div;
+        };
+
+        // 通らない場合は v4 試行だが、様々な形式があるので最後にチェックする
+        $octets = explode('.', $ipaddr);
+        $length = count($octets);
+        // が、1オクテットの場合は完全に処理が異なる
+        if ($length === 1) {
+            $int = strdec($octets[0]);
+            if (0 > $int || $int > 0xFFFFFFFF) {
+                throw new \InvalidArgumentException("$ipaddr is invalid ip address(too large)");
+            }
+            return long2ip($int);
+        }
+        elseif ($length === 2) {
+            $int = strdec($octets[1]);
+            $octets[1] = $divmod($int, 0x10000);
+            $octets[2] = $divmod($int, 0x00100);
+            $octets[3] = $divmod($int, 0x00001);
+        }
+        elseif ($length === 3) {
+            $int = strdec($octets[2]);
+            $octets[2] = $divmod($int, 0x00100);
+            $octets[3] = $divmod($int, 0x00001);
+        }
+        elseif ($length === 4) {
+            // do nothing
+        }
+        else {
+            throw new \InvalidArgumentException("$ipaddr is invalid ip address(many octet)");
+        }
+
+        $octets = array_map(fn($v) => strdec($v), $octets);
+
+        $ipaddr = implode('.', $octets);
+        if (!filter_var($ipaddr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            throw new \InvalidArgumentException("$ipaddr is invalid ip address");
+        }
+        return $ipaddr;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\ping') || (new \ReflectionFunction('ryunosuke\\DbMigration\\ping'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\ping')) {
     /**
@@ -21228,9 +21471,9 @@ if (!function_exists('ryunosuke\\DbMigration\\ping')) {
      * ```php
      * // 自身へ ICMP ping を打つ（正常終了なら float を返し、失敗なら false を返す）
      * that(ping('127.0.0.1'))->isFloat();
-     * // 自身の tcp:1234 が開いているか（開いていれば float を返し、開いていなければ false を返す）
-     * that(ping('tcp://127.0.0.1', 1234))->isFalse();
-     * that(ping('127.0.0.1', 1234))->isFalse(); // tcp はスキームを省略できる
+     * // 自身の tcp:1234 が開いているか（開いていれば float を返し、開いていなければ null を返す）
+     * that(ping('tcp://127.0.0.1', 1234))->isNull();
+     * that(ping('127.0.0.1', 1234))->isNull(); // tcp はスキームを省略できる
      * ```
      *
      * @package ryunosuke\Functions\Package\network
@@ -21239,7 +21482,7 @@ if (!function_exists('ryunosuke\\DbMigration\\ping')) {
      * @param int|null $port ポート番号。指定しないと ICMP になる
      * @param int $timeout タイムアウト秒
      * @param string $errstr エラー文字列が格納される
-     * @return float|bool 成功したときは疎通時間。失敗したときは false
+     * @return ?float 成功したときは疎通時間。失敗したときは null
      */
     function ping($host, $port = null, $timeout = 1, &$errstr = '')
     {
@@ -21265,12 +21508,12 @@ if (!function_exists('ryunosuke\\DbMigration\\ping')) {
                 '-c' => 1,
                 '-W' => (int) $timeout,
                 $host,
-            ], null, $stdout, $errstr);
+            ], '', $stdout, $errstr);
             // min/avg/max/mdev = 0.026/0.026/0.026/0.000
             if (preg_match('#min/avg/max/mdev.*?[0-9.]+/([0-9.]+)/[0-9.]+/[0-9.]+#', $stdout, $m)) {
                 return $m[1] / 1000.0;
             }
-            return false;
+            return null;
             // @codeCoverageIgnoreEnd
         }
 
@@ -21288,35 +21531,34 @@ if (!function_exists('ryunosuke\\DbMigration\\ping')) {
             throw new \InvalidArgumentException("'$protocol' is not supported.");
         }
 
+        $restore = set_error_exception_handler();
         $mtime = microtime(true);
         try {
-            call_safely(function ($socket, $protocol, $host, $port, $timeout) {
-                socket_set_option($socket, SOL_SOCKET, SO_SNDTIMEO, ['sec' => $timeout, 'usec' => 0]);
-                socket_set_option($socket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => $timeout, 'usec' => 0]);
-                if (!socket_connect($socket, $host, $port)) {
-                    throw new \RuntimeException(); // @codeCoverageIgnore
-                }
+            socket_set_option($socket, SOL_SOCKET, SO_SNDTIMEO, ['sec' => $timeout, 'usec' => 0]);
+            socket_set_option($socket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => $timeout, 'usec' => 0]);
+            if (!socket_connect($socket, $host, $port)) {
+                throw new \RuntimeException(); // @codeCoverageIgnore
+            }
 
-                // icmp は ping メッセージを送信
-                if ($protocol === 'icmp') {
-                    $message = "\x08\x00\x7d\x4b\x00\x00\x00\x00PingHost";
-                    socket_send($socket, $message, strlen($message), 0);
-                    socket_read($socket, 255);
-                }
-                // tcp は接続自体ができれば OK
-                if ($protocol === 'tcp') {
-                    assert(true); // PhpStatementHasEmptyBodyInspection
-                }
-                // udp は何か送ってみてその挙動で判断（=> catch 節）
-                if ($protocol === 'udp') {
-                    $message = ""; // noop
-                    socket_send($socket, $message, strlen($message), 0);
-                    socket_read($socket, 255);
-                }
-            }, $socket, $protocol, $host, $port, $timeout);
+            // icmp は ping メッセージを送信
+            if ($protocol === 'icmp') {
+                $message = "\x08\x00\x7d\x4b\x00\x00\x00\x00PingHost";
+                socket_send($socket, $message, strlen($message), 0);
+                socket_read($socket, 255);
+            }
+            // tcp は接続自体ができれば OK
+            if ($protocol === 'tcp') {
+                assert(true); // PhpStatementHasEmptyBodyInspection
+            }
+            // udp は何か送ってみてその挙動で判断（=> catch 節）
+            if ($protocol === 'udp') {
+                $message = ""; // noop
+                socket_send($socket, $message, strlen($message), 0);
+                socket_read($socket, 255);
+            }
             return microtime(true) - $mtime;
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
             $errno = socket_last_error($socket);
             // windows では到達できても socket_read がエラーを返すので errno で判断
             // 接続済みの呼び出し先が一定の時間を過ぎても正しく応答しなかったため、接続できませんでした。
@@ -21325,9 +21567,10 @@ if (!function_exists('ryunosuke\\DbMigration\\ping')) {
                 return microtime(true) - $mtime;
             }
             $errstr = socket_strerror($errno);
-            return false;
+            return null;
         }
         finally {
+            $restore();
             socket_close($socket);
         }
     }
@@ -21498,10 +21741,10 @@ if (!function_exists('ryunosuke\\DbMigration\\ob_stdout')) {
                 $contents = preg_split('#\\R#u', $content);
 
                 // 実行のたびに増えていくことになるので既存の出力コメントは捨てる
-                foreach (token_get_all($content) as $token) {
-                    if (is_array($token) && $token[0] === T_COMMENT && strpos($token[1], "/*= ") === 0) {
-                        $comments = preg_split('#\\R#u', $token[1]);
-                        array_splice($contents, $token[2] - 1, count($comments), array_pad([], count($comments), null));
+                foreach (\PhpToken::tokenize($content) as $token) {
+                    if ($token->id === T_COMMENT && strpos($token->text, "/*= ") === 0) {
+                        $comments = preg_split('#\\R#u', $token->text);
+                        array_splice($contents, $token->line - 1, count($comments), array_pad([], count($comments), null));
                     }
                 }
 
@@ -21648,11 +21891,11 @@ if (!function_exists('ryunosuke\\DbMigration\\glob2regex')) {
         if ($flags & GLOB_BRACE) {
             while (true) {
                 $brace_s = strpos_escaped($pattern, '{');
-                if ($brace_s === false) {
+                if ($brace_s === null) {
                     break;
                 }
                 $brace_e = strpos_escaped($pattern, '}', $brace_s);
-                if ($brace_e === false) {
+                if ($brace_e === null) {
                     break;
                 }
                 $brace = substr($pattern, $brace_s + 1, $brace_e - $brace_s - 1);
@@ -21896,66 +22139,23 @@ if (!function_exists('ryunosuke\\DbMigration\\preg_splice')) {
      * @param string|callable $replacement 置換文字列
      * @param string $subject 対象文字列
      * @param array $matches キャプチャ配列が格納される
+     * @param int $limit 置換回数
      * @return string 置換された文字列
      */
-    function preg_splice($pattern, $replacement, $subject, &$matches = [])
+    function preg_splice($pattern, $replacement, $subject, &$matches = [], $limit = -1)
     {
+        // for compatible. $limit => 1
+        // preg_match なので $matches は最初しか引っかからないにも関わらず $limit:-1 だとすべて置換されてしまう
+
         if (preg_match($pattern, $subject, $matches)) {
             if (!is_string($replacement) && is_callable($replacement)) {
-                $subject = preg_replace_callback($pattern, $replacement, $subject);
+                $subject = preg_replace_callback($pattern, $replacement, $subject, $limit);
             }
             else {
-                $subject = preg_replace($pattern, $replacement, $subject);
+                $subject = preg_replace($pattern, $replacement, $subject, $limit);
             }
         }
         return $subject;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\normal_rand') || (new \ReflectionFunction('ryunosuke\\DbMigration\\normal_rand'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\normal_rand')) {
-    /**
-     * 正規乱数（正規分布に従う乱数）を返す
-     *
-     * ※ ボックス＝ミュラー法
-     *
-     * Example:
-     * ```php
-     * mt_srand(4); // テストがコケるので種固定
-     *
-     * // 平均 100, 標準偏差 10 の正規乱数を得る
-     * that(normal_rand(100, 10))->isSame(101.16879645296162);
-     * that(normal_rand(100, 10))->isSame(96.49615862542069);
-     * that(normal_rand(100, 10))->isSame(87.74557282679618);
-     * that(normal_rand(100, 10))->isSame(117.93697951557125);
-     * that(normal_rand(100, 10))->isSame(99.1917453115627);
-     * that(normal_rand(100, 10))->isSame(96.74688207698713);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\random
-     *
-     * @param float $average 平均
-     * @param float $std_deviation 標準偏差
-     * @return float 正規乱数
-     */
-    function normal_rand($average = 0.0, $std_deviation = 1.0)
-    {
-        static $z2, $rand_max, $generate = true;
-        $rand_max ??= mt_getrandmax();
-        $generate = !$generate;
-
-        if ($generate) {
-            return $z2 * $std_deviation + $average;
-        }
-
-        $u1 = mt_rand(1, $rand_max) / $rand_max;
-        $u2 = mt_rand(0, $rand_max) / $rand_max;
-        $v1 = sqrt(-2 * log($u1));
-        $v2 = 2 * M_PI * $u2;
-        $z1 = $v1 * cos($v2);
-        $z2 = $v1 * sin($v2);
-
-        return $z1 * $std_deviation + $average;
     }
 }
 
@@ -22121,6 +22321,53 @@ if (!function_exists('ryunosuke\\DbMigration\\random_float')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\random_normal') || (new \ReflectionFunction('ryunosuke\\DbMigration\\random_normal'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\random_normal')) {
+    /**
+     * 正規乱数（正規分布に従う乱数）を返す
+     *
+     * ※ ボックス＝ミュラー法
+     *
+     * Example:
+     * ```php
+     * mt_srand(4); // テストがコケるので種固定
+     *
+     * // 平均 100, 標準偏差 10 の正規乱数を得る
+     * that(random_normal(100, 10))->isSame(101.16879645296162);
+     * that(random_normal(100, 10))->isSame(96.49615862542069);
+     * that(random_normal(100, 10))->isSame(87.74557282679618);
+     * that(random_normal(100, 10))->isSame(117.93697951557125);
+     * that(random_normal(100, 10))->isSame(99.1917453115627);
+     * that(random_normal(100, 10))->isSame(96.74688207698713);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\random
+     *
+     * @param float $average 平均
+     * @param float $std_deviation 標準偏差
+     * @return float 正規乱数
+     */
+    function random_normal($average = 0.0, $std_deviation = 1.0)
+    {
+        static $z2, $rand_max, $generate = true;
+        $rand_max ??= mt_getrandmax();
+        $generate = !$generate;
+
+        if ($generate) {
+            return $z2 * $std_deviation + $average;
+        }
+
+        $u1 = mt_rand(1, $rand_max) / $rand_max;
+        $u2 = mt_rand(0, $rand_max) / $rand_max;
+        $v1 = sqrt(-2 * log($u1));
+        $v2 = 2 * M_PI * $u2;
+        $z1 = $v1 * cos($v2);
+        $z2 = $v1 * sin($v2);
+
+        return $z1 * $std_deviation + $average;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\random_range') || (new \ReflectionFunction('ryunosuke\\DbMigration\\random_range'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\random_range')) {
     /**
@@ -22259,14 +22506,16 @@ if (!function_exists('ryunosuke\\DbMigration\\unique_string')) {
             shuffle($charlist);
             $result = implode('', array_slice($charlist, 0, $initial));
         }
-        elseif (is_stringable($initial)) {
+        elseif (is_null($initial)) {
+            $result .= $charlist[mt_rand(0, $charlength - 1)];
+        }
+        else {
             $result = $initial;
         }
 
-        $p = 0;
-        do {
+        while ((($p = strpos($source, $result, $p ?? 0)) !== false)) {
             $result .= $charlist[mt_rand(0, $charlength - 1)];
-        } while (($p = strpos($source, $result, $p)) !== false);
+        }
 
         return $result;
     }
@@ -22294,9 +22543,10 @@ if (!function_exists('ryunosuke\\DbMigration\\callable_code')) {
      * @package ryunosuke\Functions\Package\reflection
      *
      * @param callable|\ReflectionFunctionAbstract $callable コードを取得する callable
+     * @param bool $return_token true にすると生のトークン配列で返す
      * @return array ['定義部分', '{処理コード}']
      */
-    function callable_code($callable)
+    function callable_code($callable, bool $return_token = false)
     {
         $ref = $callable instanceof \ReflectionFunctionAbstract ? $callable : reflect_callable($callable);
         $contents = file($ref->getFileName());
@@ -22304,14 +22554,14 @@ if (!function_exists('ryunosuke\\DbMigration\\callable_code')) {
         $end = $ref->getEndLine();
         $codeblock = implode('', array_slice($contents, $start - 1, $end - $start + 1));
 
-        $meta = parse_php("<?php $codeblock", [
+        $meta = php_parse("<?php $codeblock", [
             'begin' => [T_FN, T_FUNCTION],
             'end'   => ['{', T_DOUBLE_ARROW],
         ]);
         $end = array_pop($meta);
 
-        if ($end[0] === T_DOUBLE_ARROW) {
-            $body = parse_php("<?php $codeblock", [
+        if ($end->id === T_DOUBLE_ARROW) {
+            $body = php_parse("<?php $codeblock", [
                 'begin'  => T_DOUBLE_ARROW,
                 'end'    => [';', ',', ')'],
                 'offset' => last_key($meta),
@@ -22320,14 +22570,175 @@ if (!function_exists('ryunosuke\\DbMigration\\callable_code')) {
             $body = array_slice($body, 1, -1);
         }
         else {
-            $body = parse_php("<?php $codeblock", [
+            $body = php_parse("<?php $codeblock", [
                 'begin'  => '{',
                 'end'    => '}',
                 'offset' => last_key($meta),
             ]);
         }
 
-        return [trim(implode('', array_column($meta, 1))), trim(implode('', array_column($body, 1)))];
+        if ($return_token) {
+            return [$meta, $body];
+        }
+
+        return [trim(implode('', array_column($meta, 'text'))), trim(implode('', array_column($body, 'text')))];
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\function_doccomments') || (new \ReflectionFunction('ryunosuke\\DbMigration\\function_doccomments'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\function_doccomments')) {
+    /**
+     * $callable の本体・引数・返り値の DocComment を返す
+     *
+     * 下記のような配列を返す（仕様上 Example が書けない）。
+     *
+     * ```
+     * [
+     *     "" => "本体の DocComment",
+     *     0  => "引数1の DocComment",
+     *     1  => "引数2の DocComment",
+     *     // ...他の引数
+     *     -1 => "返り値の DocComment",
+     * ];
+     * ```
+     *
+     * それぞれ存在しない場合はキー自体が抜け落ちる（null で入ったりはしない）。
+     * 非常に雑に実装しているので、配列や new(8.1以降)の引数に反応することがある。
+     *
+     * 本体の DocComment は ReflectionFunctionAbstract::getDocComment と同等である。
+     * 引数の DocComment は必ず型宣言の直前（ない場合は引数名の直前）に記述しなければならない。
+     * 返り値の DocComment は必ず型宣言の直前（ない場合は{の直前）に記述しなければならない。
+     *
+     * @package ryunosuke\Functions\Package\reflection
+     */
+    function function_doccomments(
+        /** 対象 callable */
+        \ReflectionFunctionAbstract|callable $callable,
+    ): /** 本体・引数・返り値の DocComment 配列 */ array
+    {
+        $ref = $callable instanceof \ReflectionFunctionAbstract ? $callable : reflect_callable($callable);
+        $parameters = array_each($ref->getParameters(), function (&$carry, $v) {
+            $carry[$v->getName()] = $v;
+        }, []);
+
+        $result = [];
+        if ($ref->getDocComment() !== false) {
+            $result[''] = $ref->getDocComment();
+        }
+
+        $doccomment = null;
+        $tokens = callable_code($ref, true)[0];
+        foreach ($tokens as $token) {
+            if ($token->is(T_DOC_COMMENT)) {
+                $doccomment = $token;
+            }
+
+            if ($token->is(T_VARIABLE)) {
+                $varname = substr($token->text, 1);
+                if ($doccomment && isset($parameters[$varname])) {
+                    $result[$parameters[$varname]->getPosition()] = $doccomment->text;
+                }
+                $doccomment = null;
+            }
+            if ($token->is([T_NEW])) {
+                $doccomment = null; // @codeCoverageIgnore for php8.1
+            }
+        }
+
+        if ($doccomment) {
+            $result[-1] = $doccomment->text;
+        }
+
+        return $result;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\function_export_false2null') || (new \ReflectionFunction('ryunosuke\\DbMigration\\function_export_false2null'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\function_export_false2null')) {
+    /**
+     * 存在する関数の内、false 返しを null 返しに再定義したファイルを返す
+     *
+     * 標準関数は歴史的な事情で false を返すものが多い（strpos, strtotime 等）。
+     * ただ大抵の場合は null の方が好ましいことが多い（int|false より ?int の方が分かりやすいし ?? を駆使できる）。
+     * （`strpos(',', 'hello, world') ?? -1` みたいなことができない）。
+     *
+     * $false_only:false にすると存在する全関数も返す。false 返しでない関数は単純な委譲で余計なことはしない。
+     * これは「strpos は nullable だから F\\strpos で、他はグローバル」という使い分けの利便性のためだが、出力数が膨大になるので留意。
+     *
+     * @package ryunosuke\Functions\Package\reflection
+     *
+     * @param string $namespace 吐き出す名前空間
+     * @param bool $false_only false 返しのみか。false を与えると全関数を返す
+     * @return string 吐き出された関数定義を含むファイル内容
+     */
+    function function_export_false2null(string $namespace, bool $false_only = true): string
+    {
+        $all = [];
+        foreach (get_defined_functions(true) as $functions) {
+            foreach ($functions as $funcname) {
+                $reffunc = new \ReflectionFunction($funcname);
+                $extension = (string) $reffunc->getExtensionName() ?: 'user';
+                $all[$extension][$funcname] = $reffunc;
+            }
+        }
+
+        $formatterOff = "@formatter:" . "off"; // 文字列的に分離しないと外側のコードまで off になる
+        $contents = <<<PHP
+        <?php
+        /**
+         * @noinspection PhpDeprecationInspection
+         * @noinspection PhpUndefinedFunctionInspection
+         * @noinspection PhpUndefinedConstantInspection
+         */
+        # Don't touch this code. This is auto generated.
+        namespace $namespace;
+        
+        // $formatterOff
+        
+        PHP;
+        foreach ($all as $extension => $functions) {
+            $contents .= "\n# $extension\n\n";
+
+            foreach ($functions as $funcname => $reffunc) {
+                // 拡張関数で名前空間を持つ者がいる（e.g. pcov）
+                if (str_contains($funcname, '\\')) {
+                    continue;
+                }
+                // assert を名前空間内に定義することはできない
+                if ($funcname === 'assert') {
+                    continue;
+                }
+                // 標準関数に参照返しは存在しないはず（したとしても1文で返すのが難しいので対応しない）
+                if ($reffunc->returnsReference()) {
+                    continue; // @codeCoverageIgnore
+                }
+                $return = reflect_type_resolve($reffunc->getReturnType() ?: 'mixed');
+                $returns = explode('|', $return);
+
+                $param = implode(', ', array_maps($reffunc->getParameters(), fn($p) => ($p->isVariadic() ? '...' : '') . '$' . $p->getName()));
+                $args = implode(', ', function_parameter($reffunc));
+
+                if (!in_array('null', $returns) && in_array('false', $returns)) {
+                    $return = str_replace('false', 'null', $return);
+                    $body = "return (\$result = \\{$funcname}($param)) === false ? null : \$result;";
+                }
+                else {
+                    if ($false_only) {
+                        continue;
+                    }
+                    if (in_array('void', $returns)) {
+                        $body = "\\{$funcname}($param);";
+                    }
+                    else {
+                        $body = "return \\{$funcname}($param);";
+                    }
+                }
+
+                $contents .= "function $funcname({$args}):$return {{$body}}\n";
+            }
+        }
+
+        return $contents;
     }
 }
 
@@ -22354,7 +22765,7 @@ if (!function_exists('ryunosuke\\DbMigration\\function_parameter')) {
             $declare = '';
 
             if ($parameter->hasType()) {
-                $declare .= reflect_types($parameter->getType())->getName() . ' ';
+                $declare .= reflect_type_resolve($parameter->getType()) . ' ';
             }
 
             if ($parameter->isPassedByReference()) {
@@ -22370,30 +22781,27 @@ if (!function_exists('ryunosuke\\DbMigration\\function_parameter')) {
             if ($parameter->isOptional()) {
                 $defval = null;
 
-                // 組み込み関数のデフォルト値を取得することは出来ない（isDefaultValueAvailable も false を返す）
                 if ($parameter->isDefaultValueAvailable()) {
                     // 修飾なしでデフォルト定数が使われているとその名前空間で解決してしまうので場合分けが必要
                     if ($parameter->isDefaultValueConstant() && strpos($parameter->getDefaultValueConstantName(), '\\') === false) {
-                        $defval = $parameter->getDefaultValueConstantName();
+                        // 存在チェック＋$dummy でグローバル定数を回避しているが、いっそのこと一律 \\ を付与してしまっても良いような気がする
+                        if (const_exists(...(explode('::', $parameter->getDefaultValueConstantName()) + [1 => '$dummy']))) {
+                            $defval = '\\' . $parameter->getDefaultValueConstantName();
+                        }
+                        else {
+                            $defval = $parameter->getDefaultValueConstantName();
+                        }
                     }
                     else {
                         $default = $parameter->getDefaultValue();
                         $defval = var_export2($default, true);
-                        if (is_string($default)) {
-                            $defval = strtr($defval, [
-                                "\r" => "\\r",
-                                "\n" => "\\n",
-                                "\t" => "\\t",
-                                "\f" => "\\f",
-                                "\v" => "\\v",
-                            ]);
-                        }
                     }
                 }
-                // 「オプショナルだけどデフォルト値がないって有り得るのか？」と思ったが、上記の通り組み込み関数だと普通に有り得るようだ
-                // notice が出るので記述せざるを得ないがその値を得る術がない。が、どうせ与えられないので null でいい
-                elseif (version_compare(PHP_VERSION, 8.0) < 0) {
-                    $defval = 'null';
+                // isOptional だが isDefaultValueAvailable でないし isVariadic でもない（稀にある（stream_filter_append で確認））
+                elseif (!$parameter->isVariadic()) {
+                    // Type に応じたデフォルト値が得られればベストだがそこまでする必要もない
+                    // 少なくとも 8.0 時点では = null してしまえば型エラーも起きない（8.4 で非推奨になってるけど）
+                    $defval = "null";
                 }
 
                 if (isset($defval)) {
@@ -22594,7 +23002,7 @@ if (!function_exists('ryunosuke\\DbMigration\\parameter_wiring')) {
                     $result[$n] = $dependency[$pname];
                 }
             }
-            elseif (($typename = (string) reflect_types($parameter->getType()))) {
+            elseif (($typename = strval($parameter->getType()))) {
                 if (isset($dependency[$typename])) {
                     $result[$n] = $dependency[$typename];
                 }
@@ -22638,16 +23046,45 @@ if (!function_exists('ryunosuke\\DbMigration\\reflect_callable')) {
     /**
      * callable から ReflectionFunctionAbstract を生成する
      *
+     * 実際には ReflectionFunctionAbstract を下記の独自拡張した Reflection クラスを返す（メソッドのオーバーライド等はしていないので完全互換）。
+     * - __invoke: 元となったオブジェクトを $this として invoke する（関数・クロージャは invoke と同義）
+     * - call: 実行 $this を指定して invoke する（クロージャ・メソッドのみ）
+     *   - 上記二つは __call/__callStatic のメソッドも呼び出せる
+     * - getDeclaration: 宣言部のコードを返す
+     * - getCode: 定義部のコードを返す
+     * - isAnonymous: 無名関数なら true を返す（8.2 の isAnonymous 互換）
+     * - isStatic: $this バインド可能かを返す（クロージャのみ）
+     * - getUsedVariables: use している変数配列を返す（クロージャのみ）
+     * - getClosure: 元となったオブジェクトを $object としたクロージャを返す（メソッドのみ）
+     *   - 上記二つは __call/__callStatic のメソッドも呼び出せる
+     * - getTraitMethod: トレイト側のリフレクションを返す（メソッドのみ）
+     *
      * Example:
      * ```php
      * that(reflect_callable('sprintf'))->isInstanceOf(\ReflectionFunction::class);
      * that(reflect_callable('\Closure::bind'))->isInstanceOf(\ReflectionMethod::class);
+     *
+     * $x = 1;
+     * $closure = function ($a, $b) use (&$x) { return $a + $b; };
+     * $reflection = reflect_callable($closure);
+     * // 単純実行
+     * that($reflection(1, 2))->is(3);
+     * // 無名クラスを $this として実行
+     * that($reflection->call(new class(){}, 1, 2))->is(3);
+     * // 宣言部を返す
+     * that($reflection->getDeclaration())->is('function ($a, $b) use (&$x)');
+     * // 定義部を返す
+     * that($reflection->getCode())->is('{ return $a + $b; }');
+     * // static か返す
+     * that($reflection->isStatic())->is(false);
+     * // use 変数を返す
+     * that($reflection->getUsedVariables())->is(['x' => 1]);
      * ```
      *
      * @package ryunosuke\Functions\Package\reflection
      *
      * @param callable $callable 対象 callable
-     * @return \ReflectionFunction|\ReflectionMethod リフレクションインスタンス
+     * @return \ReflectCallable|\ReflectionFunction|\ReflectionMethod リフレクションインスタンス
      */
     function reflect_callable($callable)
     {
@@ -22656,18 +23093,233 @@ if (!function_exists('ryunosuke\\DbMigration\\reflect_callable')) {
             throw new \InvalidArgumentException("'$call_name' is not callable");
         }
 
-        if ($callable instanceof \Closure || strpos($call_name, '::') === false) {
-            return new \ReflectionFunction($callable);
+        if (is_string($call_name) && strpos($call_name, '::') === false) {
+            return new class($callable) extends \ReflectionFunction {
+                private $definition;
+
+                public function __invoke(...$args): mixed
+                {
+                    return $this->invoke(...$args);
+                }
+
+                public function getDeclaration(): string
+                {
+                    return ($this->definition ??= callable_code($this))[0];
+                }
+
+                public function getCode(): string
+                {
+                    return ($this->definition ??= callable_code($this))[1];
+                }
+
+                public function isAnonymous(): bool
+                {
+                    return false;
+                }
+            };
+        }
+        elseif ($callable instanceof \Closure) {
+            return new class($callable) extends \ReflectionFunction {
+                private $callable;
+                private $definition;
+
+                public function __construct($function)
+                {
+                    parent::__construct($function);
+
+                    $this->callable = $function;
+                }
+
+                public function __invoke(...$args): mixed
+                {
+                    return $this->invoke(...$args);
+                }
+
+                public function call($newThis = null, ...$args): mixed
+                {
+                    return ($this->callable)->call($newThis ?? $this->getClosureThis(), ...$args);
+                }
+
+                public function getDeclaration(): string
+                {
+                    return ($this->definition ??= callable_code($this))[0];
+                }
+
+                public function getCode(): string
+                {
+                    return ($this->definition ??= callable_code($this))[1];
+                }
+
+                public function isAnonymous(): bool
+                {
+                    if (method_exists(\ReflectionFunction::class, 'isAnonymous')) {
+                        return parent::isAnonymous(); // @codeCoverageIgnore
+                    }
+
+                    return strpos($this->name, '{closure}') !== false;
+                }
+
+                public function isStatic(): bool
+                {
+                    return !is_bindable_closure($this->callable);
+                }
+
+                public function getUsedVariables(): array
+                {
+                    if (method_exists(\ReflectionFunction::class, 'getClosureUsedVariables')) {
+                        return parent::getClosureUsedVariables(); // @codeCoverageIgnore
+                    }
+
+                    $uses = object_properties($this->callable);
+                    unset($uses['this']);
+                    return $uses;
+                }
+            };
         }
         else {
             [$class, $method] = explode('::', $call_name, 2);
             // for タイプ 5: 相対指定による静的クラスメソッドのコール (PHP 5.3.0 以降)
             if (strpos($method, 'parent::') === 0) {
                 [, $method] = explode('::', $method);
-                return (new \ReflectionClass($class))->getParentClass()->getMethod($method);
+                $class = get_parent_class($class);
             }
-            return new \ReflectionMethod($class, $method);
+
+            $called_name = '';
+            if (!method_exists(is_array($callable) && is_object($callable[0]) ? $callable[0] : $class, $method)) {
+                $called_name = $method;
+                $method = is_array($callable) && is_object($callable[0]) ? '__call' : '__callStatic';
+            }
+
+            return new class($class, $method, $callable, $called_name) extends \ReflectionMethod {
+                private $callable;
+                private $call_name;
+                private $definition;
+
+                public function __construct($class, $method, $callable, $call_name)
+                {
+                    parent::__construct($class, $method);
+
+                    $this->setAccessible(true); // 8.1 はデフォルトで true になるので模倣する
+                    $this->callable = $callable;
+                    $this->call_name = $call_name;
+                }
+
+                public function __invoke(...$args): mixed
+                {
+                    if ($this->call_name) {
+                        $args = [$this->call_name, $args];
+                    }
+                    return $this->invoke($this->isStatic() ? null : $this->callable[0], ...$args);
+                }
+
+                public function call($newThis = null, ...$args): mixed
+                {
+                    if ($this->call_name) {
+                        $args = [$this->call_name, $args];
+                    }
+                    return $this->getClosure($newThis ?? ($this->isStatic() ? null : $this->callable[0]))(...$args);
+                }
+
+                public function getDeclaration(): string
+                {
+                    return ($this->definition ??= callable_code($this))[0];
+                }
+
+                public function getCode(): string
+                {
+                    return ($this->definition ??= callable_code($this))[1];
+                }
+
+                public function isAnonymous(): bool
+                {
+                    return false;
+                }
+
+                public function getClosure(?object $object = null): \Closure
+                {
+                    $name = strtolower($this->name);
+
+                    if ($this->isStatic()) {
+                        if ($name === '__callstatic') {
+                            return \Closure::fromCallable([$this->class, $this->call_name]);
+                        }
+                        return parent::getClosure();
+                    }
+
+                    $object ??= $this->callable[0];
+                    if ($name === '__call') {
+                        return \Closure::fromCallable([$object, $this->call_name]);
+                    }
+                    return parent::getClosure($object);
+                }
+
+                public function getTraitMethod(): ?\ReflectionMethod
+                {
+                    $name = strtolower($this->name);
+                    $class = $this->getDeclaringClass();
+                    $aliases = array_change_key_case($class->getTraitAliases(), CASE_LOWER);
+
+                    if (!isset($aliases[$name])) {
+                        if ($this->getFileName() === $class->getFileName()) {
+                            return null;
+                        }
+                        else {
+                            return $this;
+                        }
+                    }
+
+                    [$tname, $mname] = explode('::', $aliases[$name]);
+                    $result = new self($tname, $mname, $this->callable, $this->call_name);
+
+                    // alias を張ったとしても自身で再宣言はエラーなく可能で、その場合自身が採用されるようだ
+                    if (false
+                        || $this->getFileName() !== $result->getFileName()
+                        || $this->getStartLine() !== $result->getStartLine()
+                        || $this->getEndLine() !== $result->getEndLine()
+                    ) {
+                        return null;
+                    }
+
+                    return $result;
+                }
+            };
         }
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\reflect_type_resolve') || (new \ReflectionFunction('ryunosuke\\DbMigration\\reflect_type_resolve'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\reflect_type_resolve')) {
+    /**
+     * ReflectionType の型に \\ を付与する
+     *
+     * php8.0 で ReflectionType の __toString が解放されたけど、それをそのまま埋め込んだりすると \\ がないのでエラーになったりする。
+     * この関数を通してから埋め込めば \\ が付くので回避できる、という非常にニッチな関数。
+     *
+     * 型 exists で判定するため、付与するクラスは存在している必要がある（オプション引数で対応するかもしれない）。
+     *
+     * Example:
+     * ```php
+     * // このような DNF 型も形式を保ったまま \\ を付与できる
+     * that(reflect_type_resolve('(Countable&Traversable)|object'))->is('(\\Countable&\\Traversable)|object');
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\reflection
+     *
+     * @param ?string $type string だが実用上は getType 等で得られるインスタンスでよい
+     * @return ?string 解決された文字列
+     */
+    function reflect_type_resolve(?string $type): ?string
+    {
+        if ($type === null) {
+            return null;
+        }
+
+        // 拡張関数が string|null ではなく ?string で返すことがあるので ? を含める
+        // 8.1以上では交差型もあり得るので (&) も含める
+        // そして PREG_SPLIT_DELIM_CAPTURE で分割して再結合すれば元の形式のまま得られる
+        $types = preg_split('#([?()|&])#', $type, -1, PREG_SPLIT_DELIM_CAPTURE);
+        $types = array_map(fn($v) => type_exists($v) ? "\\" . ltrim($v, '\\') : $v, $types);
+        return implode('', $types);
     }
 }
 
@@ -22785,7 +23437,6 @@ if (!function_exists('ryunosuke\\DbMigration\\reflect_types')) {
                         continue;
                     }
 
-                    /** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
                     $types = array_merge($types, $type instanceof \ReflectionUnionType ? $type->getTypes() : [$type]);
                 }
 
@@ -22795,7 +23446,7 @@ if (!function_exists('ryunosuke\\DbMigration\\reflect_types')) {
                 }
             }
 
-            public function __toString()
+            public function __toString(): string
             {
                 return implode('|', $this->toStrings(true, true));
             }
@@ -22811,9 +23462,7 @@ if (!function_exists('ryunosuke\\DbMigration\\reflect_types')) {
                 return isset($this->$offset);
             }
 
-            /** @noinspection PhpLanguageLevelInspection */
-            #[\ReturnTypeWillChange]
-            public function offsetGet($offset)
+            public function offsetGet($offset): mixed
             {
                 return $this->$offset;
             }
@@ -22866,7 +23515,7 @@ if (!function_exists('ryunosuke\\DbMigration\\reflect_types')) {
                 return $this->toStrings(true, true);
             }
 
-            public function getName()
+            public function getName(): string
             {
                 $types = array_flip($this->toStrings(true, true));
                 $nullable = false;
@@ -22882,12 +23531,12 @@ if (!function_exists('ryunosuke\\DbMigration\\reflect_types')) {
                 return ($nullable ? '?' : '') . implode('|', $result);
             }
 
-            public function getTypes()
+            public function getTypes(): array
             {
                 return (array) $this;
             }
 
-            public function allows($type, $strict = false)
+            public function allows($type, $strict = false): bool
             {
                 $types = array_flip($this->toStrings(false, false));
 
@@ -22922,7 +23571,7 @@ if (!function_exists('ryunosuke\\DbMigration\\reflect_types')) {
                 return false;
             }
 
-            private function toStrings($ignore_compatible = true, $sort = true)
+            private function toStrings($ignore_compatible = true, $sort = true): array
             {
                 $types = [];
                 foreach ($this->getTypes() as $type) {
@@ -23281,8 +23930,8 @@ if (!function_exists('ryunosuke\\DbMigration\\include_stream')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\memory_path') || (new \ReflectionFunction('ryunosuke\\DbMigration\\memory_path'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\memory_path')) {
+assert(!function_exists('ryunosuke\\DbMigration\\memory_stream') || (new \ReflectionFunction('ryunosuke\\DbMigration\\memory_stream'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\memory_stream')) {
     /**
      * ファイルのように扱えるメモリ上のパスを返す
      *
@@ -23293,19 +23942,19 @@ if (!function_exists('ryunosuke\\DbMigration\\memory_path')) {
      * Example:
      * ```php
      * // ファイル名のように読み書きができるパスを返す（一時ファイルを使用するよりかなり高速に動作する）
-     * $memory_path = memory_path('filename.txt');
+     * $memory_stream = memory_stream('filename.txt');
      * // 呼んだだけでは何もしないので存在しない
-     * that(file_exists($memory_path))->isSame(false);
+     * that(file_exists($memory_stream))->isSame(false);
      * // file_put_contents が使える
-     * that(file_put_contents($memory_path, 'Hello, World'))->isSame(12);
+     * that(file_put_contents($memory_stream, 'Hello, World'))->isSame(12);
      * // file_get_contents が使える
-     * that(file_get_contents($memory_path))->isSame('Hello, World');
+     * that(file_get_contents($memory_stream))->isSame('Hello, World');
      * // 上記の操作で実体が存在している
-     * that(file_exists($memory_path))->isSame(true);
+     * that(file_exists($memory_stream))->isSame(true);
      * // unlink が使える
-     * that(unlink($memory_path))->isSame(true);
+     * that(unlink($memory_stream))->isSame(true);
      * // unlink したので存在しない
-     * that(file_exists($memory_path))->isSame(false);
+     * that(file_exists($memory_stream))->isSame(false);
      * ```
      *
      * @package ryunosuke\Functions\Package\stream
@@ -23313,7 +23962,7 @@ if (!function_exists('ryunosuke\\DbMigration\\memory_path')) {
      * @param string $path パス名（実質的に一意なファイル名）
      * @return string メモリ上のパス
      */
-    function memory_path($path = '')
+    function memory_stream($path = '')
     {
         static $STREAM_NAME, $registered = false;
         if (!$registered) {
@@ -23880,6 +24529,8 @@ if (!function_exists('ryunosuke\\DbMigration\\var_stream')) {
                 private $entry;
                 private $position;
 
+                public $context;
+
                 public static function create(string &$var): int
                 {
                     self::$entries[++self::$ids] = &$var;
@@ -24020,7 +24671,7 @@ if (!function_exists('ryunosuke\\DbMigration\\camel_case')) {
      * @param string $delimiter デリミタ
      * @return string 変換した文字列
      */
-    function camel_case($string, $delimiter = '_')
+    function camel_case(?string $string, ?string $delimiter = '_')
     {
         return lcfirst(pascal_case($string, $delimiter));
     }
@@ -24042,7 +24693,7 @@ if (!function_exists('ryunosuke\\DbMigration\\chain_case')) {
      * @param string $delimiter デリミタ
      * @return string 変換した文字列
      */
-    function chain_case($string, $delimiter = '-')
+    function chain_case(?string $string, ?string $delimiter = '-')
     {
         return snake_case($string, $delimiter);
     }
@@ -24054,26 +24705,31 @@ if (!function_exists('ryunosuke\\DbMigration\\concat')) {
      * strcat の空文字回避版
      *
      * 基本は strcat と同じ。ただし、**引数の内1つでも空文字を含むなら空文字を返す**。
+     * さらに*引数の内1つでも null を含むなら null を返す**。
      *
      * 「プレフィックスやサフィックスを付けたいんだけど、空文字の場合はそのままで居て欲しい」という状況はまれによくあるはず。
      * コードで言えば `strlen($string) ? 'prefix-' . $string : '';` のようなもの。
-     * 可変引数なので 端的に言えば mysql の CONCAT みたいな動作になる（あっちは NULL だが）。
+     * 可変引数なので 端的に言えば mysql の CONCAT みたいな動作になる。
      *
      * ```php
      * that(concat('prefix-', 'middle', '-suffix'))->isSame('prefix-middle-suffix');
      * that(concat('prefix-', '', '-suffix'))->isSame('');
+     * that(concat('prefix-', null, '-suffix'))->isSame(null);
      * ```
      *
      * @package ryunosuke\Functions\Package\strings
      *
-     * @param mixed ...$variadic 結合する文字列（可変引数）
-     * @return string 結合した文字列
+     * @param ?string ...$variadic 結合する文字列（可変引数）
+     * @return ?string 結合した文字列
      */
     function concat(...$variadic)
     {
+        if (count(array_filter($variadic, 'is_null')) > 0) {
+            return null;
+        }
         $result = '';
         foreach ($variadic as $s) {
-            if (strlen($s = (string) $s) === 0) {
+            if (strlen($s) === 0) {
                 return '';
             }
             $result .= $s;
@@ -24187,12 +24843,15 @@ if (!function_exists('ryunosuke\\DbMigration\\ends_with')) {
      * @param bool $case_insensitivity 大文字小文字を無視するか
      * @return bool 対象文字列で終わるなら true
      */
-    function ends_with($string, $with, $case_insensitivity = false)
+    function ends_with(?string $string, $with, $case_insensitivity = false)
     {
-        assert(is_stringable($string));
-
         foreach ((array) $with as $w) {
-            assert(strlen($w));
+            $w = (string) $w;
+
+            // All strings end with the empty string
+            if ($w === '') {
+                return true;
+            }
 
             if (str_equals(substr($string, -strlen($w)), $w, $case_insensitivity)) {
                 return true;
@@ -24214,10 +24873,10 @@ if (!function_exists('ryunosuke\\DbMigration\\include_string')) {
      * @param array $array extract される連想変数
      * @return string レンダリングされた文字列
      */
-    function include_string($template, $array = [])
+    function include_string(?string $template, $array = [])
     {
         // opcache が効かない気がする
-        $path = memory_path(__FUNCTION__);
+        $path = memory_stream(__FUNCTION__);
         file_put_contents($path, $template);
         $result = ob_include($path, $array);
         unlink($path);
@@ -24243,7 +24902,7 @@ if (!function_exists('ryunosuke\\DbMigration\\kvsprintf')) {
      * @param array $array フォーマット引数
      * @return string フォーマットされた文字列
      */
-    function kvsprintf($format, array $array)
+    function kvsprintf(?string $format, array $array)
     {
         $keys = array_flip(array_keys($array));
         $vals = array_values($array);
@@ -24290,15 +24949,18 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_compatible_encoding')) {
      * @param string $to 変換先エンコーディング
      * @return ?bool from が to に対して互換性があるなら true（8bit binary の時のみ例外的に null を返す）
      */
-    function mb_compatible_encoding($from, $to)
+    function mb_compatible_encoding(?string $from, ?string $to)
     {
         static $encmap = [];
         if (!$encmap) {
             foreach (mb_list_encodings() as $encoding) {
-                $encmap[strtolower($encoding)] = [
-                    'aliases'  => array_flip(array_map('strtolower', mb_encoding_aliases($encoding))),
-                    'mimename' => strtolower((string) @mb_preferred_mime_name($encoding)),
-                ];
+                // 非推奨を避ける
+                if (!in_array($encoding, ['BASE64', 'UUENCODE', 'HTML-ENTITIES', 'Quoted-Printable'], true)) {
+                    $encmap[strtolower($encoding)] = [
+                        'aliases'  => array_flip(array_map('strtolower', mb_encoding_aliases($encoding))),
+                        'mimename' => strtolower((string) @mb_preferred_mime_name($encoding)),
+                    ];
+                }
             }
         }
 
@@ -24391,10 +25053,8 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_ellipsis')) {
      * @param int|null $pos 省略記号の差し込み位置
      * @return string 丸められた文字列
      */
-    function mb_ellipsis($string, $width, $trimmarker = '...', $pos = null)
+    function mb_ellipsis(?string $string, $width, $trimmarker = '...', $pos = null)
     {
-        $string = (string) $string;
-
         $strwidth = mb_monospace($string);
         if ($strwidth <= $width) {
             return $string;
@@ -24462,59 +25122,34 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_ereg_options')) {
      */
     function mb_ereg_options($options)
     {
-        return new class($options) {
-            private $options, $backup;
-
-            private $settled = false;
-
-            public function __construct($options)
-            {
-                $this->options = [
-                    'internal_encoding'    => $options['internal_encoding'] ?? $options['encoding'] ?? null,
-                    'substitute_character' => $options['substitute_character'] ?? null,
-                    'regex_encoding'       => $options['regex_encoding'] ?? $options['encoding'] ?? null,
-                    'regex_options'        => $options['regex_options'] ?? null,
-                ];
-                $this->backup = [
-                    'internal_encoding'    => mb_internal_encoding(),
-                    'substitute_character' => mb_substitute_character(),
-                    'regex_encoding'       => mb_regex_encoding(),
-                    'regex_options'        => mb_regex_set_options(),
-                ];
-
-                $this->set($this->options, true);
+        $set = static function ($setting) {
+            if (strlen((string) $setting['internal_encoding'])) {
+                mb_internal_encoding($setting['internal_encoding']);
             }
-
-            public function __destruct()
-            {
-                $this();
+            if (strlen((string) $setting['substitute_character'])) {
+                mb_substitute_character($setting['substitute_character']);
             }
-
-            public function __invoke()
-            {
-                if ($this->settled) {
-                    $this->set($this->backup, false);
-                }
+            if (strlen((string) $setting['regex_encoding'])) {
+                mb_regex_encoding($setting['regex_encoding']);
             }
-
-            private function set($setting, $settled)
-            {
-                if (strlen((string) $setting['internal_encoding'])) {
-                    mb_internal_encoding($setting['internal_encoding']);
-                }
-                if (strlen((string) $setting['substitute_character'])) {
-                    mb_substitute_character($setting['substitute_character']);
-                }
-                if (strlen((string) $setting['regex_encoding'])) {
-                    mb_regex_encoding($setting['regex_encoding']);
-                }
-                if (strlen((string) $setting['regex_options'])) {
-                    mb_regex_set_options($setting['regex_options']);
-                }
-
-                $this->settled = $settled;
+            if (strlen((string) $setting['regex_options'])) {
+                mb_regex_set_options($setting['regex_options']);
             }
         };
+
+        $backup = [
+            'internal_encoding'    => mb_internal_encoding(),
+            'substitute_character' => mb_substitute_character(),
+            'regex_encoding'       => mb_regex_encoding(),
+            'regex_options'        => mb_regex_set_options(),
+        ];
+        $set([
+            'internal_encoding'    => $options['internal_encoding'] ?? $options['encoding'] ?? null,
+            'substitute_character' => $options['substitute_character'] ?? null,
+            'regex_encoding'       => $options['regex_encoding'] ?? $options['encoding'] ?? null,
+            'regex_options'        => $options['regex_options'] ?? null,
+        ]);
+        return finalize(fn() => $set($backup));
     }
 }
 
@@ -24547,9 +25182,9 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_ereg_split')) {
      * @param string $subject 対象文字列
      * @param int $limit 分割数
      * @param int $flags フラグ
-     * @return array|false 分割された文字列
+     * @return ?array 分割された文字列
      */
-    function mb_ereg_split($pattern, $subject, $limit = -1, $flags = 0)
+    function mb_ereg_split(?string $pattern, ?string $subject, $limit = -1, $flags = 0)
     {
         // 是正（奇妙だが preg_split は 0, -1 以外は特別扱いしないようだ（個数が負数になることはないので実質的に 1 指定と同じ））
         if (-1 <= $limit && $limit <= 0) {
@@ -24585,7 +25220,7 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_ereg_split')) {
 
         // 不正ならそこで終わり
         if (!mb_ereg_search_init($subject, $pattern)) {
-            return false;
+            return null;
         }
 
         // マッチしなくなるまでループ（ただし $length を超えた場合は無駄なので break）
@@ -24672,7 +25307,7 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_monospace')) {
      * @param array $codepoints コードポイント配列
      * @return int 等幅の文字幅
      */
-    function mb_monospace($string, $codepoints = [])
+    function mb_monospace(?string $string, $codepoints = [])
     {
         $widthmap = [];
         foreach ($codepoints as $codepoint => $width) {
@@ -24715,8 +25350,8 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_monospace')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\mb_str_pad') || (new \ReflectionFunction('ryunosuke\\DbMigration\\mb_str_pad'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\mb_str_pad')) {
+assert(!function_exists('ryunosuke\\DbMigration\\mb_pad_width') || (new \ReflectionFunction('ryunosuke\\DbMigration\\mb_pad_width'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\mb_pad_width')) {
     /**
      * マルチバイト版 str_pad
      *
@@ -24731,11 +25366,11 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_str_pad')) {
      * Example:
      * ```php
      * // マルチバイトは2文字幅として換算される
-     * that(mb_str_pad('aaaa', 12, '-'))->isSame('aaaa--------');
-     * that(mb_str_pad('ああ', 12, '-'))->isSame('ああ--------');
+     * that(mb_pad_width('aaaa', 12, '-'))->isSame('aaaa--------');
+     * that(mb_pad_width('ああ', 12, '-'))->isSame('ああ--------');
      * // $pad_string は切り捨てられない
-     * that(mb_str_pad('aaaa', 12, 'xyz'))->isSame('aaaaxyzxyz'); // 10文字で返す（あと1回 xyz すると 13 文字になり width を超えてしまう（かといって xy だけを足したりもしない））
-     * that(mb_str_pad('ああ', 12, 'xyz'))->isSame('ああxyzxyz'); // マルチバイトでも同じ
+     * that(mb_pad_width('aaaa', 12, 'xyz'))->isSame('aaaaxyzxyz'); // 10文字で返す（あと1回 xyz すると 13 文字になり width を超えてしまう（かといって xy だけを足したりもしない））
+     * that(mb_pad_width('ああ', 12, 'xyz'))->isSame('ああxyzxyz'); // マルチバイトでも同じ
      * ```
      *
      * @package ryunosuke\Functions\Package\strings
@@ -24746,7 +25381,7 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_str_pad')) {
      * @param int $pad_type 埋める位置
      * @return string 指定文字で埋められた文字列
      */
-    function mb_str_pad($string, $width, $pad_string = " ", $pad_type = STR_PAD_RIGHT)
+    function mb_pad_width(?string $string, $width, $pad_string = " ", $pad_type = STR_PAD_RIGHT)
     {
         assert(in_array($pad_type, [STR_PAD_LEFT, STR_PAD_RIGHT, STR_PAD_BOTH]));
 
@@ -24775,6 +25410,23 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_str_pad')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\mb_str_pad') || (new \ReflectionFunction('ryunosuke\\DbMigration\\mb_str_pad'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\mb_str_pad')) {
+    /**
+     * マルチバイト版 str_pad
+     *
+     * @see mb_pad_width()
+     * @deprecated 標準関数と重複
+     * @codeCoverageIgnore
+     * @package ryunosuke\Functions\Package\strings
+     */
+    function mb_str_pad(?string $string, $width, $pad_string = " ", $pad_type = STR_PAD_RIGHT)
+    {
+        trigger_error(__FUNCTION__ . ' is deprecated. use mb_pad_width', E_USER_DEPRECATED);
+        return mb_pad_width($string, $width, $pad_string, $pad_type);
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\mb_substr_replace') || (new \ReflectionFunction('ryunosuke\\DbMigration\\mb_substr_replace'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\mb_substr_replace')) {
     /**
@@ -24796,10 +25448,8 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_substr_replace')) {
      * @param ?int $length 置換長
      * @return string 置換した文字列
      */
-    function mb_substr_replace($string, $replacement, $start, $length = null)
+    function mb_substr_replace(?string $string, ?string $replacement, $start, $length = null)
     {
-        $string = (string) $string;
-
         $strlen = mb_strlen($string);
         if ($start < 0) {
             $start += $strlen;
@@ -24820,18 +25470,14 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_trim')) {
     /**
      * マルチバイト対応 trim
      *
-     * Example:
-     * ```php
-     * that(mb_trim(' 　 あああ　 　'))->isSame('あああ');
-     * ```
-     *
+     * @see https://github.com/symfony/polyfill-php84/
+     * @deprecated 標準関数と重複
+     * @codeCoverageIgnore
      * @package ryunosuke\Functions\Package\strings
-     *
-     * @param string $string 対象文字列
-     * @return string trim した文字列
      */
-    function mb_trim($string)
+    function mb_trim(?string $string)
     {
+        trigger_error(__FUNCTION__ . ' is deprecated. use symfony/polyfill or 8.4 builtin', E_USER_DEPRECATED);
         return preg_replace('/\A[\p{C}\p{Z}]++|[\p{C}\p{Z}]++\z/u', '', $string);
     }
 }
@@ -24866,9 +25512,9 @@ if (!function_exists('ryunosuke\\DbMigration\\mb_wordwrap')) {
      * @param ?string $break 分割文字
      * @return string|array 指定幅で改行が差し込まれた文字列
      */
-    function mb_wordwrap($string, $width, $break = "\n")
+    function mb_wordwrap(?string $string, $width, $break = "\n")
     {
-        $lines = mb_split('\\R', (string) $string);
+        $lines = mb_split('\\R', $string);
 
         $result = [];
         foreach ($lines as $line) {
@@ -24925,7 +25571,7 @@ if (!function_exists('ryunosuke\\DbMigration\\multiexplode')) {
      * @param int $limit 分割数
      * @return array 分割された配列
      */
-    function multiexplode($delimiter, $string, $limit = \PHP_INT_MAX)
+    function multiexplode($delimiter, ?string $string, $limit = \PHP_INT_MAX)
     {
         $limit = (int) $limit;
         if ($limit < 0) {
@@ -24967,7 +25613,7 @@ if (!function_exists('ryunosuke\\DbMigration\\namespace_split')) {
      * @param string $string 対象文字列
      * @return array [namespace, localname]
      */
-    function namespace_split($string)
+    function namespace_split(?string $string)
     {
         $pos = strrpos($string, '\\');
         if ($pos === false) {
@@ -24999,7 +25645,7 @@ if (!function_exists('ryunosuke\\DbMigration\\ngram')) {
      * @param string $encoding マルチバイトエンコーディング
      * @return array N-gram 配列
      */
-    function ngram($string, $N, $encoding = 'UTF-8')
+    function ngram(?string $string, $N, $encoding = 'UTF-8')
     {
         if (func_num_args() < 3) {
             $encoding = mb_internal_encoding();
@@ -25032,7 +25678,7 @@ if (!function_exists('ryunosuke\\DbMigration\\pascal_case')) {
      * @param string $delimiter デリミタ（複数可）
      * @return string 変換した文字列
      */
-    function pascal_case($string, $delimiter = '_')
+    function pascal_case(?string $string, ?string $delimiter = '_')
     {
         $replacemap = array_combine(str_split($delimiter), array_pad([], strlen($delimiter), ' '));
         return strtr(ucwords(strtr($string, $replacemap)), [' ' => '']);
@@ -25071,10 +25717,15 @@ if (!function_exists('ryunosuke\\DbMigration\\quoteexplode')) {
      * @param ?int $limit 分割数。負数未対応
      * @param array|string $enclosures 囲い文字。 ["start" => "end"] で開始・終了が指定できる
      * @param string $escape エスケープ文字
+     * @param array $options オプション
      * @return array 分割された配列
      */
-    function quoteexplode($delimiter, $string, $limit = null, $enclosures = "'\"", $escape = '\\')
+    function quoteexplode($delimiter, ?string $string, $limit = null, $enclosures = "'\"", $escape = '\\', $options = [])
     {
+        $options += [
+            'delim-capture' => false, // デリミタも結果に含まれるようになる
+        ];
+
         if ($limit === null) {
             $limit = PHP_INT_MAX;
         }
@@ -25088,13 +25739,16 @@ if (!function_exists('ryunosuke\\DbMigration\\quoteexplode')) {
                 break;
             }
             $i = strpos_quoted($string, $delimiters, $i, $enclosures, $escape);
-            if ($i === false) {
+            if ($i === null) {
                 break;
             }
             foreach ($delimiters as $delimiter) {
                 $delimiterlen = strlen($delimiter);
                 if (substr_compare($string, $delimiter, $i, $delimiterlen) === 0) {
                     $result[] = substr($string, $current, $i - $current);
+                    if ($options['delim-capture']) {
+                        $result[] = $delimiter;
+                    }
                     $current = $i + $delimiterlen;
                     $i += $delimiterlen - 1;
                     break;
@@ -25118,7 +25772,7 @@ if (!function_exists('ryunosuke\\DbMigration\\render_file')) {
      * @param array $array レンダリング変数
      * @return string レンダリングされた文字列
      */
-    function render_file($template_file, $array)
+    function render_file(?string $template_file, $array)
     {
         return render_string(file_get_contents($template_file), $array);
     }
@@ -25145,8 +25799,6 @@ if (!function_exists('ryunosuke\\DbMigration\\render_string')) {
      *
      * Example:
      * ```php
-     * // 数値キーが参照できる
-     * that(render_string('${0}', ['number']))->isSame('number');
      * // クロージャは呼び出し結果が埋め込まれる
      * that(render_string('$c', ['c' => fn($vars, $k) => $k . '-closure']))->isSame('c-closure');
      * // 引数をそのまま返すだけの特殊な変数 $_ が宣言される
@@ -25162,10 +25814,15 @@ if (!function_exists('ryunosuke\\DbMigration\\render_string')) {
      * @param array $array レンダリング変数
      * @return string レンダリングされた文字列
      */
-    function render_string($template, $array)
+    function render_string(?string $template, $array)
     {
         // eval 可能な形式に変換
-        $evalcode = 'return "' . addcslashes($template, "\"\\\0") . '";';
+        $evalcode = 'return ' . str_quote($template, [
+                'special-character' => [
+                    '\\' => '\\\\', // バックスラッシュ
+                    '"'  => '\\"',  // 二重引用符
+                ],
+            ]) . ';';
 
         // 利便性を高めるために変数配列を少しいじる
         $vars = [];
@@ -25227,7 +25884,7 @@ if (!function_exists('ryunosuke\\DbMigration\\render_template')) {
      * @param callable $tag ブロックと変数値が渡ってくるクロージャ（タグ付きテンプレートリテラルのようなもの）
      * @return string レンダリングされた文字列
      */
-    function render_template($template, $vars, $tag = null)
+    function render_template(?string $template, $vars, $tag = null)
     {
         assert(is_arrayable($vars) || is_array($vars));
 
@@ -25241,20 +25898,21 @@ if (!function_exists('ryunosuke\\DbMigration\\render_template')) {
         };
 
         [$blocks, $stmts] = cache("template-$template", function () use ($template) {
-            $tokens = array_slice(parse_php("<<<PHPTEMPLATELITERAL\n" . $template . "\nPHPTEMPLATELITERAL;", [
+            $tokens = array_slice(php_parse("<?php <<<PHPTEMPLATELITERAL\n" . $template . "\nPHPTEMPLATELITERAL;", [
                 'backtick' => false,
             ]), 2, -2);
             $last = array_key_last($tokens);
-            if ($tokens[$last][0] === T_ENCAPSED_AND_WHITESPACE) {
-                $tokens[$last][1] = substr($tokens[$last][1], 0, -1);
+            if ($tokens[$last]->id === T_ENCAPSED_AND_WHITESPACE) {
+                $tokens[$last] = clone $tokens[$last];
+                $tokens[$last]->text = substr($tokens[$last]->text, 0, -1);
             }
 
             $blocks = [""];
             $stmts = [];
             for ($i = 0, $l = count($tokens); $i < $l; $i++) {
-                if ($tokens[$i][0] === T_DOLLAR_OPEN_CURLY_BRACES) {
+                if ($tokens[$i]->id === T_DOLLAR_OPEN_CURLY_BRACES) {
                     for ($j = $i + 1; $j < $l; $j++) {
-                        if ($tokens[$j][1] === '}') {
+                        if ($tokens[$j]->text === '}') {
                             $blocks[] = "";
                             $stmts[] = array_slice($tokens, $i + 1, $j - $i - 1, true);
                             $i = $j;
@@ -25263,24 +25921,25 @@ if (!function_exists('ryunosuke\\DbMigration\\render_template')) {
                     }
                 }
                 else {
-                    $blocks[count($blocks) - 1] .= strtr_escaped($tokens[$i][1], ['\$' => '$']);
+                    $blocks[count($blocks) - 1] .= strtr_escaped($tokens[$i]->text, ['\$' => '$']);
                 }
             }
 
+            array_walk_recursive($stmts, fn(&$token) => $token = (array) $token);
             return [$blocks, $stmts];
         }, __FUNCTION__);
 
         $values = [];
         foreach ($stmts as $stmt) {
             foreach ($stmt as $n => $subtoken) {
-                if ($subtoken[0] === ord('`')) {
-                    $stmt[$n][1] = var_export(render_template(substr($subtoken[1], 1, -1), $vars), true);
+                if ($subtoken['id'] === ord('`')) {
+                    $stmt[$n]['text'] = var_export(render_template(substr($subtoken['text'], 1, -1), $vars), true);
                 }
-                elseif (attr_exists($subtoken[1], $vars) && ($stmt[$n + 1][1] ?? '') !== '(') {
-                    $stmt[$n][1] = '$' . $subtoken[1];
+                elseif (attr_exists($subtoken['text'], $vars) && ($stmt[$n + 1]['text'] ?? '') !== '(') {
+                    $stmt[$n]['text'] = '$' . $subtoken['text'];
                 }
             }
-            $values[] = phpval(implode('', array_column($stmt, 1)), (array) $vars);
+            $values[] = phpval(implode('', array_column($stmt, 'text')), (array) $vars);
         }
 
         return $tag($blocks, ...$values);
@@ -25306,7 +25965,7 @@ if (!function_exists('ryunosuke\\DbMigration\\snake_case')) {
      * @param bool $keep_abbr すべて大文字の単語を1単語として扱うか
      * @return string 変換した文字列
      */
-    function snake_case($string, $delimiter = '_', $keep_abbr = false)
+    function snake_case(?string $string, ?string $delimiter = '_', $keep_abbr = false)
     {
         $pattern = $keep_abbr ? '/[A-Z]([A-Z](?![a-z]))*/' : '/[A-Z]/';
         return ltrim(strtolower(preg_replace($pattern, $delimiter . '\0', $string)), $delimiter);
@@ -25338,7 +25997,7 @@ if (!function_exists('ryunosuke\\DbMigration\\split_noempty')) {
      * @param string|bool $trimchars 指定した文字を trim する。true を指定すると trim する
      * @return array 指定文字で分割して空文字を除いた配列
      */
-    function split_noempty($delimiter, $string, $trimchars = true)
+    function split_noempty(?string $delimiter, ?string $string, $trimchars = true)
     {
         // trim しないなら preg_split(PREG_SPLIT_NO_EMPTY) で十分
         if (strlen($trimchars) === 0) {
@@ -25346,7 +26005,7 @@ if (!function_exists('ryunosuke\\DbMigration\\split_noempty')) {
         }
 
         // trim するなら preg_split だと無駄にややこしくなるのでベタにやる
-        $trim = ($trimchars === true) ? 'trim' : rbind('trim', $trimchars);
+        $trim = ($trimchars === true) ? 'trim' : fn($v) => trim($v, $trimchars);
         $parts = explode($delimiter, $string);
         $parts = array_map($trim, $parts);
         $parts = array_filter($parts, 'strlen');
@@ -25378,12 +26037,15 @@ if (!function_exists('ryunosuke\\DbMigration\\starts_with')) {
      * @param bool $case_insensitivity 大文字小文字を無視するか
      * @return bool 指定文字列で始まるなら true を返す
      */
-    function starts_with($string, $with, $case_insensitivity = false)
+    function starts_with(?string $string, $with, $case_insensitivity = false)
     {
-        assert(is_stringable($string));
-
         foreach ((array) $with as $w) {
-            assert(strlen($w));
+            $w = (string) $w;
+
+            // All strings end with the empty string
+            if ($w === '') {
+                return true;
+            }
 
             if (str_equals(substr($string, 0, strlen($w)), $w, $case_insensitivity)) {
                 return true;
@@ -25416,14 +26078,15 @@ if (!function_exists('ryunosuke\\DbMigration\\str_anyof')) {
      *
      * @package ryunosuke\Functions\Package\strings
      *
-     * @param string $needle 調べる文字列
+     * @param ?string $needle 調べる文字列
      * @param iterable $haystack 候補配列
      * @param bool $case_insensitivity 大文字小文字を無視するか
      * @return bool 候補の中にあるならそのキー。無いなら null
      */
-    function str_anyof($needle, $haystack, $case_insensitivity = false)
+    function str_anyof(?string $needle, $haystack, $case_insensitivity = false)
     {
-        $needle = (string) $needle;
+        $needle ??= '';
+
         foreach ($haystack as $k => $v) {
             if (!$case_insensitivity && strcmp($needle, $v) === 0) {
                 return $k;
@@ -25483,6 +26146,34 @@ if (!function_exists('ryunosuke\\DbMigration\\str_array')) {
      *         '%idle'    => '98.74',
      *     ],
      * ]);
+     *
+     * // strict:false だと列数が一致していなくてもよい（null で埋められる）
+     * that(str_array("
+     * 13:00:01        CPU     %user     %nice   %system   %iowait
+     * 13:10:01        all      0.99      0.10      0.71      0.00      0.00     98.19
+     * 13:20:01        all      0.60      0.10
+     * ", ' ', false, false))->isSame([
+     *     1 => [
+     *         '13:00:01' => '13:10:01',
+     *         'CPU'      => 'all',
+     *         '%user'    => '0.99',
+     *         '%nice'    => '0.10',
+     *         '%system'  => '0.71',
+     *         '%iowait'  => '0.00',
+     *         '6'        => '0.00',
+     *         '7'        => '98.19',
+     *     ],
+     *     2 => [
+     *         '13:00:01' => '13:20:01',
+     *         'CPU'      => 'all',
+     *         '%user'    => '0.60',
+     *         '%nice'    => '0.10',
+     *         '%system'  => null,
+     *         '%iowait'  => null,
+     *         '6'        => null,
+     *         '7'        => null,
+     *     ],
+     * ]);
      * ```
      *
      * @package ryunosuke\Functions\Package\strings
@@ -25490,9 +26181,10 @@ if (!function_exists('ryunosuke\\DbMigration\\str_array')) {
      * @param string|array $string 対象文字列。配列を与えても動作する
      * @param string $delimiter 区切り文字
      * @param bool $hashmode 連想配列モードか
+     * @param bool $strict true にすると列数が一致しない場合に null になる
      * @return array 配列
      */
-    function str_array($string, $delimiter, $hashmode)
+    function str_array($string, ?string $delimiter, $hashmode, $strict = true)
     {
         $array = $string;
         if (is_stringable($string)) {
@@ -25515,7 +26207,20 @@ if (!function_exists('ryunosuke\\DbMigration\\str_array')) {
                     $keys = $parts;
                     continue;
                 }
-                $result[$n] = count($keys) === count($parts) ? array_combine($keys, $parts) : null;
+                if ($strict) {
+                    $result[$n] = count($keys) === count($parts) ? array_combine($keys, $parts) : null;
+                }
+                else {
+                    if (count($keys) < count($parts)) {
+                        for ($i = count($keys); $i < count($parts); $i++) {
+                            $keys[] = next_key($keys);
+                        }
+                    }
+                    elseif (count($keys) > count($parts)) {
+                        $parts = array_pad($parts, count($keys), null);
+                    }
+                    $result[$n] = array_combine($keys, $parts);
+                }
             }
         }
         return $result;
@@ -25555,9 +26260,9 @@ if (!function_exists('ryunosuke\\DbMigration\\str_between')) {
      * @param int $position 開始位置。渡した場合次の開始位置が設定される
      * @param string $enclosure 囲い文字。この文字中にいる $from, $to 文字は走査外になる
      * @param string $escape エスケープ文字。この文字が前にある $from, $to 文字は走査外になる
-     * @return string|bool $from, $to で囲まれた文字。見つからなかった場合は false
+     * @return ?string $from, $to で囲まれた文字。見つからなかった場合は null
      */
-    function str_between($string, $from, $to, &$position = 0, $enclosure = '\'"', $escape = '\\')
+    function str_between(?string $string, ?string $from, ?string $to, &$position = 0, $enclosure = '\'"', $escape = '\\')
     {
         $strlen = strlen($string);
         $fromlen = strlen($from);
@@ -25567,7 +26272,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_between')) {
         $start = null;
         for ($i = $position; $i < $strlen; $i++) {
             $i = strpos_quoted($string, [$from, $to], $i, $enclosure, $escape);
-            if ($i === false) {
+            if ($i === null) {
                 break;
             }
 
@@ -25588,7 +26293,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_between')) {
                 }
             }
         }
-        return false;
+        return null;
     }
 }
 
@@ -25615,7 +26320,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_bytes')) {
      * @param int $base 基数
      * @return array 文字のバイト配列
      */
-    function str_bytes($string, $base = 10)
+    function str_bytes(?string $string, $base = 10)
     {
         // return array_values(unpack('C*', $string));
 
@@ -25653,7 +26358,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_chop')) {
      * @param bool $case_insensitivity 大文字小文字を無視するか
      * @return string 削ぎ落とした文字列
      */
-    function str_chop($string, $prefix = '', $suffix = '', $case_insensitivity = false)
+    function str_chop(?string $string, ?string $prefix = '', ?string $suffix = '', $case_insensitivity = false)
     {
         $pattern = [];
         if (strlen($prefix)) {
@@ -25692,7 +26397,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_chunk')) {
      * @param int ...$chunks 分割の各文字数（可変引数）
      * @return string[] 分割された文字列配列
      */
-    function str_chunk($string, ...$chunks)
+    function str_chunk(?string $string, ...$chunks)
     {
         $offset = 0;
         $length = strlen($string);
@@ -25704,7 +26409,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_chunk')) {
             $result[] = substr($string, $offset, $chunk);
             $offset += $chunk;
         }
-        $result[] = (string) substr($string, $offset);
+        $result[] = substr($string, $offset);
         return $result;
     }
 }
@@ -25734,7 +26439,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_common_prefix')) {
      * @param string[] $strings
      * @return ?string 共通部分（共通がない場合は空文字）
      */
-    function str_common_prefix(...$strings)
+    function str_common_prefix(?string ...$strings)
     {
         if (count($strings) < 2) {
             return null;
@@ -25750,6 +26455,85 @@ if (!function_exists('ryunosuke\\DbMigration\\str_common_prefix')) {
             $result .= $c;
         }
         return $result;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\str_control_apply') || (new \ReflectionFunction('ryunosuke\\DbMigration\\str_control_apply'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\str_control_apply')) {
+    /**
+     * 制御文字を実際に適用させる
+     *
+     * とはいえ文字列として適用できる制御文字はそう多くはなく、実質的に \b くらいだろう。
+     *
+     * - \b: 前の1文字を消して自身も消える
+     * - \d: 次の\d以外の1文字を消して自身も消える
+     *   - 前方探索なので利便性のため「\d以外の」という条件がついている
+     * - \r: 直前の \n から直後の \n までを消す
+     *   - \r に「消す」という意味はないが、実用上はその方が便利なことが多い
+     *
+     * なお、 \b と書いてあるが php のエスケープシーケンスに \b は存在しないため \x08 と記述する必要がある（\d も同様）。
+     * それはそれで不便なので \b, \d は特別扱いとしてある（$characters のデフォルト値に潜ませてあるが、それを外せば特別扱いは無くなる）。
+     *
+     * Example:
+     * ```php
+     * // 最初の X は [BS] で消える・次の X は [DEL] で消える、XXX は [CR] で消える。結果 text\nzzz になる
+     * that(str_control_apply("X\b\dXtext\nXXX\rzzz"))->isSame("text\nzzz");
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     *
+     * @param string $string 対象文字列
+     * @param string $characters 対象とする制御文字
+     * @return string 制御文字が適用された文字列
+     */
+    function str_control_apply(string $string, string $characters = "\b\x08\d\x7f\r"): string
+    {
+        $remap = [];
+        if (strpos_escaped($characters, "\b") !== null) {
+            $remap["\b"] = "\x08";
+        }
+        if (strpos_escaped($characters, "\d") !== null) {
+            $remap["\d"] = "\x7f";
+        }
+        $string = strtr_escaped($string, $remap);
+        $characters = strtr_escaped($characters, $remap);
+
+        $offset = 0;
+        while (true) {
+            $pos = strcspn($string, $characters, $offset) + $offset;
+            $control = $string[$pos] ?? null;
+            if ($control === null) {
+                break;
+            }
+            if ($control === "\x08") {
+                if ($pos === 0) {
+                    $string = substr_replace($string, '', $pos, 1);
+                    $offset = $pos;
+                }
+                else {
+                    $string = substr_replace($string, '', $pos - 1, 2);
+                    $offset = $pos - 1;
+                }
+            }
+            if ($control === "\x7f") {
+                $next = strspn($string, "\x7f", $pos) + $pos;
+                $string = substr_replace($string, '', $next, 1);
+                $string = substr_replace($string, '', $pos, 1);
+                $offset = $pos;
+            }
+            if ($control === "\x0d") {
+                $prev = strposr($string, "\x0a", $pos);
+                if ($prev === false) {
+                    $string = substr_replace($string, '', 0, $pos + 1);
+                    $offset = 0;
+                }
+                else {
+                    $string = substr_replace($string, '', $prev + 1, $pos - $prev);
+                    $offset = $prev + 1;
+                }
+            }
+        }
+        return $string;
     }
 }
 
@@ -25865,7 +26649,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
             public function __invoke($xstring, $ystring)
             {
                 $arrayize = function ($string) {
-                    $binary_check = function ($string) {
+                    $binary_check = function (?string $string) {
                         if ($this->options['allow-binary'] === true || !preg_match('#\0#', $string)) {
                             return $string;
                         }
@@ -26141,6 +26925,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                     if (isset($rule[$diff[0]])) {
                         $difftext = [];
                         foreach ($rule[$diff[0]][1] as $n => $sign) {
+                            /** @noinspection PhpIllegalArrayKeyTypeInspection */
                             $difftext[] = implode("\n", array_map(fn($v) => $sign . $v, $diff[$n]));
                         }
                         $result[] = "{$index($diff[1])}{$rule[$diff[0]][0]}{$index($diff[2])}";
@@ -26228,7 +27013,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                         $d1 = mb_wordwrap($d[1] ?? '', $columns, null);
                         foreach (array_zip($d0, $d1) as $n => $dd) {
                             $gutter = $n === 0 ? $rule[0] : " ";
-                            $result[] = mb_str_pad($dd[0] ?? '', $columns) . " $gutter " . $dd[1] ?? '';
+                            $result[] = mb_pad_width($dd[0] ?? '', $columns) . " $gutter " . $dd[1] ?? '';
                         }
                     }
                 }
@@ -26359,10 +27144,8 @@ if (!function_exists('ryunosuke\\DbMigration\\str_ellipsis')) {
      * @param int|null $pos 省略記号の差し込み位置
      * @return string 丸められた文字列
      */
-    function str_ellipsis($string, $width, $trimmarker = '...', $pos = null)
+    function str_ellipsis(?string $string, $width, $trimmarker = '...', $pos = null)
     {
-        $string = (string) $string;
-
         $strlen = mb_strlen($string);
         if ($strlen <= $width) {
             return $string;
@@ -26432,11 +27215,9 @@ if (!function_exists('ryunosuke\\DbMigration\\str_embed')) {
      * @param ?array $replaced 置換されたペアがタプルで格納される
      * @return string 置換された文字列
      */
-    function str_embed($string, $replacemap, $enclosure = "'\"", $escape = '\\', &$replaced = null)
+    function str_embed(?string $string, $replacemap, $enclosure = "'\"", $escape = '\\', &$replaced = null)
     {
         assert(is_iterable($replacemap));
-
-        $string = (string) $string;
 
         // 長いキーから処理するためソートしておく
         $replacemap = arrayval($replacemap, false);
@@ -26448,7 +27229,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_embed')) {
         $counter = array_fill_keys(array_keys($replacemap), 0);
         for ($i = 0; $i < strlen($string); $i++) {
             $i = strpos_quoted($string, $srcs, $i, $enclosure, $escape);
-            if ($i === false) {
+            if ($i === null) {
                 break;
             }
 
@@ -26547,14 +27328,12 @@ if (!function_exists('ryunosuke\\DbMigration\\str_exists')) {
      * @param bool $and_flag すべて含む場合に true を返すか
      * @return bool $needle を含むなら true
      */
-    function str_exists($haystack, $needle, $case_insensitivity = false, $and_flag = false)
+    function str_exists(?string $haystack, $needle, $case_insensitivity = false, $and_flag = false)
     {
         if (!is_array($needle)) {
             $needle = [$needle];
         }
 
-        // あくまで文字列としての判定に徹する（strpos の第2引数は闇が深い気がする）
-        $haystack = (string) $haystack;
         $needle = array_map('strval', $needle);
 
         foreach ($needle as $str) {
@@ -26617,7 +27396,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_guess')) {
      * @param ?float $percent マッチ度（％）を受ける変数
      * @return string|array 候補の中で最も近い文字列
      */
-    function str_guess($string, $candidates, &$percent = null)
+    function str_guess(?string $string, $candidates, &$percent = null)
     {
         $candidates = array_filter(arrayval($candidates, false), 'strlen');
         if (!$candidates) {
@@ -26686,7 +27465,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_lchop')) {
      * @param bool $case_insensitivity 大文字小文字を無視するか
      * @return string 削ぎ落とした文字列
      */
-    function str_lchop($string, $prefix, $case_insensitivity = false)
+    function str_lchop(?string $string, ?string $prefix, $case_insensitivity = false)
     {
         return str_chop($string, $prefix, '', $case_insensitivity);
     }
@@ -26727,7 +27506,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_patch')) {
      * @param array $options オプション配列
      * @return string パッチ適用結果
      */
-    function str_patch($string, $patch, $options = [])
+    function str_patch(?string $string, ?string $patch, $options = [])
     {
         $options += [
             'encoding' => null,
@@ -26908,8 +27687,6 @@ if (!function_exists('ryunosuke\\DbMigration\\str_putcsv')) {
     /**
      * fputcsv の文字列版（str_getcsv の put 版）
      *
-     * エラーは例外に変換される。
-     *
      * 普通の配列を与えるとシンプルに "a,b,c" のような1行を返す。
      * 多次元配列（2次元のみを想定）や Traversable を与えるとループして "a,b,c\nd,e,f" のような複数行を返す。
      *
@@ -26938,22 +27715,166 @@ if (!function_exists('ryunosuke\\DbMigration\\str_putcsv')) {
      */
     function str_putcsv($array, $delimiter = ',', $enclosure = '"', $escape = "\\")
     {
-        $fp = fopen('php://memory', 'rw+');
-        try {
-            if (is_array($array) && array_depth($array) === 1) {
-                $array = [$array];
+        static $fp = null;
+        $fp ??= fopen('php://memory', 'rw+');
+        rewind($fp);
+        ftruncate($fp, 0);
+        if (is_array($array) && array_depth($array, 2) === 1) {
+            $array = [$array];
+        }
+        foreach ($array as $line) {
+            fputcsv($fp, $line, $delimiter, $enclosure, $escape);
+        }
+        rewind($fp);
+        return rtrim(stream_get_contents($fp), "\n");
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\str_quote') || (new \ReflectionFunction('ryunosuke\\DbMigration\\str_quote'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\str_quote')) {
+    /**
+     * 文字列をダブルクォート文字列に変換する
+     *
+     * 文字ではうまく表現できないが、例えば「本当の改行」が \n になり、「本当のタブ文字」が \t になる。
+     * コントロール文字は "\code" 形式のようになる。
+     * 「得られた文字列は eval すると元に戻る」とでも言えばいいか。
+     *
+     * 制御文字をそのまま出力するとまずい状況が稀によくある（特に行指向媒体への改行文字）。
+     * この関数を通せば php の文字列の体裁を保ったまま1行化できる。
+     * 端的に言えば var_export の文字列特化版。
+     *
+     * 挙動は $options である程度制御可能。
+     * 各 $options は原則的に文字のマップか true を渡す（true の場合はデフォルトが使用される）。
+     * 一部、それ以外の値・型に対応しているものもある。
+     *
+     * - escape-character: 制御文字のうち、明確なエスケープシーケンスが存在する場合はそれを使用する
+     *   - control-character にオーバーラップするがこちらが優先される
+     * - control-character: 00 ～ 1F+7F の制御文字を \code 形式にする
+     *   - 文字列で "oct", "hex", "HEX" も指定できる。その場合それぞれ \oct, \xhex, \xHEX 形式になる
+     * - special-character: ダブルクオート内の文字列が文字列であるための変換を行う
+     *   - 原則的にデフォルトに任せて指定すべきではない
+     *
+     * Example:
+     * ```php
+     * // （非常に分かりにくいが）下記のように変換される
+     * that(str_quote("\$a\nb\rc\x00"))->isSame("\"\\\$a\\nb\\rc\\0\"");
+     * // 文字としての意味は一緒であり要するに表現形式の違いなので、php の世界で eval すれば元の文字列に戻る
+     * that(eval('return ' . str_quote("\$a\nb\rc\x00") . ';'))->isSame("\$a\nb\rc\x00");
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     *
+     * @param string $string 対象文字列
+     * @param array $options オプション配列
+     * @return string クォート文字列
+     */
+    function str_quote(string $string, array $options = []): string
+    {
+        $options += [
+            'escape-character'  => true,
+            'control-character' => true,
+            'special-character' => true,
+            'heredoc'           => '',
+            'nowdoc'            => '',
+            'indent'            => 0,
+        ];
+
+        assert(!($options['heredoc'] && $options['nowdoc']));
+
+        // nowdoc にエスケープは存在しないのでそのまま埋め込む（その結果壊れてもこの関数の責務ではない）
+        if (strlen($options['nowdoc'])) {
+            $indent = str_repeat(" ", $options['indent']);
+            $string = preg_replace('#(\R)#u', '$1' . $indent, $string);
+            return "<<<'{$options['nowdoc']}'\n{$indent}{$string}\n{$indent}{$options['nowdoc']}";
+        }
+
+        // @see https://www.php.net/manual/ja/language.types.string.php#language.types.string.syntax.double
+        $special_chars = [
+            '\\' => '\\\\', // バックスラッシュ
+            '"'  => '\\"',  // 二重引用符
+            '$'  => '\\$',  // ドル記号
+        ];
+        $escape_chars = [
+            "\11" => '\\t', // 水平タブ (HT またはアスキーの 0x09 (9))
+            "\12" => '\\n', // ラインフィード (LF またはアスキーの 0x0A (10))
+            "\13" => '\\v', // 垂直タブ (VT またはアスキーの 0x0B (11))
+            "\14" => '\\f', // フォームフィード (FF またはアスキーの 0x0C (12))
+            "\15" => '\\r', // キャリッジリターン (CR またはアスキーの 0x0D (13))
+            "\33" => '\\e', // エスケープ (ESC あるいはアスキーの 0x1B (27))
+        ];
+        $control_chars = [
+            "\0"   => "\\0",
+            "\1"   => "\\1",
+            "\2"   => "\\2",
+            "\3"   => "\\3",
+            "\4"   => "\\4",
+            "\5"   => "\\5",
+            "\6"   => "\\6",
+            "\7"   => "\\7",
+            "\10"  => "\\10",
+            "\11"  => "\\11",
+            "\12"  => "\\12",
+            "\13"  => "\\13",
+            "\14"  => "\\14",
+            "\15"  => "\\15",
+            "\16"  => "\\16",
+            "\17"  => "\\17",
+            "\20"  => "\\20",
+            "\21"  => "\\21",
+            "\22"  => "\\22",
+            "\23"  => "\\23",
+            "\24"  => "\\24",
+            "\25"  => "\\25",
+            "\26"  => "\\26",
+            "\27"  => "\\27",
+            "\30"  => "\\30",
+            "\31"  => "\\31",
+            "\32"  => "\\32",
+            "\33"  => "\\33",
+            "\34"  => "\\34",
+            "\35"  => "\\35",
+            "\36"  => "\\36",
+            "\37"  => "\\37",
+            "\177" => "\\177",
+        ];
+
+        // heredoc 用の特殊処理（タイプ可能な文字はエスケープしなくてもよいだろう）
+        if (strlen($options['heredoc'])) {
+            $control_chars = array_diff_key($control_chars, $escape_chars);
+            $escape_chars = [];
+            unset($special_chars['"']);
+        }
+
+        $charmap = [];
+        if ($options['special-character']) {
+            $charmap += is_array($options['special-character']) ? $options['special-character'] : $special_chars;
+        }
+        if ($options['escape-character']) {
+            $charmap += is_array($options['escape-character']) ? $options['escape-character'] : $escape_chars;
+        }
+        if ($options['control-character']) {
+            if ($options['control-character'] === 'oct') {
+                // デフォで oct にしてあるので変換不要
+                assert(end($control_chars) === "\\177");
             }
-            return call_safely(function ($fp, $array, $delimiter, $enclosure, $escape) {
-                foreach ($array as $line) {
-                    fputcsv($fp, $line, $delimiter, $enclosure, $escape);
-                }
-                rewind($fp);
-                return rtrim(stream_get_contents($fp), "\n");
-            }, $fp, $array, $delimiter, $enclosure, $escape);
+            if ($options['control-character'] === 'hex') {
+                $control_chars = array_map(fn($v) => sprintf('\\x%02x', octdec(trim($v, '\\'))), $control_chars);
+            }
+            if ($options['control-character'] === 'HEX') {
+                $control_chars = array_map(fn($v) => sprintf('\\x%02X', octdec(trim($v, '\\'))), $control_chars);
+            }
+            $charmap += is_array($options['control-character']) ? $options['control-character'] : $control_chars;
         }
-        finally {
-            fclose($fp);
+
+        $string = strtr($string, $charmap);
+
+        if (strlen($options['heredoc'])) {
+            $indent = str_repeat(" ", $options['indent']);
+            $string = preg_replace('#(\R)#u', '$1' . $indent, $string);
+            return "<<<{$options['heredoc']}\n{$indent}{$string}\n{$indent}{$options['heredoc']}";
         }
+
+        return '"' . $string . '"';
     }
 }
 
@@ -26976,7 +27897,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_rchop')) {
      * @param bool $case_insensitivity 大文字小文字を無視するか
      * @return string 削ぎ落とした文字列
      */
-    function str_rchop($string, $suffix, $case_insensitivity = false)
+    function str_rchop(?string $string, ?string $suffix, $case_insensitivity = false)
     {
         return str_chop($string, '', $suffix, $case_insensitivity);
     }
@@ -27026,7 +27947,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_submap')) {
      * @param bool $case_insensitivity 大文字小文字を無視するか
      * @return string 置換された文字列
      */
-    function str_submap($subject, $replaces, $case_insensitivity = false)
+    function str_submap(?string $subject, $replaces, $case_insensitivity = false)
     {
         assert(is_iterable($replaces));
 
@@ -27126,7 +28047,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_subreplace')) {
      * @param bool $case_insensitivity 大文字小文字を無視するか
      * @return string 置換された文字列
      */
-    function str_subreplace($subject, $search, $replaces, $case_insensitivity = false)
+    function str_subreplace(?string $subject, ?string $search, $replaces, $case_insensitivity = false)
     {
         $replaces = is_iterable($replaces) ? $replaces : [$replaces];
 
@@ -27185,7 +28106,7 @@ if (!function_exists('ryunosuke\\DbMigration\\strcat')) {
      * @param mixed ...$variadic 結合する文字列（可変引数）
      * @return string 結合した文字列
      */
-    function strcat(...$variadic)
+    function strcat(?string ...$variadic)
     {
         return implode('', $variadic);
     }
@@ -27219,7 +28140,7 @@ if (!function_exists('ryunosuke\\DbMigration\\strpos_array')) {
      * @param int $offset 開始位置
      * @return array $needles それぞれの位置配列
      */
-    function strpos_array($haystack, $needles, $offset = 0)
+    function strpos_array(?string $haystack, $needles, $offset = 0)
     {
         if ($offset < 0) {
             $offset += strlen($haystack);
@@ -27233,6 +28154,95 @@ if (!function_exists('ryunosuke\\DbMigration\\strpos_array')) {
             }
         }
         return $result;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\strpos_closest') || (new \ReflectionFunction('ryunosuke\\DbMigration\\strpos_closest'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\strpos_closest')) {
+    /**
+     * 指定位置から左右どちらかの探索を行う
+     *
+     * 一つ前/後の指定文字の位置を返す
+     * 端的に言えば strpo/strposr の自動使い分け＋範囲外でもエラーにならない版。
+     *
+     * $nth は負数で左探索、正数で右探索だが、スキップ数も兼ねる。
+     *
+     * Example:
+     * ```php
+     * //        +0123456789A1234567
+     * //        -7654321A9876543210
+     * $string = 'hello hello hello';
+     *
+     * // 0文字目から右探索すれば0文字目が引っかかる
+     * that(strpos_closest($string, 'hello', 0, +1))->isSame(0);
+     * // ↑のスキップ（2つ目）版
+     * that(strpos_closest($string, 'hello', 0, +2))->isSame(6);
+     * // 5文字目から右探索すれば6文字目が引っかかる
+     * that(strpos_closest($string, 'hello', 5, +1))->isSame(6);
+     * // ↑のスキップ（2つ目）版
+     * that(strpos_closest($string, 'hello', 5, +2))->isSame(12);
+     * // 8文字目から右探索すれば12文字目が引っかかる（2個目の hello の途中なので3個目の hello から引っかかる）
+     * that(strpos_closest($string, 'hello', 8, +1))->isSame(12);
+     * // ↑のスキップ（2つ目）版
+     * that(strpos_closest($string, 'hello', 8, +2))->isSame(null);
+     *
+     * // 0文字目から左探索しても見つからない
+     * that(strpos_closest($string, 'hello', 0, -1))->isSame(null);
+     * // 5文字目から左探索すれば0文字目が引っかかる
+     * that(strpos_closest($string, 'hello', 5, -1))->isSame(0);
+     * // 8文字目から左探索すれば0文字目が引っかかる（2個目の hello の途中なので1個目の hello から引っかかる）
+     * that(strpos_closest($string, 'hello', 8, -1))->isSame(0);
+     * // 11文字目から左探索すれば6文字目が引っかかる
+     * that(strpos_closest($string, 'hello', 11, -1))->isSame(6);
+     * // ↑のスキップ（2つ目）版
+     * that(strpos_closest($string, 'hello', 11, -2))->isSame(0);
+     *
+     * // 範囲外でもエラーにならない
+     * that(strpos_closest($string, 'hello', -999, +1))->isSame(0);  // 「数直線のはるか左方から探索を始めて 0 文字目で見つかった」のようなイメージ
+     * that(strpos_closest($string, 'hello', +999, -1))->isSame(12); // 「数直線のはるか右方から探索を始めて 12 文字目で見つかった」のようなイメージ
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     *
+     * @param string $haystack 対象文字列
+     * @param string $needle 位置を取得したい文字列
+     * @param ?int $offset 開始位置。 null を渡すと $nth の方向に応じて自動で定まる
+     * @param int $nth 左右指定兼スキップ数（正数で右探索、負数で左探索）
+     * @return ?int 見つかった位置
+     */
+    function strpos_closest(string $haystack, string $needle, ?int $offset = null, int $nth = 1): ?int
+    {
+        assert($nth !== 0);
+
+        $reverse = $nth < 0;
+        $nth = abs($nth);
+
+        $offset ??= $reverse ? strlen($haystack) : 0;
+
+        for ($i = 0; $i < $nth; $i++) {
+            if ($i > 0) {
+                $offset++;
+            }
+
+            if ($offset < -strlen($haystack)) {
+                $offset = -strlen($haystack);
+            }
+            if ($offset > strlen($haystack)) {
+                $offset = strlen($haystack);
+            }
+
+            if ($reverse) {
+                $offset = strposr($haystack, $needle, $offset);
+            }
+            else {
+                $offset = strpos($haystack, $needle, $offset);
+            }
+
+            if ($offset === false) {
+                return null;
+            }
+        }
+        return $offset;
     }
 }
 
@@ -27259,15 +28269,15 @@ if (!function_exists('ryunosuke\\DbMigration\\strpos_escaped')) {
      * # 分かりにくいので \ ではなく % をエスケープ文字とする
      * $defargs = [0, '%'];
      *
-     * // これは false である（"%d" という文字の列であるため "d" という文字は存在しない）
-     * that(strpos_escaped('%d', 'd', ...$defargs))->isSame(false);
+     * // これは null である（"%d" という文字の列であるため "d" という文字は存在しない）
+     * that(strpos_escaped('%d', 'd', ...$defargs))->isSame(null);
      * // これは 2 である（"%" "d" という文字の列であるため（d の前の % は更にその前の % に呑まれておりメタ文字ではない））
      * that(strpos_escaped('%%d', 'd', ...$defargs))->isSame(2);
      *
      * // これは 0 である（% をつけて検索するとそのエスケープシーケンス的なものそのものを探すため）
      * that(strpos_escaped('%d', '%d', ...$defargs))->isSame(0);
-     * // これは false である（"%" "d" という文字の列であるため "%d" という文字は存在しない）
-     * that(strpos_escaped('%%d', '%d', ...$defargs))->isSame(false);
+     * // これは null である（"%" "d" という文字の列であるため "%d" という文字は存在しない）
+     * that(strpos_escaped('%%d', '%d', ...$defargs))->isSame(null);
      * // これは 2 である（"%" "%d" という文字の列であるため）
      * that(strpos_escaped('%%%d', '%d', ...$defargs))->isSame(2);
      * ```
@@ -27279,9 +28289,9 @@ if (!function_exists('ryunosuke\\DbMigration\\strpos_escaped')) {
      * @param int $offset 開始位置
      * @param string $escape エスケープ文字
      * @param ?string $found 見つかった文字が格納される
-     * @return false|int 見つかった位置
+     * @return ?int 見つかった位置
      */
-    function strpos_escaped($haystack, $needle, $offset = 0, $escape = '\\', &$found = null)
+    function strpos_escaped(?string $haystack, $needle, $offset = 0, $escape = '\\', &$found = null)
     {
         $q_escape = preg_quote($escape, '#');
         if (is_stringable($needle)) {
@@ -27303,7 +28313,7 @@ if (!function_exists('ryunosuke\\DbMigration\\strpos_escaped')) {
         }
         if (!$matched) {
             $found = null;
-            return false;
+            return null;
         }
 
         ksort($matched);
@@ -27334,9 +28344,9 @@ if (!function_exists('ryunosuke\\DbMigration\\strpos_quoted')) {
      * @param string|array $enclosure 囲い文字。この文字中にいる $from, $to 文字は走査外になる
      * @param string $escape エスケープ文字。この文字が前にある $from, $to 文字は走査外になる
      * @param ?string $found $needle の内、見つかった文字列が格納される
-     * @return false|int $needle の位置
+     * @return ?int $needle の位置
      */
-    function strpos_quoted($haystack, $needle, $offset = 0, $enclosure = "'\"", $escape = '\\', &$found = null)
+    function strpos_quoted(?string $haystack, $needle, $offset = 0, $enclosure = "'\"", $escape = '\\', &$found = null)
     {
         if (is_string($enclosure)) {
             if (strlen($enclosure)) {
@@ -27385,7 +28395,78 @@ if (!function_exists('ryunosuke\\DbMigration\\strpos_quoted')) {
                 }
             }
         }
-        return false;
+        return null;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\strposr') || (new \ReflectionFunction('ryunosuke\\DbMigration\\strposr'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\strposr')) {
+    /**
+     * デフォで左探索な strrpos
+     *
+     * 個人的に strrpos の offset の挙動が分かりにくい。
+     * - offset>=0: 先頭から offset スキップ＋**右探索**
+     * - offset< 0: 末尾から -offset スキップ＋**左探索**
+     *
+     * r と銘打っているんだから offset に依らずにデフォで左探索して欲しい。
+     * 特に offset 未指定だと 0 なので「先頭から末尾まで読んで最後に見つかった場所を返す」という非常に非効率的なことになっている（実際の実装は違うようだけど）。
+     * さらに「単純に50文字目から左探索したい」だけなのに offset が気持ち悪いことになる（50 - strlen($string)）。
+     * 要するに https://www.php.net/manual/ja/function.strrpos.php#76447 これ。
+     *
+     * offset で検索文字列の途中に飛び込んだ場合は見つからないとみなす（strrpos は見つかったとみなす）。
+     * この挙動は説明しにくいので Example を参照。
+     *
+     * Example:
+     * ```php
+     * //        +0123456789A1234567
+     * //        -7654321A9876543210
+     * $string = 'hello hello hello';
+     *
+     * // offset を省略すると末尾から左探索になる
+     * that(strposr($string, 'hello'))->isSame(12);
+     * // 標準の文字列関数のように負数で後ろからの探索になる
+     * that(strposr($string, 'hello', -1))->isSame(6);
+     * // 0文字目から左探索しても見つからない
+     * that(strposr($string, 'hello', 0))->isSame(false);
+     * // 5文字目から左探索すれば0文字目が引っかかる
+     * that(strposr($string, 'hello', 5))->isSame(0);
+     * // 13文字目から左探索すれば6文字目が引っかかる（13文字目は3個目の hello の途中なので2個目の hello から引っかかる）
+     * that(strposr($string, 'hello', 13))->isSame(6);
+     * // この動作は strrpos だと異なる（途中文字列も拾ってしまう）
+     * that(strrpos($string, 'hello', -4))->isSame(12);
+     * // そもそも strrpos は負数指定しないと右探索なので使いにくくてしょうがない
+     * that(strrpos($string, 'hello', 5))->isSame(12);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     *
+     * @param string $haystack 対象文字列
+     * @param string $needle 位置を取得したい文字列
+     * @param ?int $offset 開始位置。 null を渡すと末尾からの探索になる
+     * @return int|false 見つかった位置
+     */
+    function strposr(string $haystack, string $needle, ?int $offset = null): int|false
+    {
+        $offset ??= strlen($haystack);
+
+        if ($offset < 0) {
+            $offset += strlen($haystack);
+        }
+
+        if (strlen($haystack) < $offset) {
+            throw new \ValueError('strposr(): Argument #3 ($offset) must be contained in argument #1 ($haystack)');
+        }
+
+        $result = strrpos($haystack, $needle, $offset - strlen($haystack));
+        // 仮に見つかってもオフセットを跨いでる場合は -1 して再検索
+        if ($result !== false && $result + strlen($needle) > $offset) {
+            // が、先頭文字の場合は -1 する意味もない（そもそもエラーになる）ので false で返してしまってよい
+            if ($result === 0) {
+                return false;
+            }
+            return strrpos($haystack, $needle, $result - 1 - strlen($haystack));
+        }
+        return $result;
     }
 }
 
@@ -27418,15 +28499,15 @@ if (!function_exists('ryunosuke\\DbMigration\\strrstr')) {
      * @param string $haystack 調べる文字列
      * @param string $needle 検索文字列
      * @param bool $after_needle $needle より後ろを返すか
-     * @return string
+     * @return ?string
      */
-    function strrstr($haystack, $needle, $after_needle = true)
+    function strrstr(?string $haystack, ?string $needle, $after_needle = true)
     {
         // return strrev(strstr(strrev($haystack), strrev($needle), $after_needle));
 
         $lastpos = mb_strrpos($haystack, $needle);
         if ($lastpos === false) {
-            return false;
+            return null;
         }
 
         if ($after_needle) {
@@ -27470,13 +28551,13 @@ if (!function_exists('ryunosuke\\DbMigration\\strtr_escaped')) {
      * @param string $escape エスケープ文字
      * @return string 置換された文字列
      */
-    function strtr_escaped($string, $replace_pairs, $escape = '\\')
+    function strtr_escaped(?string $string, $replace_pairs, $escape = '\\')
     {
         uksort($replace_pairs, fn($a, $b) => strlen($b) - strlen($a));
         $froms = array_keys($replace_pairs);
 
         $offset = 0;
-        while (($pos = strpos_escaped($string, $froms, $offset, $escape, $found)) !== false) {
+        while (($pos = strpos_escaped($string, $froms, $offset, $escape, $found)) !== null) {
             $to = $replace_pairs[$found];
             $replaced = $to instanceof \Closure ? $to($found, $pos) : $to;
             $string = substr_replace($string, $replaced, $pos, strlen($found));
@@ -27583,175 +28664,115 @@ if (!function_exists('ryunosuke\\DbMigration\\blank_if')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\call_if') || (new \ReflectionFunction('ryunosuke\\DbMigration\\call_if'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\call_if')) {
+assert(!function_exists('ryunosuke\\DbMigration\\cast') || (new \ReflectionFunction('ryunosuke\\DbMigration\\cast'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\cast')) {
     /**
-     * 条件を満たしたときにコールバックを実行する
+     * php の型変換に準じてキャストする
      *
-     * `if ($condition) $callable(...$arguments);` と（$condition はクロージャを受け入れるけど）ほぼ同じ。
-     * ただし、 $condition に数値を与えると「指定回数呼ばれたあとに実行する」という意味になる。
-     * 主に「ループ内でデバッグ出力したいけど、毎回だと少しうざい」というデバッグ用途。
+     * 「php の型変換」とは strict_type=0 の時の暗黙の変換を指す（(type)等のキャストではない）。
+     * eval で呼び出して判定するため、決して $type に外部入力を渡してはならない。
      *
-     * $condition が正数だと「指定回数呼ばれた次のみ」負数だと「指定回数呼ばれた次以降」実行される。
-     * 0 のときは無条件で実行される。
+     * この関数を使うシチュエーションはほぼない。
+     * 呼び先のためならそれを普通に呼べば同じエラーになるし、用途が分かっているなら通常のキャストで十分。
+     * 「呼び先が型宣言されていない」とか「numeric であることを担保したい」とか、限られた状況でしか使えないし使うべきではない。
+     * 通常の(type)キャストが強すぎる（特に int）のため、「エラーになってくれる弱いキャスト」のようなイメージ。
      *
      * Example:
      * ```php
-     * $output = [];
-     * $debug_print = function ($debug) use (&$output) { $output[] = $debug; };
-     * for ($i=0; $i<4; $i++) {
-     *     call_if($i == 1, $debug_print, '$i == 1のとき呼ばれた');
-     *     call_if(2, $debug_print, '2回呼ばれた');
-     *     call_if(-2, $debug_print, '2回以上呼ばれた');
-     * }
-     * that($output)->isSame([
-     *     '$i == 1のとき呼ばれた',
-     *     '2回呼ばれた',
-     *     '2回以上呼ばれた',
-     *     '2回以上呼ばれた',
-     * ]);
+     * # 下記のように変換される
+     * that(cast("1", 'int'))->isSame(1);
+     * that(cast(1, 'string'))->isSame('1');
+     * that(cast(1, 'int|string'))->isSame(1);
+     * that(cast([], 'array|ArrayAccess'))->isSame([]);
+     * that(cast($ao = new \ArrayObject(), 'ArrayAccess&Countable'))->isSame($ao);
+     *
+     * # 下記はすべて TypeError になる
+     * // cast("hoge", 'int');             // 非数値文字列 は int に変換できない
+     * // cast([], 'string');              // array は string に変換できない
+     * // cast(new \stdClass(), 'bool');   // object は bool に変換できない
      * ```
      *
      * @package ryunosuke\Functions\Package\syntax
      *
-     * @param mixed $condition 呼ばれる条件
-     * @param callable $callable 呼ばれる処理
-     * @param mixed ...$arguments $callable の引数（可変引数）
-     * @return mixed 呼ばれた場合は $callable の返り値
+     * @param mixed $value 取得される配列・オブジェクト
+     * @param string $type 型文字列
+     * @param mixed $default 失敗したときのデフォルト値（null も立派な値なので例外を飛ばすためには未指定時にしなければならない）
+     * @return mixed キャストされた値
      */
-    function call_if($condition, $callable, ...$arguments)
+    function cast($value, string $type, $default = null)
     {
-        // 数値の場合はかなり特殊な動きになる
-        if (is_int($condition)) {
-            static $counts = [];
-            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
-            $caller = $trace['file'] . '#' . $trace['line'];
-            $counts[$caller] ??= 0;
-            if ($condition === 0) {
-                $condition = true;
-            }
-            elseif ($condition > 0) {
-                $condition = $condition === $counts[$caller]++;
-            }
-            else {
-                $condition = -$condition <= $counts[$caller]++;
-            }
-        }
-        elseif (is_callable($condition)) {
-            $condition = (func_user_func_array($condition))();
+        // 気休め程度だが一応チェック（呼び元の責務なのであんまり厳密にやってもしょうがない）
+        if (!preg_match('#^[?\\\\_a-z0-9|&()]+$#i', $type)) {
+            throw new \InvalidArgumentException("$type is illegal type");
         }
 
-        if ($condition) {
-            return $callable(...$arguments);
-        }
-        return null;
-    }
-}
-
-assert(!function_exists('ryunosuke\\DbMigration\\switchs') || (new \ReflectionFunction('ryunosuke\\DbMigration\\switchs'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\switchs')) {
-    /**
-     * switch 構文の関数版
-     *
-     * case にクロージャを与えると実行して返す。
-     * つまり、クロージャを返すことは出来ないので注意。
-     *
-     * $default を与えないとマッチしなかったときに例外を投げる。
-     *
-     * Example:
-     * ```php
-     * $cases = [
-     *     1 => 'value is 1',
-     *     2 => fn() => 'value is 2',
-     * ];
-     * that(switchs(1, $cases))->isSame('value is 1');
-     * that(switchs(2, $cases))->isSame('value is 2');
-     * that(switchs(3, $cases, 'undefined'))->isSame('undefined');
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\syntax
-     *
-     * @param mixed $value 調べる値
-     * @param array $cases case 配列
-     * @param null $default マッチしなかったときのデフォルト値。指定しないと例外
-     * @return mixed
-     */
-    function switchs($value, $cases, $default = null)
-    {
-        if (!array_key_exists($value, $cases)) {
-            if (func_num_args() === 2) {
-                throw new \OutOfBoundsException("value $value is not defined in " . json_encode(array_keys($cases)));
+        // php8.2 の DNF の模倣（8.2 に対応したらまるっと不要）
+        if (strpbrk($type, '(&)') !== false) {
+            if (!is_typeof($value, $type)) {
+                if (func_num_args() === 3) {
+                    return $default;
+                }
+                throw new \TypeError(sprintf("must be of type %s, %s given", $type, get_debug_type($type)));
             }
-            return $default;
+            // ↑でとりあえずマッチすることは保証されたのであとは変換のために | 繋ぎで呼び出せばよい
+            $type = implode('|', preg_split('#([?()|&])#', $type, -1, PREG_SPLIT_NO_EMPTY));
         }
 
-        $case = $cases[$value];
-        if ($case instanceof \Closure) {
-            return $case($value);
+        // 緩い変換なので一部は互換型を追加する必要がある
+        $types = array_map(fn($type) => trim(trim($type, '\\')), preg_split('#([?()|&])#', $type, -1, PREG_SPLIT_NO_EMPTY));
+        if (in_array('Stringable', $types) && !in_array('string', $types)) {
+            $types[] = 'string';
         }
-        return $case;
-    }
-}
+        $type = implode('|', $types);
 
-assert(!function_exists('ryunosuke\\DbMigration\\throw_if') || (new \ReflectionFunction('ryunosuke\\DbMigration\\throw_if'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\throw_if')) {
-    /**
-     * 条件付き throw
-     *
-     * 第1引数が true 相当のときに例外を投げる。
-     *
-     * Example:
-     * ```php
-     * // 投げない
-     * throw_if(false, new \Exception());
-     * // 投げる
-     * try{throw_if(true, new \Exception());}catch(\Exception $ex){}
-     * // クラス指定で投げる
-     * try{throw_if(true, \Exception::class, 'message', 123);}catch(\Exception $ex){}
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\syntax
-     *
-     * @param bool|mixed $flag true 相当値を与えると例外を投げる
-     * @param \Exception|string $ex 投げる例外。クラス名の場合は中で new する
-     * @param array $ex_args $ex にクラス名を与えたときの引数（可変引数）
-     */
-    function throw_if($flag, $ex, ...$ex_args)
-    {
-        if ($flag) {
-            if (is_string($ex)) {
-                $ex = new $ex(...$ex_args);
+        // 判定・変換が複雑極まるため実際に投げてその値を返すのが最も間違いが少ない
+        static $test_functions = [];
+        $test_functions[$type] ??= eval("return static fn({$type} \$value) => \$value;");
+        try {
+            return $test_functions[$type]($value);
+        }
+        catch (\TypeError $e) {
+            if (func_num_args() === 3) {
+                return $default;
             }
-            throw $ex;
+            throw $e;
         }
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\throws') || (new \ReflectionFunction('ryunosuke\\DbMigration\\throws'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\throws')) {
+assert(!function_exists('ryunosuke\\DbMigration\\instance_of') || (new \ReflectionFunction('ryunosuke\\DbMigration\\instance_of'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\instance_of')) {
     /**
-     * throw の関数版
+     * instanceof 構文の関数版
      *
-     * hoge() or throw などしたいことがまれによくあるはず。
+     * ただし、bool ではなく ?object を返す。
+     * つまり「instanceof が true ならそのまま、false なら null」を返す。
+     * これは ?-> との親和性を考慮している。
      *
      * Example:
      * ```php
-     * try {
-     *     throws(new \Exception('throws'));
-     * }
-     * catch (\Exception $ex) {
-     *     that($ex->getMessage())->isSame('throws');
-     * }
+     *  // 実質的に下記は同じ
+     * $object = new \Exception('message');
+     * that(($object instanceof \Exception ? $object : null)?->getMessage())->is('message');
+     * that(instance_of($object, \Exception::class)?->getMessage())->is('message');
+     *
+     * $object = new \stdClass();
+     * that(($object instanceof \Exception ? $object : null)?->getMessage())->isNull();
+     * that(instance_of($object, \Exception::class)?->getMessage())->isNull();
+     * // Exception ではないが null でもないので下記のようにはできない
+     * // $object?->getMessage();
      * ```
      *
      * @package ryunosuke\Functions\Package\syntax
      *
-     * @param \Exception $ex 投げる例外
-     * @return mixed （`return hoge or throws` のようなコードで警告が出るので抑止用）
+     * @template T as object
+     * @param T $object 調べるオブジェクト
+     * @param string|object $class クラス名
+     * @return ?T $object が $class のインスタンスなら $object, そうでなければ null
      */
-    function throws($ex)
+    function instance_of($object, $class)
     {
-        throw $ex;
+        return $object instanceof $class ? $object : null;
     }
 }
 
@@ -27865,7 +28886,7 @@ if (!function_exists('ryunosuke\\DbMigration\\try_close')) {
      * @package ryunosuke\Functions\Package\syntax
      *
      * @param callable $try try ブロッククロージャ
-     * @param resource|array ...$resources $try に渡る引数
+     * @param object|resource|array ...$resources $try に渡る引数
      * @return mixed $try ブロックの返り値
      */
     function try_close($callback, ...$resources)
@@ -27903,6 +28924,7 @@ if (!function_exists('ryunosuke\\DbMigration\\try_close')) {
                         }
                         else {
                             // fclose は stoream しか使えず、他は大抵専用の XXX_close のようなものが存在する
+                            // @codeCoverageIgnoreStart
                             foreach ($names as $method) {
                                 $funcname = explode(' ', $rtype)[0] . "_{$method}";
                                 if (is_callable($funcname)) {
@@ -27910,6 +28932,7 @@ if (!function_exists('ryunosuke\\DbMigration\\try_close')) {
                                     break;
                                 }
                             }
+                            // @codeCoverageIgnoreEnd
                         }
                     }
                     if (is_object($resource)) {
@@ -27919,15 +28942,13 @@ if (!function_exists('ryunosuke\\DbMigration\\try_close')) {
                                 break;
                             }
 
-                            // @codeCoverageIgnoreStart
                             // php8.0 からリソースから不透明クラスへの移行が進んでいる（リソースがクラスになっただけでメソッドが生えているわけではない）
                             // その変換は容易ではない（例えば↓は curl_close を想定しているが、CurlShareHandle 等のクラスもあり完全対応しない）
-                            $funcname = (new \ReflectionClass($resource))->getExtension() . "_{$method}";
+                            $funcname = (new \ReflectionClass($resource))->getExtension()?->getName() . "_{$method}";
                             if (is_callable($funcname)) {
                                 $funcname($resource);
                                 break;
                             }
-                            // @codeCoverageIgnoreEnd
                         }
                     }
                 }
@@ -27987,7 +29008,7 @@ if (!function_exists('ryunosuke\\DbMigration\\try_finally')) {
      */
     function try_finally($try, $finally = null, ...$variadic)
     {
-        return try_catch_finally($try, fn(...$args) => throws(...$args), $finally, ...$variadic);
+        return try_catch_finally($try, fn($arg) => throw $arg, $finally, ...$variadic);
     }
 }
 
@@ -28019,7 +29040,7 @@ if (!function_exists('ryunosuke\\DbMigration\\try_null')) {
         try {
             return $try(...$variadic);
         }
-        catch (\Exception $tried_ex) {
+        catch (\Exception) {
             return null;
         }
     }
@@ -28085,18 +29106,14 @@ if (!function_exists('ryunosuke\\DbMigration\\base62_decode')) {
 
         // 隠し第2引数が false の場合は gmp を使わない（ロジックのテスト用なので実運用で渡してはならない）
         if (extension_loaded('gmp') && !(func_num_args() === 2 && func_get_arg(1) === false)) {
-            $gmp = @gmp_init($string, 62);
-            if ($gmp === false) {
-                throw new \InvalidArgumentException("string is not an base62");
-            }
-            return $zeroprefix . gmp_export($gmp);
+            return $zeroprefix . gmp_export(gmp_init($string, 62));
         }
 
         static $basechars_assoc = null;
         $basechars_assoc ??= array_flip(str_split('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'));
 
         $chars = str_split($string);
-        $base62 = array_map(fn($c) => $basechars_assoc[$c] ?? throws(new \InvalidArgumentException("string is not an base62")), $chars);
+        $base62 = array_map(fn($c) => $basechars_assoc[$c] ?? throw new \InvalidArgumentException("string is not an base62"), $chars);
         $bytes = base_convert_array($base62, 62, 256);
         return $zeroprefix . implode('', array_map('chr', $bytes));
     }
@@ -28155,176 +29172,40 @@ if (!function_exists('ryunosuke\\DbMigration\\base62_encode')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\build_query') || (new \ReflectionFunction('ryunosuke\\DbMigration\\build_query'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\build_query')) {
+assert(!function_exists('ryunosuke\\DbMigration\\base64url_decode') || (new \ReflectionFunction('ryunosuke\\DbMigration\\base64url_decode'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\base64url_decode')) {
     /**
-     * 数値キーを削除する http_build_query
+     * url safe な base64_decode
      *
-     * php の世界において配列のクエリ表現は `var[]=1&var[]=2` で事足りる。
-     * しかし http_build_query では数値キーでも必ず `var[0]=1&var[1]=2` になる。
-     * それはそれで正しいし、他言語との連携が必要な場合はそうせざるを得ない状況もあるが、単純に php だけで配列を表したい場合は邪魔だし文字長が長くなる。
-     * この関数を使うと数値キーを削除し、`var[]=1&var[]=2` のようなクエリ文字列を生成できる。
-     *
-     * シグネチャは http_build_query と同じで、 $numeric_prefix に数値的文字列を与えたときのみ動作が変化する。
-     * （$numeric_prefix の意味を考えればこの引数に数値的文字列を与える意味は皆無だろうので流用している）。
-     *
-     * - 1 を与えると最前列を残して [] (%5B%5D) が置換される
-     * - 2 を与えると最前列とその右を残して [] (%5B%5D) が置換される
-     * - 要するに正数を与えると「abs(n) 個を残して [] (%5B%5D) を置換する」という指定になる
-     * - -1 を与えると最後尾の [] (%5B%5D) が置換される
-     * - -2 を与えると最後尾とその左の [] (%5B%5D) が置換される
-     * - 要するに負数を与えると「右から abs(n) 個の [] (%5B%5D) を置換する」という指定になる
-     *
-     * この仕様は `v[][]=1&v[][]=2` のようなときにおいしくないためである。
-     * これは `$v=[[1], [2]]` のような値になるが、この場合 `$v=[[1, 2]]` という値が欲しい、という事が多い。
-     * そのためには `v[0][]=1&v[0][]=2` のようにする必要があるための数値指定である。
-     *
-     * $brackets で配列ブラケット文字を指定できるが、現実的には下記の3択だろう。
-     * - ['%5B','%5D']: デフォルトのパーセントエンコーディング文字
-     * - ['[', ']']: [] のままにする（ブラケットは必ずしもパーセントエンコーディングが必須ではない）
-     * - ['', '']: ブラケットを削除する（他言語のために配列パラメータを抑止したいことがある）
+     * 対で使うと思うので base64_encode を参照。
      *
      * @package ryunosuke\Functions\Package\url
      *
-     * @param array|object $data クエリデータ
-     * @param string|int|null $numeric_prefix 数値キープレフィックス
-     * @param string|null $arg_separator クエリセパレータ
-     * @param int $encoding_type エンコードタイプ
-     * @param string[]|string|null $brackets 配列ブラケット文字
-     * @return string クエリ文字列
+     * @param string $string base64url 文字列
+     * @return string 変換元文字列
      */
-    function build_query($data, $numeric_prefix = null, $arg_separator = null, $encoding_type = \PHP_QUERY_RFC1738, $brackets = null)
+    function base64url_decode($string)
     {
-        $data = arrayval($data, false);
-        if (!$data) {
-            return '';
-        }
-
-        $arg_separator ??= ini_get('arg_separator.output');
-        $brackets ??= ['%5B', '%5D'];
-
-        if (!is_array($brackets)) {
-            $brackets = [$brackets, ''];
-        }
-        $brackets = array_values($brackets);
-
-        $REGEX = '%5B\d+%5D';
-        $NOSEQ = implode('', $brackets);
-        if ($numeric_prefix === null || ctype_digit(trim($numeric_prefix, '-+'))) {
-            $queries = explode($arg_separator, http_build_query($data, '', $arg_separator, $encoding_type));
-        }
-        else {
-            $queries = explode($arg_separator, http_build_query($data, $numeric_prefix, $arg_separator, $encoding_type));
-        }
-        foreach ($queries as &$q) {
-            [$k, $v] = explode('=', $q, 2);
-
-            // 0は置換しないを意味する
-            if ($numeric_prefix === 0) {
-                // do nothing
-                assert($numeric_prefix === 0);
-            }
-            // null は無制限置換
-            elseif ($numeric_prefix === null) {
-                $k = preg_replace("#$REGEX#u", $NOSEQ, $k);
-            }
-            else {
-                $count = $numeric_prefix > 0 ? 0 : -preg_match_all("#$REGEX#u", $k);
-                $k = preg_replace_callback("#$REGEX#u", function ($m) use (&$count, $numeric_prefix, $NOSEQ) {
-                    return $count++ >= $numeric_prefix ? $NOSEQ : $m[0];
-                }, $k);
-            }
-
-            $k = str_replace(['%5B', '%5D'], $brackets, $k);
-
-            $q = "$k=$v";
-        }
-
-        return implode($arg_separator, $queries);
+        return base64_decode(strtr($string, ['-' => '+', '_' => '/']));
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\build_uri') || (new \ReflectionFunction('ryunosuke\\DbMigration\\build_uri'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\build_uri')) {
+assert(!function_exists('ryunosuke\\DbMigration\\base64url_encode') || (new \ReflectionFunction('ryunosuke\\DbMigration\\base64url_encode'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\base64url_encode')) {
     /**
-     * parse_uri の逆
+     * url safe な base64_encode
      *
-     * URI のパーツを与えると URI として構築する。
-     * パーツは不完全でも良い。例えば scheme を省略すると "://" すら付かない URI が生成される。
-     *
-     * "query" パートだけは配列が許容される。その場合クエリ文字列に変換される。
-     *
-     * Example:
-     * ```php
-     * // 完全指定
-     * that(build_uri([
-     *     'scheme'   => 'http',
-     *     'user'     => 'user',
-     *     'pass'     => 'pass',
-     *     'host'     => 'localhost',
-     *     'port'     => '80',
-     *     'path'     => '/path/to/file',
-     *     'query'    => ['id' => 1],
-     *     'fragment' => 'hash',
-     * ]))->isSame('http://user:pass@localhost:80/path/to/file?id=1#hash');
-     * // 一部だけ指定
-     * that(build_uri([
-     *     'scheme'   => 'http',
-     *     'host'     => 'localhost',
-     *     'path'     => '/path/to/file',
-     *     'fragment' => 'hash',
-     * ]))->isSame('http://localhost/path/to/file#hash');
-     * ```
+     * れっきとした RFC があるのかは分からないが '+' => '-', '/' => '_' がデファクトだと思うのでそのようにしてある。
+     * パディングの = も外す。
      *
      * @package ryunosuke\Functions\Package\url
      *
-     * @param array $parts URI の各パーツ配列
-     * @param array $options オプション
-     * @return string URI 文字列
+     * @param string $string 変換元文字列
+     * @return string base64url 文字列
      */
-    function build_uri($parts, $options = [])
+    function base64url_encode($string)
     {
-        $parts += [
-            'scheme'   => '',
-            'user'     => '',
-            'pass'     => '',
-            'host'     => '',
-            'port'     => '',
-            'path'     => '',
-            'query'    => '',
-            'fragment' => '',
-        ];
-        $options = array_replace_recursive([
-            'query' => [
-                'index'     => 0,
-                'bracket'   => null,
-                'separator' => ini_get('arg_separator.output'),
-            ],
-        ], $options);
-
-        $parts['user'] = rawurlencode($parts['user']);
-        $parts['pass'] = rawurlencode($parts['pass']);
-        $parts['host'] = filter_var($parts['host'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? "[{$parts['host']}]" : $parts['host'];
-        $parts['path'] = ltrim($parts['path'], '/');
-        if (is_array($parts['query'])) {
-            $parts['query'] = build_query(
-                $parts['query'],
-                $options['query']['index'],
-                $options['query']['separator'],
-                \PHP_QUERY_RFC1738,
-                $options['query']['bracket'],
-            );
-        }
-
-        $uri = '';
-        $uri .= concat($parts['scheme'], '://');
-        $uri .= concat($parts['user'] . concat(':', $parts['pass']), '@');
-        $uri .= concat($parts['host']);
-        $uri .= concat(':', $parts['port']);
-        $uri .= concat('/', $parts['path']);
-        $uri .= concat('?', $parts['query']);
-        $uri .= concat('#', rawurlencode($parts['fragment']));
-        return $uri;
+        return rtrim(strtr(base64_encode($string), ['+' => '-', '/' => '_']), '=');
     }
 }
 
@@ -28455,8 +29336,97 @@ if (!function_exists('ryunosuke\\DbMigration\\dataurl_encode')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\parse_query') || (new \ReflectionFunction('ryunosuke\\DbMigration\\parse_query'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\parse_query')) {
+assert(!function_exists('ryunosuke\\DbMigration\\query_build') || (new \ReflectionFunction('ryunosuke\\DbMigration\\query_build'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\query_build')) {
+    /**
+     * 数値キーを削除する http_build_query
+     *
+     * php の世界において配列のクエリ表現は `var[]=1&var[]=2` で事足りる。
+     * しかし http_build_query では数値キーでも必ず `var[0]=1&var[1]=2` になる。
+     * それはそれで正しいし、他言語との連携が必要な場合はそうせざるを得ない状況もあるが、単純に php だけで配列を表したい場合は邪魔だし文字長が長くなる。
+     * この関数を使うと数値キーを削除し、`var[]=1&var[]=2` のようなクエリ文字列を生成できる。
+     *
+     * シグネチャは http_build_query と同じで、 $numeric_prefix に数値的文字列を与えたときのみ動作が変化する。
+     * （$numeric_prefix の意味を考えればこの引数に数値的文字列を与える意味は皆無だろうので流用している）。
+     *
+     * - 1 を与えると最前列を残して [] (%5B%5D) が置換される
+     * - 2 を与えると最前列とその右を残して [] (%5B%5D) が置換される
+     * - 要するに正数を与えると「abs(n) 個を残して [] (%5B%5D) を置換する」という指定になる
+     * - -1 を与えると最後尾の [] (%5B%5D) が置換される
+     * - -2 を与えると最後尾とその左の [] (%5B%5D) が置換される
+     * - 要するに負数を与えると「右から abs(n) 個の [] (%5B%5D) を置換する」という指定になる
+     *
+     * この仕様は `v[][]=1&v[][]=2` のようなときにおいしくないためである。
+     * これは `$v=[[1], [2]]` のような値になるが、この場合 `$v=[[1, 2]]` という値が欲しい、という事が多い。
+     * そのためには `v[0][]=1&v[0][]=2` のようにする必要があるための数値指定である。
+     *
+     * $brackets で配列ブラケット文字を指定できるが、現実的には下記の3択だろう。
+     * - ['%5B','%5D']: デフォルトのパーセントエンコーディング文字
+     * - ['[', ']']: [] のままにする（ブラケットは必ずしもパーセントエンコーディングが必須ではない）
+     * - ['', '']: ブラケットを削除する（他言語のために配列パラメータを抑止したいことがある）
+     *
+     * @package ryunosuke\Functions\Package\url
+     *
+     * @param array|object $data クエリデータ
+     * @param string|int|null $numeric_prefix 数値キープレフィックス
+     * @param string|null $arg_separator クエリセパレータ
+     * @param int $encoding_type エンコードタイプ
+     * @param string[]|string|null $brackets 配列ブラケット文字
+     * @return string クエリ文字列
+     */
+    function query_build($data, $numeric_prefix = null, $arg_separator = null, $encoding_type = \PHP_QUERY_RFC1738, $brackets = null)
+    {
+        $data = arrayval($data, false);
+        if (!$data) {
+            return '';
+        }
+
+        $arg_separator ??= ini_get('arg_separator.output');
+        $brackets ??= ['%5B', '%5D'];
+
+        if (!is_array($brackets)) {
+            $brackets = [$brackets, ''];
+        }
+        $brackets = array_values($brackets);
+
+        $REGEX = '%5B\d+%5D';
+        $NOSEQ = implode('', $brackets);
+        if ($numeric_prefix === null || ctype_digit(trim($numeric_prefix, '-+'))) {
+            $queries = explode($arg_separator, http_build_query($data, '', $arg_separator, $encoding_type));
+        }
+        else {
+            $queries = explode($arg_separator, http_build_query($data, $numeric_prefix, $arg_separator, $encoding_type));
+        }
+        foreach ($queries as &$q) {
+            [$k, $v] = explode('=', $q, 2);
+
+            // 0は置換しないを意味する
+            if ($numeric_prefix === 0) {
+                // do nothing
+                assert($numeric_prefix === 0);
+            }
+            // null は無制限置換
+            elseif ($numeric_prefix === null) {
+                $k = preg_replace("#$REGEX#u", $NOSEQ, $k);
+            }
+            else {
+                $count = $numeric_prefix > 0 ? 0 : -preg_match_all("#$REGEX#u", $k);
+                $k = preg_replace_callback("#$REGEX#u", function ($m) use (&$count, $numeric_prefix, $NOSEQ) {
+                    return $count++ >= $numeric_prefix ? $NOSEQ : $m[0];
+                }, $k);
+            }
+
+            $k = str_replace(['%5B', '%5D'], $brackets, $k);
+
+            $q = "$k=$v";
+        }
+
+        return implode($arg_separator, $queries);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\query_parse') || (new \ReflectionFunction('ryunosuke\\DbMigration\\query_parse'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\query_parse')) {
     /**
      * parse_str の返り値版
      *
@@ -28467,12 +29437,12 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_query')) {
      * Example:
      * ```php
      * // 普通に使えばネイティブの返り値版
-     * that(parse_query('a.b=ab&x[y][z]=xyz'))->is([
+     * that(query_parse('a.b=ab&x[y][z]=xyz'))->is([
      *     'a_b' => 'ab',
      *     'x'   => ['y' => ['z' => 'xyz']],
      * ]);
      * // パラメータを渡せば独自実装（& 以外を指定できたり . を維持できたりする）
-     * that(parse_query('a.b=ab|x[y][z]=xyz', '|'))->is([
+     * that(query_parse('a.b=ab|x[y][z]=xyz', '|'))->is([
      *     'a.b' => 'ab',
      *     'x'   => ['y' => ['z' => 'xyz']],
      * ]);
@@ -28485,7 +29455,7 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_query')) {
      * @param ?int $encoding_type クエリ文字列
      * @return array クエリのパース結果配列
      */
-    function parse_query($query, $arg_separator = null, $encoding_type = null)
+    function query_parse($query, $arg_separator = null, $encoding_type = null)
     {
         // 指定されていないなら php ネイティブ
         if ($arg_separator === null && $encoding_type === null) {
@@ -28537,8 +29507,92 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_query')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\parse_uri') || (new \ReflectionFunction('ryunosuke\\DbMigration\\parse_uri'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\parse_uri')) {
+assert(!function_exists('ryunosuke\\DbMigration\\uri_build') || (new \ReflectionFunction('ryunosuke\\DbMigration\\uri_build'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\uri_build')) {
+    /**
+     * parse_uri の逆
+     *
+     * URI のパーツを与えると URI として構築する。
+     * パーツは不完全でも良い。例えば scheme を省略すると "://" すら付かない URI が生成される。
+     *
+     * "query" パートだけは配列が許容される。その場合クエリ文字列に変換される。
+     *
+     * Example:
+     * ```php
+     * // 完全指定
+     * that(uri_build([
+     *     'scheme'   => 'http',
+     *     'user'     => 'user',
+     *     'pass'     => 'pass',
+     *     'host'     => 'localhost',
+     *     'port'     => '80',
+     *     'path'     => '/path/to/file',
+     *     'query'    => ['id' => 1],
+     *     'fragment' => 'hash',
+     * ]))->isSame('http://user:pass@localhost:80/path/to/file?id=1#hash');
+     * // 一部だけ指定
+     * that(uri_build([
+     *     'scheme'   => 'http',
+     *     'host'     => 'localhost',
+     *     'path'     => '/path/to/file',
+     *     'fragment' => 'hash',
+     * ]))->isSame('http://localhost/path/to/file#hash');
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\url
+     *
+     * @param array $parts URI の各パーツ配列
+     * @param array $options オプション
+     * @return string URI 文字列
+     */
+    function uri_build($parts, $options = [])
+    {
+        $parts += [
+            'scheme'   => '',
+            'user'     => '',
+            'pass'     => '',
+            'host'     => '',
+            'port'     => '',
+            'path'     => '',
+            'query'    => '',
+            'fragment' => '',
+        ];
+        $options = array_replace_recursive([
+            'query' => [
+                'index'     => 0,
+                'bracket'   => null,
+                'separator' => ini_get('arg_separator.output'),
+            ],
+        ], $options);
+
+        $parts['user'] = rawurlencode($parts['user']);
+        $parts['pass'] = rawurlencode($parts['pass']);
+        $parts['host'] = filter_var($parts['host'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? "[{$parts['host']}]" : $parts['host'];
+        $parts['path'] = ltrim($parts['path'], '/');
+        if (is_array($parts['query'])) {
+            $parts['query'] = query_build(
+                $parts['query'],
+                $options['query']['index'],
+                $options['query']['separator'],
+                \PHP_QUERY_RFC1738,
+                $options['query']['bracket'],
+            );
+        }
+
+        $uri = '';
+        $uri .= concat($parts['scheme'], '://');
+        $uri .= concat($parts['user'] . concat(':', $parts['pass']), '@');
+        $uri .= concat($parts['host']);
+        $uri .= concat(':', $parts['port']);
+        $uri .= concat('/', $parts['path']);
+        $uri .= concat('?', $parts['query']);
+        $uri .= concat('#', rawurlencode($parts['fragment']));
+        return $uri;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\uri_parse') || (new \ReflectionFunction('ryunosuke\\DbMigration\\uri_parse'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\uri_parse')) {
     /**
      * parse_url の仕様を少しいじったもの
      *
@@ -28552,7 +29606,7 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_uri')) {
      * Example:
      * ```php
      * // 完全指定
-     * that(parse_uri('http://user:pass@localhost:80/path/to/file?id=1#hash'))->is([
+     * that(uri_parse('http://user:pass@localhost:80/path/to/file?id=1#hash'))->is([
      *     'scheme'   => 'http',
      *     'user'     => 'user',
      *     'pass'     => 'pass',
@@ -28563,7 +29617,7 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_uri')) {
      *     'fragment' => 'hash',
      * ]);
      * // デフォルト値つき
-     * that(parse_uri('localhost/path/to/file', [
+     * that(uri_parse('localhost/path/to/file', [
      *     'scheme'   => 'http', // scheme のデフォルト値
      *     'user'     => 'user', // user のデフォルト値
      *     'port'     => '8080', // port のデフォルト値
@@ -28586,7 +29640,7 @@ if (!function_exists('ryunosuke\\DbMigration\\parse_uri')) {
      * @param array|string $default $uri に足りないパーツがあった場合のデフォルト値。文字列を与えた場合はそのパース結果がデフォルト値になる
      * @return array URI の各パーツ配列
      */
-    function parse_uri($uri, $default = [])
+    function uri_parse($uri, $default = [])
     {
         /** @noinspection RequiredAttributes */
         $regex = "
@@ -28687,19 +29741,21 @@ if (!function_exists('ryunosuke\\DbMigration\\benchmark')) {
             }
 
             $closure = \Closure::fromCallable($caller);
-            // for compatible (wait for memory_reset_peak_usage)
-            try {
-                // いったん受けて返すことで tick を誘発する
-                // @codeCoverageIgnoreStart
-                $caller = function (&...$args) use ($caller) {
-                    $dummy = $caller(...$args);
-                    return $dummy;
-                };
-                // @codeCoverageIgnoreEnd
-                $closure = evaluate("declare(ticks=1);\n" . var_export3($caller, ['outmode' => 'eval']));
-            }
-            catch (\Throwable $t) { // @codeCoverageIgnore
-                // do nothing
+            if (!function_exists('memory_reset_peak_usage')) {
+                // for compatible (wait for memory_reset_peak_usage)
+                try {
+                    // いったん受けて返すことで tick を誘発する
+                    // @codeCoverageIgnoreStart
+                    $caller = function (&...$args) use ($caller) {
+                        $dummy = $caller(...$args);
+                        return $dummy;
+                    };
+                    // @codeCoverageIgnoreEnd
+                    $closure = evaluate("declare(ticks=1);\n" . var_export3($caller, ['outmode' => 'eval']));
+                }
+                catch (\Throwable) { // @codeCoverageIgnore
+                    // do nothing
+                }
             }
             $benchset[$name] = $closure;
         }
@@ -28716,14 +29772,13 @@ if (!function_exists('ryunosuke\\DbMigration\\benchmark')) {
         ]);
 
         // ウォームアップ兼検証（大量に実行してエラーの嵐になる可能性があるのでウォームアップの時点でエラーがないかチェックする）
-        $assertions = call_safely(function ($benchset, $args) {
-            $result = [];
+        $handler_restore = set_error_exception_handler();
+        $assertions = [];
+        foreach ($benchset as $name => $caller) {
             $args2 = $args;
-            foreach ($benchset as $name => $caller) {
-                $result[$name] = $caller(...$args2);
-            }
-            return $result;
-        }, $benchset, $args);
+            $assertions[$name] = $caller(...$args2);
+        }
+        $handler_restore();
 
         // 返り値の検証（ベンチマークという性質上、基本的に戻り値が一致しないのはおかしい）
         // rand/mt_rand, md5/sha1 のような例外はあるが、そんなのベンチしないし、クロージャでラップすればいいし、それでも邪魔なら @ で黙らせればいい
@@ -28755,16 +29810,51 @@ if (!function_exists('ryunosuke\\DbMigration\\benchmark')) {
 
         // ベンチ
         $cpu_timer = cpu_timer();
-        $tick = function () use (&$usage) {
-            $usage = max($usage, memory_get_usage());
+        // for compatible (wait for memory_reset_peak_usage)
+        $memory_measurer = new class() {
+            private int $peak;
+            private int $initial;
+
+            public function __construct()
+            {
+                register_tick_function($this);
+            }
+
+            public function __destruct()
+            {
+                unregister_tick_function($this);
+            }
+
+            public function __invoke()
+            {
+                $this->peak = max($this->peak ?? 0, memory_get_usage());
+            }
+
+            public function start()
+            {
+                gc_collect_cycles();
+                if (function_exists('memory_reset_peak_usage')) {
+                    memory_reset_peak_usage(); // @codeCoverageIgnore
+                }
+                unset($this->peak);
+                $this->initial = memory_get_usage();
+            }
+
+            public function result(): ?int
+            {
+                if (function_exists('memory_reset_peak_usage')) {
+                    return memory_get_peak_usage() - $this->initial; // @codeCoverageIgnore
+                }
+                if (!isset($this->peak)) {
+                    return null;
+                }
+                return $this->peak - $this->initial;
+            }
         };
-        register_tick_function($tick);
         $stats = [];
         foreach ($benchset as $name => $caller) {
-            $usage = null;
-            gc_collect_cycles();
             $cpu_timer->start();
-            $memory = memory_get_usage();
+            $memory_measurer->start();
             $microtime = microtime(true);
             $end = $microtime + $millisec / 1000;
             $args2 = $args;
@@ -28777,9 +29867,8 @@ if (!function_exists('ryunosuke\\DbMigration\\benchmark')) {
             $stats[$name]['count'] = $n;
             $stats[$name]['mills'] = (microtime(true) - $microtime) / $n;
             $stats[$name]['cpu'] = $cpu_timer->result();
-            $stats[$name]['memory'] = $usage === null ? null : $usage - $memory;
+            $stats[$name]['memory'] = $memory_measurer->result();
         }
-        unregister_tick_function($tick);
 
         $restore();
 
@@ -28912,7 +30001,7 @@ if (!function_exists('ryunosuke\\DbMigration\\built_in_server')) {
         $process = process_async(php_binary(), array_filter([
             '-S' => "{$options['host']}:{$options['port']}",
             '-t' => $document_root,
-            '-d' => array_kmap((array) $options['-d'], fn($v, $k) => is_int($k) ? $v : "$k=$v"),
+            '-d' => array_maps((array) $options['-d'], fn($v, $k) => is_int($k) ? $v : "$k=$v"),
             $mainscript,
         ], fn($v) => $v !== null), '', $stdout, $stderr, $document_root);
 
@@ -29087,21 +30176,6 @@ if (!function_exists('ryunosuke\\DbMigration\\cache_fetch')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\cachedir') || (new \ReflectionFunction('ryunosuke\\DbMigration\\cachedir'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\cachedir')) {
-    /**
-     * 本ライブラリで使用するキャッシュディレクトリを設定する
-     *
-     * @package ryunosuke\Functions\Package\utility
-     *
-     * @deprecated use function_configure
-     */
-    function cachedir($dirname = null)
-    {
-        return function_configure(['cachedir' => $dirname])['cachedir'];
-    }
-}
-
 assert(!function_exists('ryunosuke\\DbMigration\\cacheobject') || (new \ReflectionFunction('ryunosuke\\DbMigration\\cacheobject'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
     /**
@@ -29112,8 +30186,7 @@ if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
      * - キャッシュはファイルシステムに保存される
      * - キャッシュキーの . はディレクトリ区切りとして使用される
      * - TTL を指定しなかったときのデフォルト値は約100年（実質無期限だろう）
-     * - clear するとディレクトリ自体を吹き飛ばすのでそのディレクトリはキャッシュ以外の用途に使用してはならない
-     * - psr-16 にはない getOrSet が生えている（利便性が非常に高く使用頻度が多いため）
+     * - psr-16 にはない getOrSet(fetch) が生えている（利便性が非常に高く使用頻度が多いため）
      *
      * 性質上、参照されない期限切れキャッシュが溜まり続けるが $clean_probability を渡すと一定確率で削除される。
      * $clean_probability は 1 が 100%（必ず削除）、 0 が 0%（削除しない）である。
@@ -29126,13 +30199,16 @@ if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
      *
      * @package ryunosuke\Functions\Package\utility
      *
-     * @param string $directory キャッシュ保存ディレクトリ
+     * @param ?string $directory キャッシュ保存ディレクトリ
      * @param float $clean_probability 不要キャッシュの削除確率
-     * @return \Psr16CacheInterface psr-16 実装オブジェクト
+     * @return \Cacheobject psr-16 実装オブジェクト
      */
-    function cacheobject($directory, $clean_probability = 0)
+    function cacheobject($directory = null, $clean_probability = 0)
     {
-        $cacheobject = new class($directory) {
+        static $cacheobjects = [];
+
+        $directory ??= function_configure('cachedir');
+        $cacheobject = $cacheobjects[$directory] ??= new class($directory) {
             private $directory;
             private $entries = [];
 
@@ -29188,14 +30264,22 @@ if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
 
             private function _getFilename(string $key): string
             {
-                return $this->directory . DIRECTORY_SEPARATOR . strtr(rawurlencode($key), ['.' => DIRECTORY_SEPARATOR]) . ".php";
+                return $this->directory . DIRECTORY_SEPARATOR . strtr(rawurlencode($key), ['.' => DIRECTORY_SEPARATOR]) . ".php-cache";
+            }
+
+            private function _getCacheFilenames(): array
+            {
+                return file_list($this->directory, [
+                    '!type'     => ['dir', 'link'],
+                    'extension' => ['php-cache'],
+                ]) ?? [];
             }
 
             private function _getMetadata(string $filename): ?array
             {
-                $fp = fopen($filename, "r");
+                $fp = @fopen($filename, "r");
                 if ($fp === false) {
-                    return null; // @codeCoverageIgnore
+                    return null;
                 }
                 try {
                     $first = fgets($fp);
@@ -29209,9 +30293,7 @@ if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
 
             public function keys(?string $pattern = null)
             {
-                $files = file_list($this->directory, [
-                    '!type' => ['dir', 'link'],
-                ]);
+                $files = $this->_getCacheFilenames();
 
                 $now = time();
                 $result = [];
@@ -29293,8 +30375,16 @@ if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
                 $expire = time() + $ttl;
                 $this->entries[$key] = [$expire, $value];
                 $meta = json_encode(['key' => $key, 'expire' => $expire]);
-                $code = var_export3($this->entries[$key], ['outmode' => 'eval']);
-                return !!file_set_contents($this->_getFilename($key), "<?php # $meta\n$code\n");
+                // var_export3 はあらゆる出力を可能にしているので **読み込み時** のオーバーヘッドがでかく、もし var_export が使えるならその方が格段に速い
+                // しかし要素を再帰的に全舐め（is_exportable）しないと「var_export できるか？」は分からないというジレンマがある
+                // このコンテキストは「キャッシュ」なので書き込み時のオーバーヘッドよりも読み込み時のオーバーヘッドを優先して判定を行っている
+                if (is_exportable($this->entries[$key])) {
+                    $code = var_export($this->entries[$key], true);
+                }
+                else {
+                    $code = var_export3($this->entries[$key], true);
+                }
+                return !!file_set_contents($this->_getFilename($key), "<?php # $meta\nreturn $code;\n");
             }
 
             public function delete($key)
@@ -29305,10 +30395,30 @@ if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
                 return @unlink($this->_getFilename($key));
             }
 
+            public function provide($provider, ...$args)
+            {
+                $provider_hash = (string) new \ReflectionFunction($provider);
+                $cacheid = "autoprovide." . hash('fnv164', $provider_hash);
+                $key = $provider_hash . '@' . serialize($args);
+
+                $cache = $this->get($cacheid) ?? [];
+                if (!array_key_exists($key, $cache)) {
+                    $result = $provider(...$args);
+                    if ($result === null) {
+                        return null;
+                    }
+                    $cache[$key] = $result;
+                    $this->set($cacheid, $cache);
+                }
+                return $cache[$key];
+            }
+
             public function clear()
             {
                 $this->entries = [];
-                return rm_rf($this->directory, false);
+
+                $files = $this->_getCacheFilenames();
+                return count($files) === count(array_filter(array_map('unlink', $files)));
             }
 
             public function getMultiple($keys, $default = null)
@@ -29356,19 +30466,20 @@ if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
             }
 
             // @formatter:off
-                public function clean()                                { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function keys($pattern = null)                  { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function fetch($key, $provider, $ttl = null)    { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function fetchMultiple($providers, $ttl = null) { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function get($key, $default = null)             { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function set($key, $value, $ttl = null)         { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function delete($key)                           { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function clear()                                { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function getMultiple($keys, $default = null)    { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function setMultiple($values, $ttl = null)      { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function deleteMultiple($keys)                  { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                public function has($key)                              { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
-                // @formatter:on
+            public function clean()                                          { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function keys($pattern = null): iterable                  { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function fetch($key, $provider, $ttl = null): mixed       { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function fetchMultiple($providers, $ttl = null): iterable { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function get($key, $default = null): mixed                { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function set($key, $value, $ttl = null): bool             { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function delete($key): bool                               { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function provide($provider, ...$args): mixed              { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function clear(): bool                                    { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function getMultiple($keys, $default = null): iterable    { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function setMultiple($values, $ttl = null): bool          { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function deleteMultiple($keys): bool                      { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            public function has($key): bool                                  { return $this->cacheobject->{__FUNCTION__}(...func_get_args()); }
+            // @formatter:on
         };
     }
 }
@@ -29393,9 +30504,10 @@ if (!function_exists('ryunosuke\\DbMigration\\function_configure')) {
         $config['cachedir'] ??= sys_get_temp_dir() . DIRECTORY_SEPARATOR . strtr(__NAMESPACE__, ['\\' => '%']);
         $config['storagedir'] ??= DIRECTORY_SEPARATOR === '/' ? '/var/tmp/rf' : (getenv('ALLUSERSPROFILE') ?: sys_get_temp_dir()) . '\\rf';
         $config['placeholder'] ??= '';
-        $config['var_stream'] ??= get_cfg_var('rfunc.var_stream') ?: 'VarStreamV010000';          // for compatible
-        $config['memory_stream'] ??= get_cfg_var('rfunc.memory_stream') ?: 'MemoryStreamV010000'; // for compatible
-        $config['chain.version'] ??= 1;
+        $config['var_stream'] ??= 'VarStreamV010000';
+        $config['memory_stream'] ??= 'MemoryStreamV010000';
+        $config['array.variant'] ??= false;
+        $config['chain.version'] ??= 2;
         $config['chain.nullsafe'] ??= false;
         $config['process.autoload'] ??= [];
 
@@ -29530,40 +30642,6 @@ if (!function_exists('ryunosuke\\DbMigration\\number_serial')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\timer') || (new \ReflectionFunction('ryunosuke\\DbMigration\\timer'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\timer')) {
-    /**
-     * 処理時間を計測する
-     *
-     * 第1引数 $callable を $count 回回してその処理時間を返す。
-     *
-     * Example:
-     * ```php
-     * // 0.01 秒を 10 回回すので 0.1 秒は超える
-     * that(timer(function () {usleep(10 * 1000);}, 10))->greaterThan(0.1);
-     * ```
-     *
-     * @package ryunosuke\Functions\Package\utility
-     *
-     * @param callable $callable 処理クロージャ
-     * @param int $count ループ回数
-     * @return float 処理時間
-     */
-    function timer(callable $callable, $count = 1)
-    {
-        $count = (int) $count;
-        if ($count < 1) {
-            throw new \InvalidArgumentException("\$count must be greater than 0 (specified $count).");
-        }
-
-        $t = microtime(true);
-        for ($i = 0; $i < $count; $i++) {
-            $callable();
-        }
-        return microtime(true) - $t;
-    }
-}
-
 assert(!function_exists('ryunosuke\\DbMigration\\arrayable_key_exists') || (new \ReflectionFunction('ryunosuke\\DbMigration\\arrayable_key_exists'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\arrayable_key_exists')) {
     /**
@@ -29627,7 +30705,7 @@ if (!function_exists('ryunosuke\\DbMigration\\arrayval')) {
      * that(arrayval([123]))->isSame([123]); // 配列は配列のまま
      *
      * // $recursive = false にしない限り再帰的に適用される
-     * $stdclass = stdclass(['key' => 'val']);
+     * $stdclass = (object) ['key' => 'val'];
      * that(arrayval([$stdclass], true))->isSame([['key' => 'val']]); // true なので中身も配列化される
      * that(arrayval([$stdclass], false))->isSame([$stdclass]);       // false なので中身は変わらない
      * ```
@@ -29735,8 +30813,7 @@ if (!function_exists('ryunosuke\\DbMigration\\attr_get')) {
     function attr_get($key, $value, $default = null)
     {
         if (is_array($value)) {
-            // see https://www.php.net/manual/function.array-key-exists.php#107786
-            return isset($value[$key]) || array_key_exists($key, $value) ? $value[$key] : $default;
+            return array_key_exists($key, $value) ? $value[$key] : $default;
         }
 
         if ($value instanceof \ArrayAccess) {
@@ -29751,7 +30828,7 @@ if (!function_exists('ryunosuke\\DbMigration\\attr_get')) {
                 $result = @$value[$key];
                 return error_get_last() ? $default : $result;
             }
-            catch (\Throwable $t) {
+            catch (\Throwable) {
                 return $default;
             }
         }
@@ -29766,7 +30843,7 @@ if (!function_exists('ryunosuke\\DbMigration\\attr_get')) {
                 $result = @$value->$key;
                 return error_get_last() ? $default : $result;
             }
-            catch (\Throwable $t) {
+            catch (\Throwable) {
                 return $default;
             }
         }
@@ -29960,14 +31037,7 @@ if (!function_exists('ryunosuke\\DbMigration\\decrypt')) {
     function decrypt($cipherdata, $password, $ciphers = 'aes-256-cbc', $tag = '')
     {
         $version = $cipherdata[-1] ?? '';
-        // for compatible
-        if (!ctype_digit($version)) {
-            $version = '0';
-            $cipherdata = base64_decode(strtr($cipherdata, ['-' => '+', '_' => '/']));
-        }
-        else {
-            $cipherdata = base64_decode(strtr(substr($cipherdata, 0, -1), ['-' => '+', '_' => '/']));
-        }
+        $cipherdata = base64url_decode(substr($cipherdata, 0, -1));
 
         if ($version === "4") {
             $cipher = 'aes-256-gcm';
@@ -30014,7 +31084,7 @@ if (!function_exists('ryunosuke\\DbMigration\\decrypt')) {
             $iv = substr($ivtagpayload, 0, $metadata['ivlen']);
             $tag = substr($ivtagpayload, $metadata['ivlen'], $metadata['taglen']);
             $payload = substr($ivtagpayload, $metadata['ivlen'] + $metadata['taglen']);
-            $tags = array_merge([$tag], (array) $ciphers); // for compatible
+            $tags = array_merge([$tag], (array) $ciphers);
             foreach ($tags as $tag) {
                 if ($metadata['taglen'] === strlen($tag)) {
                     $decryptdata = openssl_decrypt($payload, $cipher, $password, OPENSSL_RAW_DATA, $iv, ...$metadata['taglen'] ? [$tag] : []);
@@ -30026,20 +31096,20 @@ if (!function_exists('ryunosuke\\DbMigration\\decrypt')) {
             return null;
         }
 
-        foreach ((array) $ciphers as $c) {
-            $ivlen = openssl_cipher_iv_length($c);
-            if (strlen($cipherdata) <= $ivlen) {
-                continue;
-            }
-            $iv = substr($cipherdata, 0, $ivlen);
-            $payload = substr($cipherdata, $ivlen);
-
-            $decryptdata = openssl_decrypt($payload, $c, $password, OPENSSL_RAW_DATA, $iv, $tag);
-            if ($decryptdata !== false) {
-                if ($version === "1") {
-                    $decryptdata = gzinflate($decryptdata);
+        if ($version === "1") {
+            foreach ((array) $ciphers as $c) {
+                $ivlen = openssl_cipher_iv_length($c);
+                if (strlen($cipherdata) <= $ivlen) {
+                    continue;
                 }
-                return json_decode($decryptdata, true);
+                $iv = substr($cipherdata, 0, $ivlen);
+                $payload = substr($cipherdata, $ivlen);
+
+                $decryptdata = openssl_decrypt($payload, $c, $password, OPENSSL_RAW_DATA, $iv, $tag);
+                if ($decryptdata !== false) {
+                    $decryptdata = gzinflate($decryptdata);
+                    return json_decode($decryptdata, true);
+                }
             }
         }
         return null;
@@ -30118,10 +31188,10 @@ if (!function_exists('ryunosuke\\DbMigration\\encrypt')) {
         $payload = openssl_encrypt($zlibdata, $cipher, $password, OPENSSL_RAW_DATA, $iv, ...$metadata['taglen'] ? [&$tag] : []);
 
         if ($original_cipher === null) {
-            return rtrim(strtr(base64_encode($payload . $tag . $iv), ['+' => '-', '/' => '_']), '=') . '4';
+            return base64url_encode($payload . $tag . $iv) . '4';
         }
         else {
-            return rtrim(strtr(base64_encode($tag . $iv . $payload . ':' . $cipher), ['+' => '-', '/' => '_']), '=') . '3';
+            return base64url_encode($tag . $iv . $payload . ':' . $cipher) . '3';
         }
     }
 }
@@ -30202,27 +31272,27 @@ if (!function_exists('ryunosuke\\DbMigration\\hashvar')) {
 
             // php パーシング
             $starting = false;
-            $tokens = token_get_all('<?php ' . $target);
+            $tokens = \PhpToken::tokenize('<?php ' . $target);
             foreach ($tokens as $token) {
                 // トークン配列の場合
-                if (is_array($token)) {
+                if ($token->id >= 255) {
                     // 自身の呼び出しが始まった
-                    if (!$starting && $token[0] === T_STRING && $token[1] === $function) {
+                    if (!$starting && $token->id === T_STRING && $token->text === $function) {
                         $starting = true;
                     }
                     // 呼び出し中でかつ変数トークンなら変数名を確保
-                    elseif ($starting && $token[0] === T_VARIABLE) {
-                        $caller[] = ltrim($token[1], '$');
+                    elseif ($starting && $token->id === T_VARIABLE) {
+                        $caller[] = ltrim($token->text, '$');
                     }
                     // 上記以外の呼び出し中のトークンは空白しか許されない
-                    elseif ($starting && $token[0] !== T_WHITESPACE) {
+                    elseif ($starting && $token->id !== T_WHITESPACE) {
                         throw new \UnexpectedValueException('argument allows variable only.');
                     }
                 }
                 // 1文字単位の文字列の場合
                 else {
                     // 自身の呼び出しが終わった
-                    if ($starting && $token === ')' && $caller) {
+                    if ($starting && $token->text === ')' && $caller) {
                         $callers[] = $caller;
                         $caller = [];
                         $starting = false;
@@ -30388,6 +31458,84 @@ if (!function_exists('ryunosuke\\DbMigration\\is_empty')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\is_exportable') || (new \ReflectionFunction('ryunosuke\\DbMigration\\is_exportable'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\is_exportable')) {
+    /**
+     * 値が var_export で出力可能か検査する
+     *
+     * 「出力可能」とは「意味のある出力」を意味する。
+     * 例えば set_state のないオブジェクトはエラーなく set_state コール形式で出力されるが意味のある出力ではない。
+     * リソース型はエラーなく NULL で出力されるが意味のある出力ではない。
+     * 循環参照は出力できるものの warning が出てかつ循環は切れるため意味のある出力ではない。
+     *
+     * Example:
+     * ```php
+     * that(is_primitive(null))->isTrue();
+     * that(is_primitive(false))->isTrue();
+     * that(is_primitive(123))->isTrue();
+     * that(is_primitive(STDIN))->isTrue();
+     * that(is_primitive(new \stdClass))->isFalse();
+     * that(is_primitive(['array']))->isFalse();
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\var
+     *
+     * @param mixed $var 調べる値
+     * @return bool 出力可能なら true
+     */
+    function is_exportable($var): bool
+    {
+        // スカラー/NULL は OK
+        if (is_scalar($var) || is_null($var)) {
+            return true;
+        }
+
+        // リソース型の変数は、この関数ではエクスポートする事ができません
+        if (is_resourcable($var)) {
+            return false;
+        }
+
+        // var_export() では循環参照を扱うことができません
+        if (is_recursive($var)) {
+            return false;
+        }
+
+        // 配列に制限はない。それゆえに全要素を再帰的に見なければならない
+        if (is_array($var)) {
+            foreach ($var as $v) {
+                if (!is_exportable($v)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        if (is_object($var)) {
+            // 無名クラスは非常に特殊で、出力は class@anonymous{filename}:123$456::__set_state(...) のようになる
+            // set_state さえ実装してれば復元可能に思えるが php コードとして不正なのでそのまま実行するとシンタックスエラーになる
+            // 'class@anonymous{filename}:123$456'::__set_state(...) のようにクオートすれば実行可能になるが、それは標準 var_export の動作ではない
+            // 復元する側がクオートして読み込み…とすれば復元可能だが、そもそもクラスがロードされている保証もない
+            // これらのことを考慮するなら「意味のある出力」ではないとみなした方が手っ取り早い
+            if ((new \ReflectionClass($var))->isAnonymous()) {
+                return false;
+            }
+            // var_export() が生成する PHP を評価できるようにするためには、処理対象のすべてのオブジェクトがマジックメソッド __set_state を実装している必要があります
+            if (method_exists($var, '__set_state')) {
+                return true;
+            }
+            // これの唯一の例外は stdClass です。 stdClass は、配列をオブジェクトにキャストした形でエクスポートされます
+            if (get_class($var) === \stdClass::class) {
+                return true;
+            }
+            // マニュアルに記載はないが enum は export できる
+            if ($var instanceof \UnitEnum) {
+                return true;
+            }
+            return false;
+        }
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\is_primitive') || (new \ReflectionFunction('ryunosuke\\DbMigration\\is_primitive'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\is_primitive')) {
     /**
@@ -30549,6 +31697,88 @@ if (!function_exists('ryunosuke\\DbMigration\\is_stringable')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\is_typeof') || (new \ReflectionFunction('ryunosuke\\DbMigration\\is_typeof'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\is_typeof')) {
+    /**
+     * 変数が型に合致するか調べる
+     *
+     * is_a のビルトイン＋DNF 対応版。
+     *
+     * DNF の場合、括弧は必須だしネストも不可。
+     * 実質的には ReflectionType の文字列表現を与えるのみ。
+     *
+     * いわゆる strict_types=1 で、型の変換は伴わない。
+     * それはそれで不便なことがある（stringable とか）ので対応するかもしれない。
+     *
+     * Example:
+     * ```php
+     * that(is_typeof(null, 'null'))->isTrue();
+     * that(is_typeof(null, '?int'))->isTrue();
+     * that(is_typeof(1234, '?int'))->isTrue();
+     * that(is_typeof(1234, 'int|string'))->isTrue();
+     * that(is_typeof('ss', 'int|string'))->isTrue();
+     * that(is_typeof(null, 'int|string'))->isFalse();
+     * that(is_typeof([], 'array|(ArrayAccess&Countable&iterable)'))->isTrue();
+     * that(is_typeof(new \ArrayObject(), 'array|(ArrayAccess&Countable&iterable)'))->isTrue();
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\var
+     *
+     * @param mixed $var 調べる値
+     * @param string $typestring 型文字列
+     * @param null|object|string $context self,static のコンテキスト
+     * @return bool $typestring に合致するなら true
+     */
+    function is_typeof($var, string $typestring, $context = null)
+    {
+        $context ??= '';
+
+        $match = function ($type) use ($var, $context) {
+            $type = trim($type);
+            // ?type は 7.4 を最後に姿を消したが $typestring はただの文字列なので与えられる可能性がなくはない
+            if ($type[0] === '?') {
+                if ($var === null) {
+                    return true;
+                }
+                $type = substr($type, 1);
+            }
+            return match ($type) {
+                'void', 'never'  => false, // 単一戻り値専用なのでオマケのようなもの
+                'mixed'          => true,
+                'null'           => $var === null,
+                'true'           => $var === true,
+                'false'          => $var === false,
+                'bool'           => is_bool($var),
+                'int'            => is_int($var),
+                'float'          => is_float($var),
+                'string'         => is_string($var),
+                'array'          => is_array($var),
+                'object'         => is_object($var),
+                'iterable'       => is_iterable($var),
+                'callable'       => is_callable($var),
+                'countable'      => is_countable($var),   // Countable は配列が引っかからないので Countable/countable を区別している
+                'resource'       => is_resourcable($var), // 型宣言できないのでオマケのようなもの
+                'self', 'static' => is_a($var, is_object($context) ? get_class($context) : $context),
+                default          => is_a($var, $type),
+            };
+        };
+
+        // DNF の()は必須かつネストしないので単純 explode で問題ない
+        foreach (explode('|', $typestring) as $ortype) {
+            if (preg_match('#\(?([^)]+)\)?#u', $ortype, $m)) {
+                foreach (explode('&', $m[1]) as $andtype) {
+                    if (!$match($andtype)) {
+                        continue 2;
+                    }
+                }
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\numberify') || (new \ReflectionFunction('ryunosuke\\DbMigration\\numberify'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\numberify')) {
     /**
@@ -30706,7 +31936,7 @@ if (!function_exists('ryunosuke\\DbMigration\\phpval')) {
         try {
             return evaluate("return $var;", $contextvars);
         }
-        catch (\Throwable $t) {
+        catch (\Throwable) {
             return $var;
         }
         finally {
@@ -30815,21 +32045,80 @@ if (!function_exists('ryunosuke\\DbMigration\\si_unprefix')) {
      * @param int $unit 桁単位。実用上は 1000, 1024 の2値しか指定することはないはず
      * @return int|float SI 接頭辞を取り払った実際の数値
      */
-    function si_unprefix($var, $unit = 1000)
+    function si_unprefix($var, $unit = 1000, $format = '%d%s')
     {
         assert($unit > 0);
 
         $var = trim($var);
+        $num = numval($var);
 
         foreach (SI_UNITS as $exp => $sis) {
             foreach ($sis as $si) {
-                if (strpos($var, $si) === (strlen($var) - strlen($si))) {
-                    return numval($var) * pow($unit, $exp);
+                if (sprintf($format, $num, $si) === $var) {
+                    return $num * pow($unit, $exp);
                 }
             }
         }
 
-        return numval($var);
+        return $num;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\strdec') || (new \ReflectionFunction('ryunosuke\\DbMigration\\strdec'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\strdec')) {
+    /**
+     * 0xff,0777 などを10進数値化する
+     *
+     * php のリテラル形式の数値文字列を int に変換すると考えればよい。
+     * intval でも似たようなことはできるが、エラーも例外も発生せず静かに 0 を返すので使い勝手が悪い。
+     * この関数は変換できない場合は例外を投げる。
+     *
+     * Example:
+     * ```php
+     * // 数値を与えれば数値のまま
+     * that(strdec(12345))->isSame(12345);
+     * // 通常の10進数字
+     * that(strdec('12345'))->isSame(12345);
+     * // 16進数字
+     * that(strdec('0xff'))->isSame(255);
+     * // 8進数字
+     * that(strdec('077'))->isSame(63);
+     * that(strdec('0o77'))->isSame(63);
+     * // 2進数字
+     * that(strdec('0b11'))->isSame(3);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\var
+     */
+    function strdec($var): int|float
+    {
+        if (is_int($var) || is_float($var)) {
+            return $var;
+        }
+
+        $restore = set_error_exception_handler();
+        try {
+            $var = strtr($var, ['_' => '']);
+            $sign = 1;
+            if (($var[0] ?? '') === '-') {
+                $sign = -1;
+                $var = substr($var, 1);
+            }
+            if (strcasecmp(substr($var, 0, 2), '0x') === 0) {
+                return $sign * hexdec($var);
+            }
+            if (strcasecmp(substr($var, 0, 2), '0b') === 0) {
+                return $sign * bindec($var);
+            }
+            if (strcasecmp(substr($var, 0, 2), '0o') === 0 || strcasecmp(substr($var, 0, 1), '0') === 0) {
+                return $sign * octdec($var);
+            }
+
+            return $sign * $var;
+        }
+        finally {
+            $restore();
+        }
     }
 }
 
@@ -30968,7 +32257,6 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
      * 下記の点が異なる。
      *
      * - 配列は 5.4 以降のショートシンタックス（[]）で出力
-     * - インデントは 4 固定
      * - ただの配列は1行（[1, 2, 3]）でケツカンマなし、連想配列は桁合わせインデントでケツカンマあり
      * - 文字列はダブルクオート
      * - null は null（小文字）
@@ -31014,59 +32302,87 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
      * @package ryunosuke\Functions\Package\var
      *
      * @param mixed $value 出力する値
-     * @param bool $return 返すなら true 出すなら false
+     * @param bool|array $options オプション配列（var_export に寄せるため bool も受け付ける）
      * @return string|null $return=true の場合は出力せず結果を返す
      */
-    function var_export2($value, $return = false)
+    function var_export2($value, $options = [])
     {
-        // インデントの空白数
-        $INDENT = 4;
+        if (!is_array($options)) {
+            $options = [
+                'return' => !!$options,
+            ];
+        }
+
+        $options += [
+            'minify' => false, // 短縮形で返す（実質的には情報を減らして1行で返す）
+            'indent' => 4,     // インデントの空白数
+            'return' => false, // 値を戻すか出力するか
+        ];
 
         // 再帰用クロージャ
-        $export = function ($value, $nest = 0, $parents = []) use (&$export, $INDENT) {
+        $export = function ($value, $context, $nest = 0, $parents = []) use (&$export, $options) {
             // 再帰を検出したら *RECURSION* とする（処理に関しては is_recursive のコメント参照）
             foreach ($parents as $parent) {
                 if ($parent === $value) {
-                    return $export('*RECURSION*');
+                    return $export('*RECURSION*', 'recursion');
                 }
             }
+
+            $space = $options['minify'] ? "" : " ";
+            $break = $options['minify'] ? "" : "\n";
+
             // 配列は連想判定したり再帰したり色々
             if (is_array($value)) {
-                $spacer1 = str_repeat(' ', ($nest + 1) * $INDENT);
-                $spacer2 = str_repeat(' ', $nest * $INDENT);
+                $spacer1 = str_repeat($space, ($nest + 1) * $options['indent']);
+                $spacer2 = str_repeat($space, $nest * $options['indent']);
 
                 $hashed = is_hasharray($value);
 
                 // スカラー値のみで構成されているならシンプルな再帰
-                if (!$hashed && array_all($value, fn(...$args) => is_primitive(...$args))) {
-                    return '[' . implode(', ', array_map($export, $value)) . ']';
+                if (!$hashed && array_and($value, fn(...$args) => is_primitive(...$args))) {
+                    return '[' . implode(",$space", array_map(fn($v) => $export($v, 'array-value'), $value)) . ']';
                 }
 
                 // 連想配列はキーを含めて桁あわせ
                 if ($hashed) {
-                    $keys = array_map($export, array_combine($keys = array_keys($value), $keys));
+                    $keys = array_map(fn($v) => $export($v, 'array-key'), array_combine($keys = array_keys($value), $keys));
                     $maxlen = max(array_map('strlen', $keys));
                 }
                 $kvl = '';
+                $lastkey = array_key_last($value);
                 $parents[] = $value;
                 foreach ($value as $k => $v) {
-                    $keystr = $hashed ? $keys[$k] . str_repeat(' ', $maxlen - strlen($keys[$k])) . ' => ' : '';
-                    $kvl .= $spacer1 . $keystr . $export($v, $nest + 1, $parents) . ",\n";
+                    $keystr = $hashed ? $keys[$k] . str_repeat($space, $maxlen - strlen($keys[$k])) . "$space=>$space" : '';
+                    $kvl .= $spacer1 . $keystr . $export($v, 'array-value', $nest + 1, $parents) . ($k === $lastkey && $options['minify'] ? "" : ",") . "$break";
                 }
-                return "[\n{$kvl}{$spacer2}]";
+                return "[$break{$kvl}{$spacer2}]";
             }
             // オブジェクトは単にプロパティを __set_state する文字列を出力する
             elseif (is_object($value)) {
                 $parents[] = $value;
                 $classname = get_class($value);
                 if ($classname === \stdClass::class) {
-                    return '(object) ' . $export((array) $value, $nest, $parents);
+                    return "(object)$space" . $export((array) $value, 'object', $nest, $parents);
                 }
-                return $classname . '::__set_state(' . $export(get_object_properties($value), $nest, $parents) . ')';
+                return $classname . '::__set_state(' . $export(object_properties($value), 'object', $nest, $parents) . ')';
             }
-            // 文字列はダブルクオート
+            // 文字列はダブルクオート（場合によってはヒアドキュメント）
             elseif (is_string($value)) {
-                return '"' . addcslashes($value, "\$\"\0\\") . '"';
+                // 列揃えのため配列のキーは常にダブルクォート
+                if ($context === 'array-key') {
+                    return str_quote($value);
+                }
+                // 改行を含むならヒアドキュメント
+                if (!$options['minify'] && str_exists($value, ["\r", "\n"])) {
+                    // ただし、改行文字だけの場合は除く（何らかの引数で改行文字だけを渡すシチュエーションはそれなりにあるのでヒアドキュメントだと冗長）
+                    if (trim($value, "\r\n") !== '') {
+                        return str_quote($value, [
+                            'heredoc' => unique_string($value, 'TEXT', '_'),
+                            'indent'  => $nest * $options['indent'],
+                        ]);
+                    }
+                }
+                return str_quote($value);
             }
             // null は小文字で居て欲しい
             elseif (is_null($value)) {
@@ -31079,8 +32395,8 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
         };
 
         // 結果を返したり出力したり
-        $result = $export($value);
-        if ($return) {
+        $result = $export($value, null);
+        if ($options['return']) {
             return $result;
         }
         echo $result, "\n";
@@ -31113,7 +32429,6 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
      * クラス名のエイリアスや use, $this バインドなど可能な限り復元するが、おそらくあまりに複雑なことをしてると失敗する。
      *
      * リソースはファイル的なリソースであればメタ情報を出力して復元時に再オープンする。
-     * それ以外のリソースは null で出力される（将来的に例外にするかもしれない）。
      *
      * 軽くベンチを取ったところ、オブジェクトを含まない純粋な配列の場合、serialize の 200 倍くらいは速い（それでも var_export の方が速いが…）。
      * オブジェクトを含めば含むほど遅くなり、全要素がオブジェクトになると serialize と同程度になる。
@@ -31214,33 +32529,56 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
             $var_export = fn($v) => var_export($v, true);
             $neighborToken = function ($n, $d, $tokens) {
                 for ($i = $n + $d; isset($tokens[$i]); $i += $d) {
-                    if ($tokens[$i][0] !== T_WHITESPACE) {
+                    if ($tokens[$i]->id !== T_WHITESPACE) {
                         return $tokens[$i];
                     }
                 }
             };
             $resolveSymbol = function ($token, $prev, $next, $ref) use ($var_export) {
-                if ($token[0] === T_STRING) {
-                    if ($prev[0] === T_NEW || $next[0] === T_DOUBLE_COLON || $next[0] === T_VARIABLE || $next[1] === '{') {
-                        $token[1] = resolve_symbol($token[1], $ref->getFileName(), 'alias') ?? $token[1];
+                $text = $token->text;
+                if ($token->id === T_STRING) {
+                    $namespaces = [$ref->getNamespaceName()];
+                    if ($ref instanceof \ReflectionFunctionAbstract) {
+                        $namespaces[] = $ref->getClosureScopeClass()?->getNamespaceName();
                     }
-                    elseif ($next[1] === '(') {
-                        $token[1] = resolve_symbol($token[1], $ref->getFileName(), 'function') ?? $token[1];
+                    if ($prev->id === T_NEW || $next->id === T_DOUBLE_COLON || $next->id === T_VARIABLE || $next->text === '{') {
+                        $text = namespace_resolve($text, $ref->getFileName(), 'alias') ?? $text;
+                    }
+                    elseif ($next->text === '(') {
+                        $text = namespace_resolve($text, $ref->getFileName(), 'function') ?? $text;
+                        // 関数・定数は use しなくてもグローバルにフォールバックされる（=グローバルと名前空間の区別がつかない）
+                        foreach ($namespaces as $namespace) {
+                            if (!function_exists($text) && function_exists($nstext = "\\$namespace\\$text")) {
+                                $text = $nstext;
+                                break;
+                            }
+                        }
                     }
                     else {
-                        $token[1] = resolve_symbol($token[1], $ref->getFileName(), 'const') ?? $token[1];
+                        $text = namespace_resolve($text, $ref->getFileName(), 'const') ?? $text;
+                        // 関数・定数は use しなくてもグローバルにフォールバックされる（=グローバルと名前空間の区別がつかない）
+                        foreach ($namespaces as $namespace) {
+                            if (!const_exists($text) && const_exists($nstext = "\\$namespace\\$text")) {
+                                $text = $nstext;
+                                break;
+                            }
+                        }
                     }
                 }
 
                 // マジック定数の解決（__CLASS__, __TRAIT__ も書き換えなければならないが、非常に大変なので下記のみ）
-                if ($token[0] === T_FILE) {
-                    $token[1] = $var_export($ref->getFileName());
+                if ($token->id === T_FILE) {
+                    $text = $var_export($ref->getFileName());
                 }
-                if ($token[0] === T_DIR) {
-                    $token[1] = $var_export(dirname($ref->getFileName()));
+                if ($token->id === T_DIR) {
+                    $text = $var_export(dirname($ref->getFileName()));
                 }
-                if ($token[0] === T_NS_C) {
-                    $token[1] = $var_export($ref->getNamespaceName());
+                if ($token->id === T_NS_C) {
+                    $text = $var_export($ref->getNamespaceName());
+                }
+                if ($text !== null) {
+                    $token = clone $token;
+                    $token->text = $text;
                 }
                 return $token;
             };
@@ -31255,7 +32593,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
 
             if (is_array($value)) {
                 $hashed = is_hasharray($value);
-                if (!$hashed && array_all($value, fn(...$args) => is_primitive(...$args))) {
+                if (!$hashed && array_and($value, fn(...$args) => is_primitive(...$args))) {
                     [$begin, $middle, $end] = ["", ", ", ""];
                 }
                 else {
@@ -31305,19 +32643,19 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
             if ($value instanceof \Closure) {
                 $ref = new \ReflectionFunction($value);
                 $bind = $ref->getClosureThis();
-                $class = $ref->getClosureScopeClass() ? $ref->getClosureScopeClass()->getName() : null;
+                $class = $ref->getClosureScopeClass();
                 $statics = $ref->getStaticVariables();
 
                 // 内部由来はきちんと fromCallable しないと差異が出てしまう
                 if ($ref->isInternal()) {
-                    $receiver = $bind ?? $class;
+                    $receiver = $bind ?? $class?->getName();
                     $callee = $receiver ? [$receiver, $ref->getName()] : $ref->getName();
                     return "\$this->$vid = \\Closure::fromCallable({$export($callee, $nest)})";
                 }
 
                 [$meta, $body] = callable_code($value);
                 $arrow = starts_with($meta, 'fn') ? ' => ' : ' ';
-                $tokens = array_slice(parse_php("$meta{$arrow}$body;", TOKEN_PARSE), 1, -1);
+                $tokens = array_slice(php_parse("<?php $meta{$arrow}$body;", TOKEN_PARSE), 1, -1);
 
                 $uses = [];
                 $context = [
@@ -31325,35 +32663,35 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                     'brace' => 0,
                 ];
                 foreach ($tokens as $n => $token) {
-                    $prev = $neighborToken($n, -1, $tokens) ?? [null, null, null];
-                    $next = $neighborToken($n, +1, $tokens) ?? [null, null, null];
+                    $prev = $neighborToken($n, -1, $tokens) ?? (object) ['id' => null, 'text' => null, 'line' => null];
+                    $next = $neighborToken($n, +1, $tokens) ?? (object) ['id' => null, 'text' => null, 'line' => null];
 
                     // クロージャは何でもかける（クロージャ・無名クラス・ジェネレータ etc）のでネスト（ブレース）レベルを記録しておく
-                    if ($token[1] === '{') {
+                    if ($token->text === '{') {
                         $context['brace']++;
                     }
-                    if ($token[1] === '}') {
+                    if ($token->text === '}') {
                         $context['brace']--;
                     }
 
                     // 無名クラスは色々厄介なので読み飛ばすために覚えておく
-                    if ($prev[0] === T_NEW && $token[0] === T_CLASS) {
+                    if ($prev->id === T_NEW && $token->id === T_CLASS) {
                         $context['class'] = $context['brace'];
                     }
                     // そして無名クラスは色々かける上に終了条件が自明ではない（シンタックスエラーでない限りは {} が一致するはず）
-                    if ($token[1] === '}' && $context['class'] === $context['brace']) {
+                    if ($token->text === '}' && $context['class'] === $context['brace']) {
                         $context['class'] = 0;
                     }
 
                     // fromCallable 由来だと名前がついてしまう
-                    if (!$context['class'] && $prev[0] === T_FUNCTION && $token[0] === T_STRING) {
+                    if (!$context['class'] && $prev->id === T_FUNCTION && $token->id === T_STRING) {
                         unset($tokens[$n]);
                         continue;
                     }
 
                     // use 変数の導出
-                    if ($token[0] === T_VARIABLE) {
-                        $varname = substr($token[1], 1);
+                    if ($token->id === T_VARIABLE) {
+                        $varname = substr($token->text, 1);
                         // クロージャ内クロージャの use に反応してしまうので存在するときのみとする
                         if (array_key_exists($varname, $statics) && !isset($uses[$varname])) {
                             $recurself = $statics[$varname] === $value ? '&' : '';
@@ -31364,13 +32702,19 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                     $tokens[$n] = $resolveSymbol($token, $prev, $next, $ref);
                 }
 
-                $code = indent_php(implode('', array_column($tokens, 1)), [
+                $code = php_indent(implode('', array_column($tokens, 'text')), [
                     'indent'   => $spacer1,
                     'baseline' => -1,
                 ]);
                 if ($bind) {
-                    $scope = $var_export($class === 'Closure' ? 'static' : $class);
-                    $code = "\Closure::bind($code, {$export($bind, $nest + 1)}, $scope)";
+                    $instance = $export($bind, $nest + 1);
+                    if ($class->isAnonymous()) {
+                        $scope = "get_class({$export($bind, $nest + 1)})";
+                    }
+                    else {
+                        $scope = $var_export($class?->getName() === 'Closure' ? 'static' : $class?->getName());
+                    }
+                    $code = "\Closure::bind($code, $instance, $scope)";
                 }
                 elseif (!is_bindable_closure($value)) {
                     $code = "static $code";
@@ -31395,7 +32739,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                                 return "\$this->$vid = $declare()";
                             }
                         }
-                        catch (\Throwable $t) { // @codeCoverageIgnore
+                        catch (\Throwable) { // @codeCoverageIgnore
                             // through. treat regular object
                         }
                     }
@@ -31423,7 +32767,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                         serialize($value);
                     }
                 }
-                catch (\Exception $e) {
+                catch (\Exception) {
                     return "\$this->$vid = new \\__PHP_Incomplete_Class()";
                 }
 
@@ -31433,7 +32777,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                     $fname = $ref->getFileName();
                     $sline = $ref->getStartLine();
                     $eline = $ref->getEndLine();
-                    $tokens = parse_php(implode('', array_slice(file($fname), $sline - 1, $eline - $sline + 1)));
+                    $tokens = php_parse('<?php ' . implode('', array_slice(file($fname), $sline - 1, $eline - $sline + 1)));
 
                     $block = [];
                     $starting = false;
@@ -31443,8 +32787,8 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                         $prev = $neighborToken($n, -1, $tokens) ?? [null, null, null];
                         $next = $neighborToken($n, +1, $tokens) ?? [null, null, null];
 
-                        // 無名クラスは new class で始まるはず
-                        if ($token[0] === T_NEW && $next[0] === T_CLASS) {
+                        // 無名クラスは new class か new #[Attribute] で始まるはず（new #[A] ClassName は許可されていない）
+                        if (($token->id === T_NEW && $next->id === T_CLASS) || ($token->id === T_NEW && $next->id === T_ATTRIBUTE)) {
                             $starting = true;
                         }
                         if (!$starting) {
@@ -31453,10 +32797,10 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
 
                         // コンストラクタの呼び出し引数はスキップする
                         if ($constructing !== null) {
-                            if ($token[1] === '(') {
+                            if ($token->text === '(') {
                                 $constructing++;
                             }
-                            if ($token[1] === ')') {
+                            if ($token->text === ')') {
                                 $constructing--;
                                 if ($constructing === 0) {
                                     $constructing = null;          // null を終了済みマークとして変数を再利用している
@@ -31470,16 +32814,17 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                         }
 
                         // 引数ありコンストラクタは呼ばないのでリネームしておく
-                        if ($token[1] === '__construct' && $ref->getConstructor() && $ref->getConstructor()->getNumberOfRequiredParameters()) {
-                            $token[1] = "replaced__construct";
+                        if ($token->text === '__construct' && $ref->getConstructor() && $ref->getConstructor()->getNumberOfRequiredParameters()) {
+                            $token = clone $token;
+                            $token->text = "replaced__construct";
                         }
 
                         $block[] = $resolveSymbol($token, $prev, $next, $ref);
 
-                        if ($token[1] === '{') {
+                        if ($token->text === '{') {
                             $nesting++;
                         }
-                        if ($token[1] === '}') {
+                        if ($token->text === '}') {
                             $nesting--;
                             if ($nesting === 0) {
                                 break;
@@ -31487,7 +32832,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                         }
                     }
 
-                    $code = indent_php(implode('', array_column($block, 1)), [
+                    $code = php_indent(implode('', array_column($block, 'text')), [
                         'indent'   => $spacer1,
                         'baseline' => -1,
                     ]);
@@ -31508,11 +32853,11 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                 }
                 // __sleep があるならそれをプロパティとする
                 elseif (method_exists($value, '__sleep')) {
-                    $fields = array_intersect_key(get_object_properties($value, $privates), array_flip($value->__sleep()));
+                    $fields = array_intersect_key(object_properties($value, $privates), array_flip($value->__sleep()));
                 }
                 // それ以外は適当に漁る
                 else {
-                    $fields = get_object_properties($value, $privates);
+                    $fields = object_properties($value, $privates);
                 }
 
                 return "\$this->new(\$this->$vid, $classname, (function () {\n{$spacer1}return {$export([$fields, $privates], $nest + 1)};\n{$spacer0}}))";
@@ -31520,11 +32865,16 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
             if (is_resourcable($value)) {
                 // スタンダードなリソースなら復元できないこともない
                 $meta = stream_get_meta_data($value);
-                if (!in_array(strtolower($meta['stream_type']), ['stdio', 'output'], true)) {
-                    return 'null'; // for compatible. 例外にしたい
+                $stream_type = strtolower($meta['stream_type']);
+                if (!in_array($stream_type, ['stdio', 'output', 'temp', 'memory'], true)) {
+                    throw new \DomainException('resource is supported stream resource only.');
                 }
                 $meta['position'] = @ftell($value);
                 $meta['context'] = stream_context_get_options($value);
+                $meta['buffer'] = null;
+                if (in_array($stream_type, ['temp', 'memory'], true)) {
+                    $meta['buffer'] = stream_get_contents($value, null, 0);
+                }
                 return "\$this->$vid = \$this->open({$export($meta, $nest + 1)})";
             }
 
@@ -31542,7 +32892,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
         static $factory = null;
         if ($factory === null) {
             // @codeCoverageIgnoreStart
-            $factory = $export(new class() {
+            $factory = $export(new #[\AllowDynamicProperties] class() {
                 public function new(&$object, $class, $provider)
                 {
                     if ($class instanceof \Closure) {
@@ -31570,7 +32920,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                             if (isset($privates[$parent->name][$name]) && !$privates[$parent->name][$name] instanceof \__PHP_Incomplete_Class) {
                                 $property->setValue($object, $privates[$parent->name][$name]);
                             }
-                            if ((isset($fields[$name]) || array_key_exists($name, $fields))) {
+                            if (array_key_exists($name, $fields)) {
                                 if (!$fields[$name] instanceof \__PHP_Incomplete_Class) {
                                     $property->setValue($object, $fields[$name]);
                                 }
@@ -31594,6 +32944,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export3')) {
                     $resource = fopen($metadata['uri'], $metadata['mode'], false, stream_context_create($metadata['context']));
                     if ($resource === false) {
                         return null;
+                    }
+                    if ($metadata['seekable'] && is_string($metadata['buffer'])) {
+                        fwrite($resource, $metadata['buffer']);
                     }
                     if ($metadata['seekable'] && is_int($metadata['position'])) {
                         fseek($resource, $metadata['position']);
@@ -31700,7 +33053,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_hash')) {
             return $hash;
         }
 
-        return rtrim(strtr(base64_encode($hash), ['+' => '-', '/' => '_']));
+        return base64url_encode($hash);
     }
 }
 
@@ -31756,7 +33109,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_html')) {
             }
             elseif (is_object($value)) {
                 $parents[] = $value;
-                return get_class($value) . '::' . $export(get_object_properties($value), $parents);
+                return get_class($value) . '::' . $export(object_properties($value), $parents);
             }
             elseif (is_null($value)) {
                 return 'null';
@@ -31898,6 +33251,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
 
                 //$current = count($this->content) - 1;
                 if ($this->options['maxcolumn'] !== null) {
+                    $basecolumn = $this->column;
                     $breakpos = strrpos($value, "\n");
                     if ($breakpos === false) {
                         $this->column += $strlen;
@@ -31905,10 +33259,10 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                     else {
                         $this->column = $strlen - $breakpos - 1;
                     }
-                    if ($this->column >= $this->options['maxcolumn']) {
+                    if ($basecolumn !== 0 && $this->column >= $this->options['maxcolumn']) {
                         preg_match('# +#', $this->content, $m, 0, strrpos($this->content, "\n"));
                         $this->column = 0;
-                        $this->content .= "\n\t" . $m[0];
+                        $this->content .= "\n\t" . ($m[0] ?? '');
                     }
                 }
 
@@ -31995,7 +33349,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                             $eline = $ref->getExecutingLine();
                             return get_class($token) . "#" . spl_object_id($token) . "@$ename:$eline";
                         }
-                        catch (\ReflectionException $e) {
+                        catch (\ReflectionException) {
                             return get_class($token) . "#" . spl_object_id($token);
                         }
                     }
@@ -32045,7 +33399,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         }
                     }
                     else {
-                        $properties = get_object_properties($value);
+                        $properties = object_properties($value);
                     }
                     return $properties;
                 }
@@ -32091,7 +33445,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                     }
 
                     $is_hasharray = is_hasharray($value);
-                    $primitive_only = array_all($value, fn(...$args) => is_primitive(...$args));
+                    $primitive_only = array_and($value, fn(...$args) => is_primitive(...$args));
                     $assoc = !$this->options['minify'] && ($is_hasharray || !$primitive_only);
                     $tableofarray = (function () use ($count, $value) {
                         if ($this->options['minify'] || !$this->options['table'] || $count <= 1) {
@@ -32110,7 +33464,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         }
                         else {
                             $first_condition = array_keys($first);
-                            if (array_any($first_condition, 'is_int')) {
+                            if (array_or($first_condition, 'is_int')) {
                                 return null;
                             }
                         }
@@ -32343,23 +33697,37 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
 assert(!function_exists('ryunosuke\\DbMigration\\var_type') || (new \ReflectionFunction('ryunosuke\\DbMigration\\var_type'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\var_type')) {
     /**
-     * 値の型を取得する（gettype + get_class）
+     * 値の型を取得する
      *
-     * プリミティブ型（gettype で得られるやつ）はそのまま、オブジェクトのときのみクラス名を返す。
-     * ただし、オブジェクトの場合は先頭に '\\' が必ず付く。
-     * また、 $valid_name を true にするとタイプヒントとして正当な名前を返す（integer -> int, double -> float など）。
-     * 互換性のためデフォルト false になっているが、将来的にこの引数は削除されるかデフォルト true に変更される。
+     * get_debug_type を少しだけ特殊化したもの。
+     * 「デバッグ用の型」ではなく「コード化したときに埋め込みやすい型」が主目的。
+     *
+     * - object の場合は必ず \ が付く
+     * - resource の場合はカッコ書き無しで 'resource'
      *
      * 無名クラスの場合は extends, implements の優先順位でその名前を使う。
      * 継承も実装もされていない場合は標準の get_class の結果を返す。
      *
+     * phpdoc に true を渡すと array-shape 記法も有効になり下記のようになる。
+     *
+     * - 連想配列は想起した通り
+     * - 連番配列は中身の和集合を取る
+     *     - 中身がさらに配列なら再帰的に処理する
+     *         - 有り無し混在は null 扱いになる
+     * - 無名クラスは親クラス＋インターフェースを取る
+     *     - 完全無名クラスは object になる
+     *
+     * phpdoc:true の場合の結果は互換性を考慮しない。
+     *
      * Example:
      * ```php
-     * // プリミティブ型は gettype と同義
-     * that(var_type(false))->isSame('boolean');
-     * that(var_type(123))->isSame('integer');
-     * that(var_type(3.14))->isSame('double');
+     * // プリミティブ型は get_debug_type と同義
+     * that(var_type(false))->isSame('bool');
+     * that(var_type(123))->isSame('int');
+     * that(var_type(3.14))->isSame('float');
      * that(var_type([1, 2, 3]))->isSame('array');
+     * // リソースはなんでも resource
+     * that(var_type(STDOUT))->isSame('resource');
      * // オブジェクトは型名を返す
      * that(var_type(new \stdClass))->isSame('\\stdClass');
      * that(var_type(new \Exception()))->isSame('\\Exception');
@@ -32368,17 +33736,242 @@ if (!function_exists('ryunosuke\\DbMigration\\var_type')) {
      * that(var_type(new class implements \JsonSerializable{
      *     public function jsonSerialize(): string { return ''; }
      * }))->isSame('\\JsonSerializable');
+     *
+     * // phpdoc 形式
+     * that(var_type([
+     *     'scalar'    => 123,
+     *     'lish-hash' => [
+     *         ['id' => 1, 'name' => 'a'],
+     *         ['id' => 2, 'name' => 'b'],
+     *     ],
+     *     'nest'      => [
+     *         'a' => [
+     *             'b' => [
+     *                 'c' => ['a', 'b', 'c'],
+     *             ],
+     *         ],
+     *     ],
+     * ], ['phpdoc' => true, 'format' => 9]))->is(<<<ARRAYSHAPE
+     * array{
+     *   "lish-hash": array<array{
+     *     id: int,
+     *     name: string
+     *   }>,
+     *   nest: array{
+     *     a: array{
+     *       b: array{
+     *         c: array<string>
+     *       }
+     *     }
+     *   },
+     *   scalar: int
+     * }
+     * ARRAYSHAPE);
      * ```
      *
      * @package ryunosuke\Functions\Package\var
-     *
-     * @param mixed $var 型を取得する値
-     * @param bool $valid_name タイプヒントとして有効な名前を返すか
-     * @return string 型名
      */
-    function var_type($var, $valid_name = false)
+    function var_type(
+        /** 型を取得する値 */ mixed $var,
+        /** オプション配列 */ array $options = [],
+    ): /** 型名 */ string
     {
+        $options['phpdoc'] ??= false;                             // phpdoc 形式で書き出すか
+        $options['format'] ??= 1;                                 // フォーマットレベル（0:no space, 1:separator only, ...9:pretty）
+        $options['is_list'] ??= fn($k, $v, $array) => is_int($k); // 連番配列の判定処理（例えば UUID などを連番として扱いたいことがある）
+        $options['is_object'] ??= function ($var) {               // object-shape 記法にするオブジェクトの判定処理
+            if (is_object($var)) {
+                if ($var instanceof \stdClass) {
+                    return true;
+                }
+                /** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
+                if (count((new \ReflectionClass($var))->getAttributes(\AllowDynamicProperties::class))) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        $options['nest'] = 0;
+
+        if (is_array($var) || $options['is_object']($var)) {
+            if ($options['phpdoc']) {
+                $shape = new class($var, $options) {
+                    private string $shape;
+                    private array  $type     = [];
+                    private array  $list     = [];
+                    private array  $hash     = [];
+                    private array  $object   = [];
+                    private bool   $optional = false;
+                    private array  $options;
+
+                    private string $result;
+
+                    public function __construct($var, $options)
+                    {
+                        $this->shape = is_object($var) ? 'object' : 'array';
+                        $this->options = $options;
+
+                        if (is_array($var) || $this->options['is_object']($var)) {
+                            foreach ($var as $k => $v) {
+                                if ($this->options['is_list']($k, $v, $var)) {
+                                    $new = new self($v, $this->options);
+                                    foreach ($this->list as $n => $old) {
+                                        /** @var self $old */
+                                        if (type_exists($newtype = (string) $new) && type_exists($oldtype = (string) $old)) {
+                                            if (is_subclass_of($newtype, $oldtype)) {
+                                                $this->list[$n] = $new;
+                                                continue 2;
+                                            }
+                                            if (is_subclass_of($oldtype, $newtype)) {
+                                                continue 2;
+                                            }
+                                        }
+
+                                        if ($new->list xor $old->list) {
+                                            if ($new->list && !$old->list) {
+                                                $this->list[$n] = $new;
+                                                continue 2;
+                                            }
+                                            if (!$new->list && $old->list) {
+                                                continue 2;
+                                            }
+                                        }
+
+                                        $flag = false;
+                                        foreach (['hash', 'object'] as $property) {
+                                            if ($new->$property && $old->$property) {
+                                                $flag = true;
+                                                $diffs = array_diff_key($new->$property, $old->$property) + array_diff_key($old->$property, $new->$property);
+
+                                                foreach ($diffs as $diff) {
+                                                    /** @var self $diff */
+                                                    unset($diff->result);
+                                                    $diff->optional = true;
+                                                }
+                                                $old->$property += $diffs;
+
+                                                foreach ($old->$property as $name => $diff) {
+                                                    unset($diff->result);
+                                                    $diff->type = array_merge($diff->type, $new->$property[$name]?->type ?? []);
+                                                    $diff->list = array_merge($diff->list, $new->$property[$name]?->list ?? []);
+                                                    $diff->hash = array_merge($diff->hash, $new->$property[$name]?->hash ?? []);
+                                                    $diff->object = array_merge($diff->object, $new->$property[$name]?->object ?? []);
+                                                }
+                                            }
+                                        }
+                                        if ($flag) {
+                                            continue 2;
+                                        }
+                                    }
+                                    $this->list[] = $new;
+                                }
+                                else {
+                                    $new = new self($v, ['nest' => $this->options['nest'] + 1] + $this->options);
+                                    if (is_object($var)) {
+                                        $type = var_type($var, ['is_object' => fn() => false] + $this->options);
+                                        if ($type !== 'object') {
+                                            $this->type[] = $type;
+                                        }
+                                        $this->object[$k] = $new;
+                                    }
+                                    else {
+                                        $this->hash[$k] = $new;
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            $this->type[] = var_type($var, $this->options);
+                        }
+                    }
+
+                    public function __toString(): string
+                    {
+                        return $this->result ??= (function () {
+                            $result = [];
+                            if ($t = array_filter(array_map('strval', $this->type), 'strlen')) {
+                                sort($t);
+                                $result[] = $t ? implode('|', array_unique($t)) : "";
+                            }
+                            if ($t = array_filter(array_map('strval', $this->list), 'strlen')) {
+                                sort($t);
+                                $result[] = $t ? "array<" . implode('|', array_unique($t)) . ">" : "";
+                            }
+                            foreach (['hash', 'object'] as $property) {
+                                if ($t = array_filter(array_map('strval', $this->$property), 'strlen')) {
+                                    $space = $this->options['format'] > 0 ? " " : "";
+                                    $break = $this->options['format'] > 1 ? "\n" : "";
+                                    $delim = $this->options['format'] > 1 ? $break : $space;
+                                    $indent = $this->options['format'] > 1 ? "  " : "";
+                                    $indent0 = $this->options['format'] > 1 ? str_repeat($indent, $this->options['nest'] + 0) : "";
+                                    $indent1 = $this->options['format'] > 1 ? str_repeat($indent, $this->options['nest'] + 1) : "";
+
+                                    ksort($t);
+                                    $keyvalues = array_map(function ($v, $k) use ($property, $indent1, $space) {
+                                        if (!preg_match('#^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*$#u', $k)) {
+                                            $k = str_quote($k);
+                                        }
+                                        if ($this->$property[$k]->optional ?? false) {
+                                            $k = "$k?";
+                                        }
+                                        return "{$indent1}$k:{$space}$v";
+                                    }, $t, array_keys($t));
+                                    $result[] = $t ? "{$this->shape}{{$break}" . implode(",{$delim}", $keyvalues) . "{$break}{$indent0}}" : "";
+                                }
+                            }
+                            $result = array_filter($result, 'strlen');
+                            return $result ? implode('|', $result) : $this->shape;
+                        })();
+                    }
+
+                    /** @codeCoverageIgnore */
+                    public function __debugInfo(): ?array
+                    {
+                        return [
+                            'type'     => $this->type,
+                            'list'     => $this->list,
+                            'hash'     => $this->hash,
+                            'object'   => $this->object,
+                            'optional' => $this->optional,
+                        ];
+                    }
+                };
+                //var_pretty($shape);
+                return (string) $shape;
+            }
+        }
         if (is_object($var)) {
+            if ($options['phpdoc']) {
+                // クロージャだけはどうせ情報量がゼロなので特別扱いにする
+                if ($var instanceof \Closure) {
+                    $space = $options['format'] > 0 ? " " : "";
+
+                    $ref = new \ReflectionFunction($var);
+                    $args = array_map(fn($p) => ($p->getType() ?? "mixed") . ($p->isVariadic() ? '...' : ''), $ref->getParameters());
+                    $return = ($ref->getReturnType() ?? 'mixed');
+                    $return = is_string($return) || $return instanceof \ReflectionNamedType ? $return : "($return)";
+                    return "\\Closure(" . implode(",$space", $args) . "):$space" . reflect_type_resolve($return);
+                }
+
+                $types = [];
+                $ref = new \ReflectionObject($var);
+                if ($ref->isAnonymous()) {
+                    $ifs = [];
+                    if ($pc = $ref->getParentClass()) {
+                        $types[] = $pc->name;
+                        $ifs = $pc->getInterfaceNames();
+                    }
+                    $types = array_merge($types, array_diff($ref->getInterfaceNames(), $ifs));
+                }
+                else {
+                    $types[] = get_class($var);
+                }
+                if (!$types) {
+                    return 'object';
+                }
+                return implode('|', array_map(fn($v) => "\\" . ltrim($v, '\\'), $types));
+            }
             $ref = new \ReflectionObject($var);
             if ($ref->isAnonymous()) {
                 if ($pc = $ref->getParentClass()) {
@@ -32390,22 +33983,11 @@ if (!function_exists('ryunosuke\\DbMigration\\var_type')) {
             }
             return '\\' . get_class($var);
         }
-        $type = gettype($var);
-        if (!$valid_name) {
-            return $type;
+        if (is_resourcable($var)) {
+            return 'resource';
         }
-        switch ($type) {
-            default:
-                return $type;
-            case 'NULL':
-                return 'null';
-            case 'boolean':
-                return 'bool';
-            case 'integer':
-                return 'int';
-            case 'double':
-                return 'float';
-        }
+
+        return get_debug_type($var);
     }
 }
 
