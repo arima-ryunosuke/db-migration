@@ -15,10 +15,6 @@ use function ryunosuke\DbMigration\var_pretty;
 
 abstract class AbstractCommand extends Command
 {
-    public const SCHEME_DRIVERS = [
-        'mysql' => 'pdo_mysql', // for compatible
-    ];
-
     /** @var InputInterface */
     protected $input;
 
@@ -286,7 +282,7 @@ abstract class AbstractCommand extends Command
 
     protected function parseDsn($dsn)
     {
-        $parser = new DsnParser(self::SCHEME_DRIVERS);
+        $parser = new DsnParser([]);
         $params = $parser->parse($dsn);
 
         // for .my.cnf

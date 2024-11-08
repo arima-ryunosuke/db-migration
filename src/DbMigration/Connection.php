@@ -156,7 +156,6 @@ class Connection extends \Doctrine\DBAL\Connection
             return $value;
         }
 
-        // for compatible
         if ($value === null) {
             return 'NULL';
         }

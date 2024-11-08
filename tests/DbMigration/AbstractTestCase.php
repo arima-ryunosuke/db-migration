@@ -16,7 +16,7 @@ use ryunosuke\DbMigration\Console\Command\AbstractCommand;
 
 abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
 {
-    public const TEST_SCHEME = 'mysql://';
+    public const TEST_SCHEME = 'pdo-mysql://';
 
     protected static $tmpdir;
 
@@ -78,7 +78,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
             return $array;
         };
 
-        $parser = new DsnParser(AbstractCommand::SCHEME_DRIVERS);
+        $parser = new DsnParser([]);
         $params = $parser->parse(AbstractTestCase::TEST_SCHEME . $GLOBALS['db']);
 
         // drop schema

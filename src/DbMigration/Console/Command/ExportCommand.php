@@ -72,7 +72,7 @@ class ExportCommand extends AbstractCommand
 
         $this->event($conn);
 
-        $conn->maintainType($this->input->getOption('maintain-type') ?? false); // set default true or delete in future scope
+        $conn->maintainType($this->input->getOption('maintain-type') ?? true);
 
         // export sql files from argument
         $transporter = new Transporter($conn);

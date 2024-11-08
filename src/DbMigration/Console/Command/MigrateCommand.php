@@ -78,7 +78,7 @@ class MigrateCommand extends AbstractCommand
         }
 
         $conn->disableConstraint($this->input->getOption('disable-constraint'));
-        $conn->maintainType($this->input->getOption('maintain-type') ?? false); // set default true or delete in future scope
+        $conn->maintainType($this->input->getOption('maintain-type') ?? true);
 
         $transporter = new Transporter($conn);
         $transporter->setDirectory($this->input->getOption('directory'));

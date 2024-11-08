@@ -169,7 +169,7 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->setInputOutput($input, $output);
 
         $this->assertEquals([
-            'driver'       => 'pdo_mysql',
+            'driver'       => 'mysql',
             'host'         => 'hostname',
             'port'         => 3306,
             'user'         => 'user',
@@ -215,7 +215,7 @@ user = hoge
 password = fuga
 ');
         $this->assertEquals([
-            'driver'       => 'pdo_mysql',
+            'driver'       => 'mysql',
             'host'         => 'hostname',
             'user'         => 'hoge',
             'password'     => 'fuga',
