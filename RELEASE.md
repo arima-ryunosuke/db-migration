@@ -21,6 +21,14 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.2.0
+
+- package update
+  - [*change] スキーム名が厳密になった（pdo_mysql -> pdo-mysql）
+  - [*change] 型が厳密になった（comment の NOT NULL, customSchemaOptions の廃止など）
+  - [*change] 一部のイベントの廃止（onSchemaCreateTable）
+  - [*change] maintain-type のデフォルト値を true に変更
+
 ## 3.1.11
 
 - [bin] box を v4 系に変更
