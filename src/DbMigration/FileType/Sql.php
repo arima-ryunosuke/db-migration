@@ -47,14 +47,34 @@ class Sql extends AbstractFile
     {
         $delimiter = $this->options['delimiter'] ?? ';';
         $qtable    = $this->options['quoteIdentifier']($this->pathinfo['filename']);
+        $multiline = $this->options['multiline'] ?? false;
 
         $stream = $this->stream('w');
+
+        $first = true;
         foreach ($rows as $row) {
             $columns = implode(', ', $this->options['quoteIdentifier'](array_keys($row)));
             $values  = implode(', ', $this->options['quoteValue']($row));
 
-            $stream->fwrite("INSERT INTO $qtable ($columns) VALUES ($values)$delimiter\n");
+            if ($multiline) {
+                if ($first) {
+                    $stream->fwrite("INSERT INTO $qtable ($columns) VALUES\n");
+                    $stream->fwrite("($values)");
+                }
+                else {
+                    $stream->fwrite(",\n($values)");
+                }
+            }
+            else {
+                $stream->fwrite("INSERT INTO $qtable ($columns) VALUES ($values)$delimiter\n");
+            }
+
             yield $row;
+            $first = false;
+        }
+
+        if (!$first && $multiline) {
+            $stream->fwrite("$delimiter\n");
         }
     }
 

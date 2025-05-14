@@ -42,6 +42,26 @@ class SqlTest extends AbstractFileTestCase
         ], iterator_to_array($file->readRecords()));
     }
 
+    public function test_multiline()
+    {
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.sql', [
+            'multiline'       => true,
+            'quoteIdentifier' => fn($v) => $v,
+            'quoteValue'      => fn($v) => $v,
+        ]);
+        iterator_to_array($file->writeRecords([
+            ['a' => 'a1', 'b' => 'b1', 'c' => 'c1'],
+            ['a' => 'a2', 'b' => 'b2', 'c' => 'c2'],
+        ]));
+        $actual = file_get_contents($file->pathinfo()['fullname']);
+        $this->assertEquals(<<<EXPECTED
+        INSERT INTO dummy (a, b, c) VALUES
+        (a1, b1, c1),
+        (a2, b2, c2);
+
+        EXPECTED, $actual);
+    }
+
     public function test_delimiter()
     {
         $contents = <<<SQL
