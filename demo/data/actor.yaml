@@ -2,9 +2,11 @@
     actor_id: '1'
     first_name: first
     last_name: last
+    avatar: null
     last_update: '2022-12-26 22:38:08'
 -
     actor_id: '2'
     first_name: ryunosuke
     last_name: arima
+    avatar: null
     last_update: '2022-12-26 22:38:37'
