@@ -55,7 +55,7 @@
   },
   "require-dev": {
     "ryunosuke/functions": "1.6.*",
-    "phpunit/phpunit": "8.*"
+    "phpunit/phpunit": "9.*"
   },
   "scripts": {
     "build": [
