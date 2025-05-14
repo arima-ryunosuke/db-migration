@@ -9,6 +9,7 @@ use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Type;
 use ryunosuke\DbMigration\Connection;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 use ryunosuke\DbMigration\TableScanner;
 
 class TableScannerTest extends AbstractTestCase
@@ -330,6 +331,7 @@ class TableScannerTest extends AbstractTestCase
                 new Column('id', Type::getType('integer')),
                 new Column('havedef', Type::getType('integer'), ['default' => 9]),
                 new Column('nullable', Type::getType('integer'), ['notnull' => false]),
+                new Column('binary', Type::getType('binary'), ['length' => 255]),
                 (new Column('generated', Type::getType('integer'), ['notnull' => false]))->setPlatformOption('generation', ['type' => 'STORED']),
             ],
             [new Index('PRIMARY', ['id'], true, true)]
@@ -343,7 +345,10 @@ class TableScannerTest extends AbstractTestCase
             'id'       => 0,
             'havedef'  => 9,
             'nullable' => null,
-        ], $scanner->fillDefaultValue([]));
+            'binary'   => new Binary("\0"),
+        ], $scanner->fillDefaultValue([
+            'binary' => "\0",
+        ]));
     }
 
     /**

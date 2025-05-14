@@ -4,6 +4,7 @@ namespace ryunosuke\DbMigration\FileType;
 
 use Closure;
 use Generator;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 use ryunosuke\DbMigration\FileType\Tool\Exportion;
 use function ryunosuke\DbMigration\file_set_contents;
 use function ryunosuke\DbMigration\is_hasharray;
@@ -62,6 +63,9 @@ class Php extends AbstractFile
             return 'null';
         }
 
+        if ($data instanceof Binary) {
+            return "base64_decode(" . var_export($data->base64(), true) . ')';
+        }
         if ($data instanceof Exportion) {
             return "include " . var_export($data->export($this->pathinfo['dirname'], fn($data) => $this->export($data, $options)), true);
         }

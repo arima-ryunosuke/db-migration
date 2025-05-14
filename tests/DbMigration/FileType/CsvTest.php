@@ -4,6 +4,7 @@ namespace ryunosuke\Test\DbMigration\FileType;
 
 use DomainException;
 use ryunosuke\DbMigration\FileType\AbstractFile;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 
 class CsvTest extends AbstractFileTestCase
 {
@@ -91,6 +92,14 @@ class CsvTest extends AbstractFileTestCase
 
         iterator_to_array($file->writeRecords([['id' => 1, 'name' => null]]));
         $this->assertSame([['id' => '1', 'name' => null]], iterator_to_array($file->readRecords()));
+    }
+
+    public function test_binary()
+    {
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.csv', []);
+
+        iterator_to_array($file->writeRecords([['id' => 1, 'name' => new Binary("\0\1\2")]]));
+        $this->assertSame([['id' => '1', 'name' => "\0\1\2"]], iterator_to_array($file->readRecords()));
     }
 
     public function test_bom()

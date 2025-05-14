@@ -7,6 +7,7 @@ use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Tools\DsnParser;
 use Doctrine\DBAL\Types\Type;
 use ryunosuke\DbMigration\Connection;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 
 class ConnectionTest extends AbstractTestCase
 {
@@ -66,7 +67,7 @@ class ConnectionTest extends AbstractTestCase
 
     function test_insert()
     {
-        $conn = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);
+        $conn       = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
         $table_hoge->getColumn('id')->setAutoincrement(true);
         $this->readyObject($this->schema, $table_hoge);
@@ -115,6 +116,10 @@ class ConnectionTest extends AbstractTestCase
         $parser = new DsnParser();
 
         /** @var Connection $conn */
+        $conn = DriverManager::getConnection($parser->parse('pdo-sqlite://:memory:') + ['wrapperClass' => Connection::class]);
+        $this->assertSame("E'\\\\x686f67652066756761'", $conn->quote(new Binary('hoge fuga')));
+
+        /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
         $conn->maintainType(true);
         $this->assertSame("NULL", $conn->quote(null));
@@ -124,6 +129,7 @@ class ConnectionTest extends AbstractTestCase
         $this->assertSame(3.14, $conn->quote(3.14));
         $this->assertSame("'abc'", $conn->quote('abc'));
         $this->assertSame(["NULL", "FALSE", 123, 3.14, "'abc'"], $conn->quote([null, false, 123, 3.14, 'abc']));
+        $this->assertSame("0x686f67652066756761", $conn->quote(new Binary('hoge fuga')));
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
@@ -135,6 +141,7 @@ class ConnectionTest extends AbstractTestCase
         $this->assertSame("'3.14'", $conn->quote(3.14));
         $this->assertSame("'abc'", $conn->quote('abc'));
         $this->assertSame(["NULL", "''", "'123'", "'3.14'", "'abc'"], $conn->quote([null, false, 123, 3.14, 'abc']));
+        $this->assertSame("0x686f67652066756761", $conn->quote(new Binary('hoge fuga')));
     }
 
     function test_quoteIdentifier()
