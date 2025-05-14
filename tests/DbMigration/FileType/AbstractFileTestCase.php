@@ -77,5 +77,16 @@ abstract class AbstractFileTestCase extends AbstractTestCase
         $this->assertDirectoryExists($file->pathinfo()['dirname']);
 
         $this->assertEquals('notfound.sjis.txt', $file->stream('c')->getFilename());
+
+        $stream = $file->open('w');
+        $stream->fwrite('a');
+
+        $stream = $file->stream('w');
+        $stream->fwrite('b');
+
+        $stream = $file->open('w');
+        $stream->fwrite('c');
+
+        $this->assertEquals('abc', file_get_contents($file->pathinfo()['fullname']));
     }
 }

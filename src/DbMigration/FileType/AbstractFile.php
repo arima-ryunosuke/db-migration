@@ -18,6 +18,7 @@ abstract class AbstractFile
     protected string $internal_encoding;
     protected array  $pathinfo;
     protected array  $options;
+    protected array  $streams = [];
 
     public static function create(string $filename, array $options): AbstractFile
     {
@@ -117,6 +118,11 @@ abstract class AbstractFile
         return new DomainException("'{$this->pathinfo['extension']}' does not support $type.");
     }
 
+    public function open(string $mode): SplFileObject
+    {
+        return $this->streams[$mode] ??= $this->stream($mode);
+    }
+
     abstract public function readSchema(): array;
 
     abstract public function writeSchema(array $schemaArray): string;
@@ -129,12 +135,15 @@ abstract class AbstractFile
 
     protected function stream(string $mode): SplFileObject
     {
+        if (isset($this->streams[$mode])) {
+            return $this->streams[$mode];
+        }
         if (strpos($mode, 'r') !== false) {
             if (!file_exists($this->pathinfo['fullname'])) {
                 throw new RuntimeException("{$this->pathinfo['fullname']} is not exist.");
             }
         }
-        if (strpos($mode, 'w') !== false) {
+        if (strpos($mode, 'w') !== false || strpos($mode, 'a') !== false) {
             if (!file_exists($this->pathinfo['dirname'])) {
                 @mkdir($this->pathinfo['dirname'], 0777, true);
             }
@@ -159,7 +168,7 @@ abstract class AbstractFile
         if (strpos($mode, 'r') !== false) {
             $filter .= "/read=convert.mbstring.encoding.{$this->pathinfo['encoding']}:{$this->internal_encoding}";
         }
-        if (strpos($mode, 'w') !== false) {
+        if (strpos($mode, 'w') !== false || strpos($mode, 'a') !== false) {
             $filter .= "/write=convert.mbstring.encoding.{$this->internal_encoding}:{$this->pathinfo['encoding']}";
         }
 
