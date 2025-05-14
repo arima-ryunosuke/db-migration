@@ -228,6 +228,18 @@ class TransporterTest extends AbstractTestCase
     /**
      * @test
      */
+    function dumpSchema()
+    {
+        // for coverage
+        $this->transporter->setDirectory(self::$tmpdir);
+        $diff = $this->transporter->dump('', ['hoge'], ['fuga']);
+
+        $this->assertEquals(18, iterator_count($diff));
+    }
+
+    /**
+     * @test
+     */
     function exportDDL()
     {
         $this->transporter->exportDDL(self::$tmpdir . '/table.php');
