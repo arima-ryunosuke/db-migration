@@ -28,16 +28,16 @@ class MigrateCommandTest extends AbstractTestCase
         $longtable->addColumn('blob_data', 'blob');
         $nopkeytable = $this->createSimpleTable('nopkeytable', 'integer', 'id');
         $nopkeytable->dropPrimaryKey();
-        $this->readyTable($this->schema, $migtable);
-        $this->readyTable($this->schema, $longtable);
-        $this->readyTable($this->schema, $nopkeytable);
-        $this->readyTable($this->schema, $this->createSimpleTable('difftable', 'integer', 'code'));
-        $this->readyTable($this->schema, $this->createSimpleTable('igntable', 'integer', 'id', 'code'));
-        $this->readyTable($this->schema, $this->createSimpleTable('unqtable', 'integer', 'id', 'code'));
-        $this->readyTable($this->schema, $this->createSimpleTable('sametable', 'integer', 'id'));
-        $this->readyTable($this->schema, $this->createSimpleTable('drptable', 'integer', 'id'));
-        $this->readyTable($this->schema, $this->createSimpleTable('eventtable', 'integer', 'id'));
-        $this->readyTable($this->schema, $this->createSimpleTable('excluded', 'integer', 'id'));
+        $this->readyObject($this->schema, $migtable);
+        $this->readyObject($this->schema, $longtable);
+        $this->readyObject($this->schema, $nopkeytable);
+        $this->readyObject($this->schema, $this->createSimpleTable('difftable', 'integer', 'code'));
+        $this->readyObject($this->schema, $this->createSimpleTable('igntable', 'integer', 'id', 'code'));
+        $this->readyObject($this->schema, $this->createSimpleTable('unqtable', 'integer', 'id', 'code'));
+        $this->readyObject($this->schema, $this->createSimpleTable('sametable', 'integer', 'id'));
+        $this->readyObject($this->schema, $this->createSimpleTable('drptable', 'integer', 'id'));
+        $this->readyObject($this->schema, $this->createSimpleTable('eventtable', 'integer', 'id'));
+        $this->readyObject($this->schema, $this->createSimpleTable('excluded', 'integer', 'id'));
 
         $view = new View('simpleview', 'select 1');
         $this->schema->createView($view);

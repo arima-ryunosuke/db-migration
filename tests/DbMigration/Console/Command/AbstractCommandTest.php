@@ -40,7 +40,7 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->event($this->connection);
 
         $tableName = $this->connection->getDatabase() . '.events';
-        $this->readyTable($this->connection->createSchemaManager(), $this->createSimpleTable($tableName, 'integer', 'id'));
+        $this->readyObject($this->connection->createSchemaManager(), $this->createSimpleTable($tableName, 'integer', 'id'));
 
         $this->assertEquals($tableName, $this->connection->fetchOne('SELECT @onSchemaCreateTable'));
 

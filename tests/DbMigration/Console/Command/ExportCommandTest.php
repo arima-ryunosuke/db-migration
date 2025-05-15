@@ -12,7 +12,7 @@ class ExportCommandTest extends AbstractTestCase
     {
         parent::setUp();
 
-        $this->readyTable($this->schema, $this->createSimpleTable('gentable', 'integer', 'id', 'code'));
+        $this->readyObject($this->schema, $this->createSimpleTable('gentable', 'integer', 'id', 'code'));
 
         $this->connection->insert('gentable', [
             'id'   => 1,

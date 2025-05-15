@@ -28,7 +28,7 @@ class TableScannerTest extends AbstractTestCase
         parent::setUp();
 
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
-        $this->readyTable($this->schema, $table_hoge);
+        $this->readyObject($this->schema, $table_hoge);
 
         $table_fuga = new Table('fuga');
         $table_fuga->addColumn('id1', 'integer');
@@ -38,7 +38,7 @@ class TableScannerTest extends AbstractTestCase
         $table_fuga->addColumn('data', 'string');
         $table_fuga->addColumn('ignored', 'string');
         $table_fuga->setPrimaryKey(['id1', 'id2']);
-        $this->readyTable($this->schema, $table_fuga);
+        $this->readyObject($this->schema, $table_fuga);
 
         $this->schema->createForeignKey(new ForeignKeyConstraint(['fid1'], 'hoge', ['id'], 'fk_fuga_hoge1'), 'fuga');
         $this->schema->createForeignKey(new ForeignKeyConstraint(['fid2'], 'hoge', ['id'], 'fk_fuga_hoge2'), 'fuga');
@@ -335,7 +335,7 @@ class TableScannerTest extends AbstractTestCase
             [new Index('PRIMARY', ['id'], true, true)]
         );
 
-        $this->readyTable($con->createSchemaManager(), $table);
+        $this->readyObject($con->createSchemaManager(), $table);
 
         $scanner = new TableScanner($con, $table, ['1']);
 
@@ -359,8 +359,8 @@ class TableScannerTest extends AbstractTestCase
             [new Index('PRIMARY', ['id'], true, true)]
         );
 
-        $this->readyTable($old->createSchemaManager(), $table);
-        $this->readyTable($new->createSchemaManager(), $table);
+        $this->readyObject($old->createSchemaManager(), $table);
+        $this->readyObject($new->createSchemaManager(), $table);
 
         $this->insertMultiple($new, 'hogetable', [['id' => 1]]);
 

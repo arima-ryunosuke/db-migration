@@ -35,18 +35,18 @@ class TransporterTest extends AbstractTestCase
         $table->setPrimaryKey(['id']);
         $table->addIndex(['name'], 'SECONDARY');
         $table->addUniqueIndex(['data']);
-        $this->readyTable($this->schema, $table);
+        $this->readyObject($this->schema, $table);
 
         $table = new Table('fuga');
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
         $table->addForeignKeyConstraint('hoge', ['id'], ['id']);
-        $this->readyTable($this->schema, $table);
+        $this->readyObject($this->schema, $table);
 
         $table = new Table('parent');
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
-        $this->readyTable($this->schema, $table);
+        $this->readyObject($this->schema, $table);
 
         $table = new Table('child');
         $table->addColumn('id', 'integer');
@@ -58,12 +58,12 @@ class TransporterTest extends AbstractTestCase
                 $table->dropIndex($index->getName());
             }
         }
-        $this->readyTable($this->schema, $table);
+        $this->readyObject($this->schema, $table);
 
         $table = new Table('zzz');
         $table->addColumn('id', 'integer');
         $table->setPrimaryKey(['id']);
-        $this->readyTable($this->schema, $table);
+        $this->readyObject($this->schema, $table);
         $this->schema->createTrigger(new Trigger('trg1', "INSERT INTO hoge\nVALUES()", 'zzz', [
             'timing'  => 'BEFORE',
             'event'   => 'UPDATE',
@@ -96,7 +96,7 @@ class TransporterTest extends AbstractTestCase
         ]));
 
         $view = new View('vvview', 'select * from hoge');
-        $this->readyView($this->schema, $view);
+        $this->readyObject($this->schema, $view);
 
         $this->insertMultiple($this->connection, 'hoge', array_map(function ($i) {
             return [
@@ -108,24 +108,24 @@ class TransporterTest extends AbstractTestCase
 
 
         // create migration table different name
-        $this->readyTable($this->schema, $this->createSimpleTable('hogera', 'integer', 'id'));
+        $this->readyObject($this->schema, $this->createSimpleTable('hogera', 'integer', 'id'));
 
         // create migration table no pkey
         $table = $this->createSimpleTable('nopkey', 'integer', 'id');
         $table->dropPrimaryKey();
-        $this->readyTable($this->schema, $table);
+        $this->readyObject($this->schema, $table);
 
         // create migration table different pkey
-        $this->readyTable($this->schema, $this->createSimpleTable('diffpkey', 'integer', 'id'));
+        $this->readyObject($this->schema, $this->createSimpleTable('diffpkey', 'integer', 'id'));
 
         // create migration table different column
-        $this->readyTable($this->schema, $this->createSimpleTable('diffcolumn', 'integer', 'id'));
+        $this->readyObject($this->schema, $this->createSimpleTable('diffcolumn', 'integer', 'id'));
 
         // create migration table different type
-        $this->readyTable($this->schema, $this->createSimpleTable('difftype', 'string', 'id'));
+        $this->readyObject($this->schema, $this->createSimpleTable('difftype', 'string', 'id'));
 
         // create migration table different type
-        $this->readyTable($this->schema, $this->createSimpleTable('diffpos', 'integer', 'id', 'name', 'hoge', 'fuga'));
+        $this->readyObject($this->schema, $this->createSimpleTable('diffpos', 'integer', 'id', 'name', 'hoge', 'fuga'));
 
         // create migration table different record
         $table = $this->createSimpleTable('foo', 'integer', 'id');
@@ -135,7 +135,7 @@ class TransporterTest extends AbstractTestCase
         $table->addColumn('c_text', 'text');
         $table->addColumn('c_datetime', 'datetime');
 
-        $this->readyTable($this->schema, $table);
+        $this->readyObject($this->schema, $table);
 
         $this->insertMultiple($this->connection, 'foo', [
             '{"id":0,"c_int":1,"c_float":1.2,"c_varchar":"char","c_text":"text","c_datetime":"2000-01-01 00:00:00"}',

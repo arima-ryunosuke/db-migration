@@ -14,12 +14,12 @@ class CheckCommandTest extends AbstractTestCase
         parent::setUp();
 
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
-        $this->readyTable($this->schema, $table_hoge);
+        $this->readyObject($this->schema, $table_hoge);
 
         $table_fuga = $this->createSimpleTable('fuga', 'integer', 'id');
         $table_fuga->addColumn('fid1', 'integer', ['Notnull' => false]);
         $table_fuga->addColumn('fid2', 'integer', ['Notnull' => false]);
-        $this->readyTable($this->schema, $table_fuga);
+        $this->readyObject($this->schema, $table_fuga);
 
         $this->schema->createForeignKey(new ForeignKeyConstraint(['fid1'], 'hoge', ['id'], 'fk_fuga_hoge1'), 'fuga');
         $this->schema->createForeignKey(new ForeignKeyConstraint(['fid2'], 'hoge', ['id'], 'fk_fuga_hoge2'), 'fuga');

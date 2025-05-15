@@ -47,19 +47,19 @@ class ConnectionTest extends AbstractTestCase
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('pdo-sqlite://:memory:') + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->readyObject($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$conn->queryUnbuffered('select * from t_many')]);
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->readyObject($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$conn->queryUnbuffered('select * from t_many')]);
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->readyObject($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$conn->queryUnbuffered('select * from t_many')]);
     }
@@ -69,7 +69,7 @@ class ConnectionTest extends AbstractTestCase
         $conn = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
         $table_hoge->getColumn('id')->setAutoincrement(true);
-        $this->readyTable($this->schema, $table_hoge);
+        $this->readyObject($this->schema, $table_hoge);
 
         $this->assertEquals(1, $conn->insert('hoge', []));
         $this->assertEquals(1, $conn->insert('hoge', ['id' => 3]));
@@ -98,7 +98,7 @@ class ConnectionTest extends AbstractTestCase
         })();
         foreach ($conns as $conn => ['initial' => $initial, 'affected' => $affected]) {
             /** @var Connection $conn */
-            $this->readyTable($conn->createSchemaManager(), $table_hoge);
+            $this->readyObject($conn->createSchemaManager(), $table_hoge);
 
             $this->assertEquals(1, $conn->upsert('hoge', $initial));
             $this->assertEquals(1, $conn->upsert('hoge', ['id' => 2, 'name' => 'A']));
