@@ -173,7 +173,7 @@ return function ($connection) {
 このような変更は DDL, DML では管理しきれないため、差分適用後に何らかの SQL を実行する必要があります。
 そういった事象を救うためのオプションです。
 
-export 時の指定は大きな意味はありません。 `exclude` と同じに意味になります（マイグレーションテーブルも出力されてしまうため）。
+export/dump 時の指定は大きな意味はありません。 `exclude` と同じに意味になります（マイグレーションテーブルも出力されてしまうため）。
 import 時は当てるか当てないかの選択肢が表示されます。初期化を想定したコマンドのため、デフォルトは "p"(当てた扱いにする) です。
 
 #### --transaction (-T)
@@ -196,7 +196,7 @@ import, migrate のときに 1 を指定すると一度でも失敗したとき�
 
 - `inline`: 指定された数以上のネストをインラインで出力します（php/json/yaml）
 - `indent`: 空白インデント数です（sql/php/json/yaml）
-- `multiline`: 複数行をリテラル的に出力します（php/yaml）。.php の場合は nowdoc, yaml の場合は `|-` で出力されます。yaml5 は対応していません
+- `multiline`: 複数行をリテラル的に出力します（php/sql/yaml）。.php の場合は nowdoc, sql の場合は bulk-insert, yaml の場合は `|-` で出力されます。yaml5 は対応していません
 - `align`: key と value の桁合わせフラグです（php/json/yaml）。php だけで指定される想定です。json, yaml で桁合わせは一般的ではないでしょう
 - `delimiter`: .sql の場合は SQL の区切り文字、 .csv の場合は CSV のセパレータとして振る舞います。その他の場合は使用されません
 - `format`: .sql のときのみ有効です。コンソールにログ出力される際のフォーマットを指定します
@@ -332,7 +332,7 @@ Options:
   -g, --ignore[=IGNORE]                   Ignore column. (multiple values allowed)
       --inline[=INLINE]                   Specify php/json/yaml inline nest level. [default: 4]
       --indent[=INDENT]                   Specify php/json/yaml indent size. [default: 4]
-      --multiline                         Specify php/yaml literal multiline.
+      --multiline                         Specify php/sql/yaml literal multiline.
       --align                             Specify php/json/yaml align key value.
       --delimiter=DELIMITER               Specify sql/csv delimiter.
   -E, --event[=EVENT]                     Specify Event filepath
@@ -609,6 +609,69 @@ Help:
 ```
 
 原則的にシンプルで引数やオプションも少ないため、説明は割愛します。
+
+### dump
+
+第1引数の DSN を指定ディレクトリにダンプします。
+
+- e.g. `php dbmigration.phar dump mysql://127.0.0.1/dbname outdir
+
+引数は下記。
+
+```
+Description:
+  Dump schema and records.
+
+Usage:
+  dump [options] [--] [<dsn> [<directory>]]
+
+Arguments:
+  dsn                              Specify target DSN.
+  directory                        Specify output directory.
+
+Options:
+  -R, --recreate[=RECREATE]        Add DROP DATABASE/CREATE DATABASE. [default: ""]
+  -m, --migration[=MIGRATION]      Specify migration directory.
+  -i, --include[=INCLUDE]          Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
+  -e, --exclude[=EXCLUDE]          Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
+  -D, --disable[=DISABLE]          Specify disabled schema object (enable comma separated value. e.g. --disable view,trigger) (multiple values allowed)
+  -T, --transaction[=TRANSACTION]  Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table) [default: 1]
+  -E, --event[=EVENT]              Specify Event filepath
+  -C, --config[=CONFIG]            Specify Configuration filepath
+  -h, --help                       Display help for the given command. When no command is given display help for the list command
+  -q, --quiet                      Do not output any message
+  -V, --version                    Display this application version
+      --ansi|--no-ansi             Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction             Do not ask any interactive question
+  -v|vv|vvv, --verbose             Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+
+Help:
+  Dump database (e.g. sakila).
+   e.g. `dbmigration dump mysql://user:pass@localhost/sakila path/to/out`
+```
+
+directory の指定がないとカレントディレクトリに DBNAME で出力します。
+
+このサブコマンドは mysqldump を模倣するものではありますが、バックアップ用途ではありません。そういう用途では使用しないでください。
+データの移行などで mysqldump の吐き出す巨大な1枚岩の sql ファイルのハンドリングがつらいときに使います。
+
+スキーマオブジェクト毎にファイル単位で出力されるため、定義をいじくったりデータを書き換えたりが比較的容易に行えます。
+また冒頭に `CREATE DATABASE` や `CREATE USER` が記載されるため、工夫すれば完全なる移行が行えます。
+ただし、これらは安全のためデフォルトでコメントアウトされています（DATABASE に関して recreate オプションで有効化できます）。
+もっとも、上記の通り1枚岩ではないのでテキストエディタで簡単に開いて編集可能です。
+完全に復元名可能なクエリ（`SHOW CREATE USER` の結果）で出力されるため、情報の共有には注意を払ってください。
+
+取り込みサブコマンドは用意されていませんが、トップレベルの database.sql に SOURCE が記載されているため、
+
+```
+mysql dbname < database.sql
+```
+
+ですべて取り込むことができます。
+ただし SOURCE はカレントディレクトリの影響を受けるので実行場所には要注意です。
+directory に絶対パスを渡せば `SOURCE` も絶対パスになります。
+同じホストであれこれする場合は絶対パスの方がいいでしょう。
+別のホストへ移行したい場合は相対パスの方がいいでしょう。
 
 ## Licence
 
