@@ -67,4 +67,37 @@ class LoggerTest extends AbstractTestCase
         $this->assertNull($logger->trace('hogera2'));
         $this->assertEquals('hogera2', $logger->log('hogera2'));
     }
+
+    public function test_progress()
+    {
+        $output = new BufferedOutput();
+        $logger = new Logger(new ArrayInput([]), $output);
+
+        $generator = function () {
+            yield 1 => 'a';
+            yield 2 => 'b';
+            yield 3 => 'c';
+            return 'z';
+        };
+
+        $output->setDecorated(true);
+        $iterator = $logger->progress($generator(), 0);
+
+        $this->assertInstanceOf(\Generator::class, $iterator);
+        $this->assertEquals([
+            1 => 'a',
+            2 => 'b',
+            3 => 'c',
+        ], iterator_to_array($iterator));
+        $this->assertEquals('z', $iterator->getReturn());
+        $this->assertNotEmpty($output->fetch());
+
+        $output->setDecorated(false);
+        $iterator = $logger->progress($generator(), 0);
+
+        $this->assertInstanceOf(\Generator::class, $iterator);
+        $this->assertEquals(['' => ''], iterator_to_array($iterator));
+        $this->assertEquals('z', $iterator->getReturn());
+        $this->assertEmpty('', $output->fetch());
+    }
 }
