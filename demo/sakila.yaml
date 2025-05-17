@@ -4,6 +4,7 @@ table:
             actor_id: { type: smallint, default: null, notnull: true, unsigned: true, autoincrement: true, comment: '', platformOptions: {  } }
             first_name: { type: string, default: null, notnull: true, length: 45, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
             last_name: { type: string, default: null, notnull: true, length: 45, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci } }
+            avatar: { type: blob, default: null, notnull: false, length: 65535, comment: '', platformOptions: {  } }
             last_update: { type: datetime, default: CURRENT_TIMESTAMP, notnull: true, comment: '', platformOptions: {  } }
             fulltext_column: { type: string, default: null, notnull: false, length: 100, comment: '', platformOptions: { charset: utf8mb4, collation: utf8mb4_0900_ai_ci, generation: { type: STORED, expression: "concat(`first_name`,_utf8mb4'\t',`last_name`)" } } }
         index:

@@ -4,6 +4,7 @@ namespace ryunosuke\DbMigration\FileType;
 
 use DomainException;
 use Generator;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 use function ryunosuke\DbMigration\iterator_split;
 
 class Csv extends AbstractFile
@@ -60,6 +61,9 @@ class Csv extends AbstractFile
             foreach ($row as $c => $v) {
                 if ($v === null) {
                     $row[$c] = self::NULL;
+                }
+                if ($v instanceof Binary) {
+                    $row[$c] = "\\B" . $v->base64();
                 }
             }
 
@@ -127,6 +131,9 @@ class Csv extends AbstractFile
             foreach ($fields as $c => $v) {
                 if ($v === self::NULL) {
                     $fields[$c] = null;
+                }
+                elseif (substr($v, 0, 2) === "\\B") {
+                    $fields[$c] = base64_decode(substr($v, 2));
                 }
                 elseif (isset($types[$c])) {
                     settype($fields[$c], $types[$c]);

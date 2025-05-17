@@ -9,6 +9,7 @@ use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Type;
 use ryunosuke\DbMigration\Connection;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 use ryunosuke\DbMigration\TableScanner;
 
 class TableScannerTest extends AbstractTestCase
@@ -28,7 +29,7 @@ class TableScannerTest extends AbstractTestCase
         parent::setUp();
 
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
-        $this->readyTable($this->schema, $table_hoge);
+        $this->readyObject($this->schema, $table_hoge);
 
         $table_fuga = new Table('fuga');
         $table_fuga->addColumn('id1', 'integer');
@@ -38,7 +39,7 @@ class TableScannerTest extends AbstractTestCase
         $table_fuga->addColumn('data', 'string', ['length' => 255]);
         $table_fuga->addColumn('ignored', 'string', ['length' => 255]);
         $table_fuga->setPrimaryKey(['id1', 'id2']);
-        $this->readyTable($this->schema, $table_fuga);
+        $this->readyObject($this->schema, $table_fuga);
 
         $this->schema->createForeignKey(new ForeignKeyConstraint(['fid1'], 'hoge', ['id'], 'fk_fuga_hoge1'), 'fuga');
         $this->schema->createForeignKey(new ForeignKeyConstraint(['fid2'], 'hoge', ['id'], 'fk_fuga_hoge2'), 'fuga');
@@ -328,12 +329,13 @@ class TableScannerTest extends AbstractTestCase
                 new Column('id', Type::getType('integer')),
                 new Column('havedef', Type::getType('integer'), ['default' => 9]),
                 new Column('nullable', Type::getType('integer'), ['notnull' => false]),
+                new Column('binary', Type::getType('binary'), ['length' => 255]),
                 (new Column('generated', Type::getType('integer'), ['notnull' => false]))->setPlatformOption('generation', ['type' => 'STORED']),
             ],
             [new Index('PRIMARY', ['id'], true, true)]
         );
 
-        $this->readyTable($con->createSchemaManager(), $table);
+        $this->readyObject($con->createSchemaManager(), $table);
 
         $scanner = new TableScanner($con, $table, ['1']);
 
@@ -341,7 +343,10 @@ class TableScannerTest extends AbstractTestCase
             'id'       => 0,
             'havedef'  => 9,
             'nullable' => null,
-        ], $scanner->fillDefaultValue([]));
+            'binary'   => new Binary("\0"),
+        ], $scanner->fillDefaultValue([
+            'binary' => "\0",
+        ]));
     }
 
     /**
@@ -357,8 +362,8 @@ class TableScannerTest extends AbstractTestCase
             [new Index('PRIMARY', ['id'], true, true)]
         );
 
-        $this->readyTable($old->createSchemaManager(), $table);
-        $this->readyTable($new->createSchemaManager(), $table);
+        $this->readyObject($old->createSchemaManager(), $table);
+        $this->readyObject($new->createSchemaManager(), $table);
 
         $this->insertMultiple($new, 'hogetable', [['id' => 1]]);
 

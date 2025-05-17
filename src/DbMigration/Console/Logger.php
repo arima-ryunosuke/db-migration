@@ -2,6 +2,7 @@
 
 namespace ryunosuke\DbMigration\Console;
 
+use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -86,5 +87,41 @@ class Logger
     public function trace($message)
     {
         return $this->write(OutputInterface::VERBOSITY_DEBUG, $message, array_slice(func_get_args(), 1));
+    }
+
+    /**
+     * simple oneline progress like a ProgressBar::iterate
+     *
+     * @param iterable $iterable progress iterator
+     * @param float $interval refresh interval
+     * @return mixed $iterable->getReturn
+     */
+    public function progress(iterable $iterable, float $interval = 0.1)
+    {
+        $timer  = null;
+        $cursor = null;
+
+        if ($this->output->isDecorated()) {
+            $cursor = new Cursor($this->output);
+            $cursor->savePosition();
+        }
+        foreach ($iterable as $k => $v) {
+            // suppress flickering
+            if ($timer === null || microtime(true) - $timer > $interval) {
+                $timer = microtime(true);
+                if ($cursor) {
+                    $cursor->restorePosition()->clearLineAfter();
+                    yield $k => $v;
+                }
+                else {
+                    yield null => '';
+                }
+            }
+        }
+        if ($cursor) {
+            $cursor->restorePosition()->clearLineAfter();
+        }
+
+        return $iterable instanceof \Generator ? $iterable->getReturn() : null;
     }
 }

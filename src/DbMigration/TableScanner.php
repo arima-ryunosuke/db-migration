@@ -2,12 +2,14 @@
 
 namespace ryunosuke\DbMigration;
 
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Table;
 use Generator;
 use ryunosuke\DbMigration\Exception\MigrationException;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 
 class TableScanner
 {
@@ -272,6 +274,10 @@ class TableScanner
                 else {
                     $row[$name] = $column->getType()->convertToPHPValue('', $platform);
                 }
+            }
+
+            if ($row[$name] !== null && in_array($column->getType()->getBindingType(), [ParameterType::BINARY, ParameterType::LARGE_OBJECT])) {
+                $row[$name] = new Binary($row[$name]);
             }
         }
         return $row;

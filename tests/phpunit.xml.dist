@@ -10,6 +10,7 @@
 
     <php>
         <var name="db" value="root@127.0.0.1/test_migration"/>
+        <ini name="zend.exception_ignore_args" value="On"/>
     </php>
 
     <coverage>

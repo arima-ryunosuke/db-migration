@@ -16,4 +16,5 @@ $application->add(new \ryunosuke\DbMigration\Console\Command\CheckCommand());
 $application->add(new \ryunosuke\DbMigration\Console\Command\ExportCommand());
 $application->add(new \ryunosuke\DbMigration\Console\Command\ImportCommand());
 $application->add(new \ryunosuke\DbMigration\Console\Command\MigrateCommand());
+$application->add(new \ryunosuke\DbMigration\Console\Command\DumpCommand());
 $application->run();

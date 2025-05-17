@@ -3,6 +3,7 @@
 namespace ryunosuke\Test\DbMigration\FileType;
 
 use ryunosuke\DbMigration\FileType\AbstractFile;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 
 class JsonTest extends AbstractFileTestCase
 {
@@ -100,6 +101,16 @@ class JsonTest extends AbstractFileTestCase
         }
         
         EXPECTED, $actual);
+    }
+
+    public function test_binary()
+    {
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.json', [
+            'yield' => false,
+        ]);
+
+        iterator_to_array($file->writeRecords([['id' => 1, 'name' => new Binary("\0\1\2")]]));
+        $this->assertSame([['id' => 1, 'name' => "\0\1\2"]], iterator_to_array($file->readRecords()));
     }
 
     function test_yield()

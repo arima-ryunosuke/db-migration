@@ -7,6 +7,7 @@ use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Generator;
 use mysqli;
 use PDO;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 
 class Connection extends \Doctrine\DBAL\Connection
 {
@@ -171,6 +172,16 @@ class Connection extends \Doctrine\DBAL\Connection
             if (is_int($value) || is_float($value)) {
                 return $value;
             }
+        }
+
+        if ($value instanceof Binary) {
+            if ($this->getDatabasePlatform() instanceof MySQLPlatform) {
+                $value = "0{$value->xstring()}";
+            }
+            else {
+                $value = "E'\\\\{$value->xstring()}'";
+            }
+            return $value;
         }
 
         return parent::quote($value);

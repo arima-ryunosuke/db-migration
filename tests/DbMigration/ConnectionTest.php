@@ -7,6 +7,7 @@ use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Tools\DsnParser;
 use Doctrine\DBAL\Types\Type;
 use ryunosuke\DbMigration\Connection;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 
 class ConnectionTest extends AbstractTestCase
 {
@@ -47,19 +48,19 @@ class ConnectionTest extends AbstractTestCase
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('pdo-sqlite://:memory:') + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->readyObject($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$conn->queryUnbuffered('select * from t_many')]);
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->readyObject($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$conn->queryUnbuffered('select * from t_many')]);
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
-        $this->readyTable($conn->createSchemaManager(), $table);
+        $this->readyObject($conn->createSchemaManager(), $table);
         $this->insertMultiple($conn, 't_many', [['id' => 1], ['id' => 2]]);
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$conn->queryUnbuffered('select * from t_many')]);
     }
@@ -69,7 +70,7 @@ class ConnectionTest extends AbstractTestCase
         $conn       = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);
         $table_hoge = $this->createSimpleTable('hoge', 'integer', 'id');
         $table_hoge->getColumn('id')->setAutoincrement(true);
-        $this->readyTable($this->schema, $table_hoge);
+        $this->readyObject($this->schema, $table_hoge);
 
         $this->assertEquals(1, $conn->insert('hoge', []));
         $this->assertEquals(1, $conn->insert('hoge', ['id' => 3]));
@@ -99,7 +100,7 @@ class ConnectionTest extends AbstractTestCase
         })();
         foreach ($conns as $conn => ['initial' => $initial, 'affected' => $affected]) {
             /** @var Connection $conn */
-            $this->readyTable($conn->createSchemaManager(), $table_hoge);
+            $this->readyObject($conn->createSchemaManager(), $table_hoge);
 
             $this->assertEquals(1, $conn->upsert('hoge', $initial));
             $this->assertEquals(1, $conn->upsert('hoge', ['id' => 2, 'name' => 'A']));
@@ -116,6 +117,10 @@ class ConnectionTest extends AbstractTestCase
         $parser = new DsnParser();
 
         /** @var Connection $conn */
+        $conn = DriverManager::getConnection($parser->parse('pdo-sqlite://:memory:') + ['wrapperClass' => Connection::class]);
+        $this->assertSame("E'\\\\x686f67652066756761'", $conn->quoteValues(new Binary('hoge fuga')));
+
+        /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('pdo-mysql://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
         $conn->maintainType(true);
         $this->assertSame("NULL", $conn->quoteValues(null));
@@ -125,6 +130,8 @@ class ConnectionTest extends AbstractTestCase
         $this->assertSame(3.14, $conn->quoteValues(3.14));
         $this->assertSame("'abc'", $conn->quoteValues('abc'));
         $this->assertSame(["NULL", "FALSE", 123, 3.14, "'abc'"], $conn->quoteValues([null, false, 123, 3.14, 'abc']));
+        $this->assertSame("0x686f67652066756761", $conn->quoteValues(new Binary('hoge fuga')));
+        $this->assertSame("NULL", $conn->quoteValues(null));
 
         /** @var Connection $conn */
         $conn = DriverManager::getConnection($parser->parse('mysqli://' . $GLOBALS['db']) + ['wrapperClass' => Connection::class]);
@@ -136,6 +143,7 @@ class ConnectionTest extends AbstractTestCase
         $this->assertSame("'3.14'", $conn->quoteValues(3.14));
         $this->assertSame("'abc'", $conn->quoteValues('abc'));
         $this->assertSame(["NULL", "''", "'123'", "'3.14'", "'abc'"], $conn->quoteValues([null, false, 123, 3.14, 'abc']));
+        $this->assertSame("0x686f67652066756761", $conn->quoteValues(new Binary('hoge fuga')));
     }
 
     function test_quoteIdentifier()

@@ -3,6 +3,7 @@
 namespace ryunosuke\Test\DbMigration\FileType;
 
 use ryunosuke\DbMigration\FileType\AbstractFile;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 
 class PhpTest extends AbstractFileTestCase
 {
@@ -123,5 +124,13 @@ class PhpTest extends AbstractFileTestCase
         ];
         
         EXPECTED, $actual);
+    }
+
+    public function test_binary()
+    {
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.php', []);
+
+        iterator_to_array($file->writeRecords([['id' => 1, 'name' => new Binary("\0\1\2")]]));
+        $this->assertSame([['id' => 1, 'name' => "\0\1\2"]], iterator_to_array($file->readRecords()));
     }
 }

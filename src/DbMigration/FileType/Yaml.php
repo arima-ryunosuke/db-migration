@@ -3,6 +3,7 @@
 namespace ryunosuke\DbMigration\FileType;
 
 use Generator;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 use ryunosuke\DbMigration\FileType\Tool\Exportion;
 use Symfony\Component\Yaml\Tag\TaggedValue;
 use Symfony\Component\Yaml\Yaml as SymfonyYaml;
@@ -76,6 +77,9 @@ class Yaml extends AbstractFile
         $multiline = $options['multiline'] ?? false;
         $flow      = $options['flowstyle'] ?? false;
 
+        if ($data instanceof Binary) {
+            return "!!binary " . $data->base64();
+        }
         if ($data instanceof Exportion) {
             return "!include " . $data->export($this->pathinfo['dirname'], fn($data) => $this->encode($data, $options));
         }
@@ -119,7 +123,7 @@ class Yaml extends AbstractFile
                 $result = "";
 
                 foreach ($keys as $k => $qk) {
-                    $oneline = $data[$k] instanceof Exportion || $data[$k] === [] || is_scalar($data[$k]) || is_null($data[$k]) || $inline1;
+                    $oneline = $data[$k] instanceof Binary || $data[$k] instanceof Exportion || $data[$k] === [] || is_scalar($data[$k]) || is_null($data[$k]) || $inline1;
 
                     $result .= $indent0;
                     $result .= $is_hash ? "$qk:" : "-";

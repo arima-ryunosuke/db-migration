@@ -6,6 +6,7 @@ use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Logging\Middleware as LoggingMiddleware;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
+use Doctrine\DBAL\Schema\Routine;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Tools\DsnParser;
 use Generator;
@@ -160,34 +161,17 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function readyTable(AbstractSchemaManager $schema_manager, $table)
+    public function readyObject(AbstractSchemaManager $schema_manager, $object)
     {
+        $name = (new \ReflectionClass($object))->getShortName();
         try {
-            $schema_manager->dropTable($table->getName());
+            $type = $object instanceof Routine ? [$object->getType()] : [];
+            $schema_manager->{"drop$name"}($object->getName(), ...$type);
         }
         catch (\Throwable) {
         }
 
-        try {
-            $schema_manager->createTable($table);
-        }
-        catch (\Throwable) {
-        }
-    }
-
-    public function readyView(AbstractSchemaManager $schema_manager, $view)
-    {
-        try {
-            $schema_manager->dropView($view->getName());
-        }
-        catch (\Throwable) {
-        }
-
-        try {
-            $schema_manager->createView($view);
-        }
-        catch (\Throwable) {
-        }
+        $schema_manager->{"create$name"}($object);
     }
 
     public function createSimpleTable($name, $type)

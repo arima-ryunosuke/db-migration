@@ -29,6 +29,15 @@
   - [*change] 一部のイベントの廃止（onSchemaCreateTable）
   - [*change] maintain-type のデフォルト値を true に変更
 
+## 3.1.12
+
+- [feature] dump コマンド追加
+- [feature] Logger に簡易プログレス機能を追加
+- [feature] バイナリ型の対応
+- [feature] sql ファイルの multiline 対応
+- [feature] 追加書き込み対応
+- [refactor] readyTable/View を汎用的な readyObject に変更
+
 ## 3.1.11
 
 - [bin] box を v4 系に変更

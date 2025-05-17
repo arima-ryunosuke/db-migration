@@ -3,6 +3,7 @@
 namespace ryunosuke\DbMigration\FileType;
 
 use Generator;
+use ryunosuke\DbMigration\FileType\Tool\Binary;
 use ryunosuke\DbMigration\FileType\Tool\Exportion;
 use function ryunosuke\DbMigration\file_set_contents;
 use function ryunosuke\DbMigration\is_hasharray;
@@ -57,6 +58,9 @@ class Json extends AbstractFile
         $indent0 = $inline ? "" : str_repeat(" ", ($options['indent'] ?? 4) * ($nest + 0));
         $indent1 = $inline ? "" : str_repeat(" ", ($options['indent'] ?? 4) * ($nest + 1));
 
+        if ($data instanceof Binary) {
+            return json_encode('!binary: ' . $data->base64(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
         if ($data instanceof Exportion) {
             return json_encode('!include: ' . $data->export($this->pathinfo['dirname'], fn($data) => $this->encode($data, $options)), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
@@ -102,6 +106,9 @@ class Json extends AbstractFile
             $result = $this->decode((string) $this);
 
             array_walk_recursive($result, function (&$value) {
+                if (preg_match('#^!binary: (.*)#', $value ?? '', $m)) {
+                    $value = base64_decode($m[1]);
+                }
                 if (preg_match('#^!include: (.*)#', $value ?? '', $m)) {
                     $value = $this->decode(file_get_contents("{$this->pathinfo['dirname']}/{$m[1]}"));
                 }

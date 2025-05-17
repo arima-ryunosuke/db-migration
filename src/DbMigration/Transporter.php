@@ -242,6 +242,10 @@ class Transporter
                     return $table;
                 },
                 'createSQLs' => fn($tables) => $this->platform->getCreateTablesSQL($tables),
+                'showCreate' => function ($table) {
+                    $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE TABLE {$table->getName()}"));
+                    return [$data["create table"] . ';'];
+                },
             ],
             'view'    => [
                 'get'        => fn(Schema $schema) => $sortAssets($schema->getViews()),
@@ -257,6 +261,17 @@ class Transporter
                     return new View($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreViewOptionAttributes), 'sql'));
                 },
                 'createSQLs' => fn($views) => array_map(fn($view) => $this->platform->getCreateViewSQL($view->getName(), $view->getSql(), $view->getOptions()), $views),
+                'showCreate' => function ($view) {
+                    $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE VIEW {$view->getName()}"));
+                    [$before, $after] = $this->getSetStatements([
+                        'character_set_client' => $data['character_set_client'],
+                    ]);
+                    return [
+                        ...$before,
+                        $this->stripSchemaOf($data["create view"]) . ';',
+                        ...$after,
+                    ];
+                },
             ],
             'trigger' => [
                 'get'        => fn(Schema $schema) => $sortAssets($schema->getTriggers()),
@@ -272,6 +287,21 @@ class Transporter
                     return new Trigger($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreTriggerOptionAttributes), 'statement', 'table'));
                 },
                 'createSQLs' => fn($triggers) => array_map(fn($trigger) => $this->platform->getCreateTriggerSQL($trigger), $triggers),
+                'showCreate' => function ($trigger) {
+                    $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE TRIGGER {$trigger->getName()}"));
+                    [$before, $after] = $this->getSetStatements([
+                        'sql_mode'             => $this->connection->quoteValues($data['sql_mode']),
+                        'character_set_client' => $data['character_set_client'],
+                        'collation_connection' => $data['collation_connection'],
+                    ]);
+                    return [
+                        ...$before,
+                        "DELIMITER $$$",
+                        $data["sql original statement"] . '$$$',
+                        "DELIMITER ;",
+                        ...$after,
+                    ];
+                },
             ],
             'routine' => [
                 'get'        => fn(Schema $schema) => $sortAssets($schema->getRoutines()),
@@ -286,6 +316,22 @@ class Transporter
                     return new Routine($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreRoutineOptionAttributes), 'statement'));
                 },
                 'createSQLs' => fn($routines) => array_map(fn($routine) => (fn($routine) => $this->platform->{"getCreate{$routine->getType()}SQL"}($routine))($routine), $routines),
+                'showCreate' => function ($routine) {
+                    $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE {$routine->getType()} {$routine->getName()}"));
+                    $type = strtolower($routine->getType());
+                    [$before, $after] = $this->getSetStatements([
+                        'sql_mode'             => $this->connection->quoteValues($data['sql_mode']),
+                        'character_set_client' => $data['character_set_client'],
+                        'collation_connection' => $data['collation_connection'],
+                    ]);
+                    return [
+                        ...$before,
+                        "DELIMITER $$$",
+                        $data["create $type"] . '$$$',
+                        "DELIMITER ;",
+                        ...$after,
+                    ];
+                },
             ],
             'event'   => [
                 'get'        => fn(Schema $schema) => $sortAssets($schema->getEvents()),
@@ -300,6 +346,20 @@ class Transporter
                     return new Event($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreEventOptionAttributes), 'statement'));
                 },
                 'createSQLs' => fn($events) => array_map(fn($event) => $this->platform->getCreateEventSQL($event), $events),
+                'showCreate' => function ($event) {
+                    $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE EVENT {$event->getName()}"));
+                    [$before, $after] = $this->getSetStatements([
+                        'sql_mode'  => $this->connection->quoteValues($data['sql_mode']),
+                        'time_zone' => $this->connection->quoteValues($data['time_zone']),
+                    ]);
+                    return [
+                        ...$before,
+                        "DELIMITER $$$",
+                        $data["create event"] . '$$$',
+                        "DELIMITER ;",
+                        ...$after,
+                    ];
+                },
             ],
         ];
     }
@@ -366,6 +426,192 @@ class Transporter
         }
 
         return $result;
+    }
+
+    public function dump(?string $dbname, array $includes = [], array $excludes = []): Generator
+    {
+        assert(strlen($this->directory));
+
+        [$before, $after] = $this->getSetStatements([
+            'print_identified_with_as_hex' => 1,
+            'show_create_table_verbosity'  => 1,
+            'sql_quote_show_create'        => 1,
+        ]);
+
+        foreach ($before as $sql) {
+            $this->connection->executeStatement($sql);
+        }
+
+        try {
+            $definition = $this->getDefinition();
+
+            $sources = [];
+            foreach ($definition as $category => $setting) {
+                if ($this->disableds[$category]) {
+                    continue;
+                }
+                foreach ($setting['get']($this->schema) as $object) {
+                    $name     = $object->getName();
+                    $filename = "$this->directory/$category/$name.sql";
+
+                    if ($this->filterTable($name, $includes, $excludes) > 0) {
+                        yield [$name, $filename] => null;
+                        continue;
+                    }
+
+                    $sources[$category][$name] = $filename;
+                    yield [$name, $filename] => function () use ($filename, $category, $name, $setting, $object) {
+                        $count  = 0;
+                        $file   = $this->getFileByFilename($filename);
+                        $stream = $file->open('w');
+
+                        // drop
+                        $type = strtoupper($category === 'routine' ? $object->getType() : $category);
+                        $stream->fwrite("DROP $type IF EXISTS {$this->connection->quoteIdentifiers($name)};\n");
+                        yield $count++;
+
+                        // create
+                        $createSQLs = $setting['showCreate']($object);
+                        foreach ($createSQLs as $createSQL) {
+                            $stream->fwrite("$createSQL\n");
+                            yield $count++;
+                        }
+
+                        // insert
+                        if ($category === 'table') {
+                            $stream->fwrite("\n");
+                            $scanner = new TableScanner($this->connection, $object, []);
+                            foreach ($file->writeRecords($scanner->getAllRows()) as $ignored) {
+                                yield $count++;
+                            }
+                        }
+
+                        // return
+                        return [
+                            'count' => $count,
+                            'size'  => $stream->getSize(),
+                        ];
+                    };
+                }
+            }
+
+            $schemaName     = $this->connection->getDatabase();
+            $schemaFilename = "$this->directory/database.sql";
+            yield [$schemaName, $schemaFilename] => function () use ($dbname, $schemaName, $schemaFilename, $sources) {
+                $count  = 0;
+                $file   = $this->getFileByFilename($schemaFilename);
+                $stream = $file->open('w');
+
+                // before,after
+                [$before, $after] = $this->getSetStatements([
+                    'sql_mode'           => $this->connection->quoteValues("NO_AUTO_VALUE_ON_ZERO"),
+                    'sql_notes'          => "0",
+                    'time_zone'          => $this->connection->quoteValues("+00:00"),
+                    'unique_checks'      => "0",
+                    'foreign_key_checks' => "0",
+                ]);
+
+                // before
+                $stream->fwrite("-- set variable\n");
+                foreach ($before as $sql) {
+                    $stream->fwrite("$sql\n");
+                    yield $count++;
+                }
+                $stream->fwrite("\n");
+
+                // database
+                $stream->fwrite("-- database\n");
+                $createSqls = function () use ($dbname, $schemaName) {
+                    $qSchemaName = $this->connection->quoteIdentifiers($schemaName);
+                    $create      = $this->connection->fetchAssociative("SHOW CREATE DATABASE $qSchemaName")['Create Database'];
+                    if ($dbname === '') {
+                        yield '-- ' . str_replace(["\r\n", "\r", "\n"], ' ', $create) . ";";
+                    }
+                    else {
+                        $dbname  ??= $schemaName;
+                        $qdbname = $this->connection->quoteIdentifiers($dbname);
+                        yield "DROP DATABASE IF EXISTS $qdbname;";
+                        yield str_replace($qSchemaName, $qdbname, $create) . ";";
+                        yield "USE $qdbname;";
+                    }
+                };
+                foreach ($createSqls() as $sql) {
+                    $stream->fwrite("$sql\n");
+                    yield $count++;
+                }
+                $stream->fwrite("\n");
+
+                // user/grant
+                $stream->fwrite("-- user/grant\n");
+                $createSqls = function () use ($schemaName) {
+                    $users = $this->connection->fetchAllAssociative(<<<SQL
+                    SELECT DISTINCT U.GRANTEE AS user
+                    FROM information_schema.USER_PRIVILEGES AS U
+                    LEFT JOIN information_schema.SCHEMA_PRIVILEGES S USING (GRANTEE)
+                    WHERE (
+                      (U.PRIVILEGE_TYPE = "SUPER" AND U.IS_GRANTABLE = "YES") OR
+                      (S.TABLE_SCHEMA = {$this->connection->quoteValues($schemaName)})
+                    )
+                    SQL,);
+                    foreach ($users as $user) {
+                        $createSqls = $this->connection->fetchAllNumeric("SHOW CREATE USER {$user['user']}");
+                        foreach ($createSqls as $sql) {
+                            yield '-- ' . str_replace(["\r\n", "\r", "\n"], ' ', $sql[0]) . ";";
+                        }
+                        $grantsSqls = $this->connection->fetchAllNumeric("SHOW GRANTS FOR {$user['user']}");
+                        foreach ($grantsSqls as $sql) {
+                            yield '  -- ' . str_replace(["\r\n", "\r", "\n"], ' ', $sql[0]) . ";";
+                        }
+                    }
+                };
+                foreach ($createSqls() as $sql) {
+                    $stream->fwrite("$sql\n");
+                    yield $count++;
+                }
+                $stream->fwrite("\n");
+
+                // preparation
+                $stream->fwrite("-- preparation\n");
+                foreach ($sources['view'] ?? [] as $name => $dummyView) {
+                    $view    = $this->schemaManager->introspectViewAsTable($name);
+                    $selects = array_sprintf($view->getColumns(), fn($column) => "1 AS {$this->connection->quoteIdentifiers($column->getName())}", ', ');
+                    $stream->fwrite("CREATE OR REPLACE VIEW {$this->connection->quoteIdentifiers($name)} AS SELECT $selects;\n");
+                    yield $count++;
+                }
+                $stream->fwrite("\n");
+
+                // import
+                foreach ($sources as $category => $filenames) {
+                    $stream->fwrite("-- $category\n");
+                    foreach ($filenames as $filename) {
+                        $stream->fwrite("SOURCE $filename;\n");
+                        yield $count++;
+                    }
+                    $stream->fwrite("\n");
+                }
+
+                // after
+                $stream->fwrite("-- reset variable\n");
+                foreach ($after as $sql) {
+                    $stream->fwrite("$sql\n");
+                    yield $count++;
+                }
+
+                // return
+                return [
+                    'count' => $count,
+                    'size'  => $stream->getSize(),
+                ];
+            };
+        }
+        finally {
+            foreach ($after as $sql) {
+                $this->connection->executeStatement($sql);
+            }
+
+            // auto close/flush
+            gc_collect_cycles();
+        }
     }
 
     public function exportDDL(string $filename, array $includes = [], array $excludes = []): string
@@ -574,6 +820,16 @@ class Transporter
         }
 
         return $schema;
+    }
+
+    private function getSetStatements(array $values): array
+    {
+        $before = $after = [];
+        foreach ($values as $name => $value) {
+            $before[] = "SET @old_$name = @@$name, $name = $value;";
+            $after[]  = "SET $name = @old_$name;";
+        }
+        return [$before, $after];
     }
 
     private function tableUnsetImplicitIndex(Table $table): Table
