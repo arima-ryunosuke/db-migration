@@ -103,12 +103,12 @@ class MigrationTable
         return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAllAssociativeIndexed();
     }
 
-    public function apply(string $version, array $records): int
+    public function apply(string $version, iterable $records): int
     {
         $tablenames = array_flip($this->schemaManager->listTableNames());
 
         $insert = function ($value, &$logs) use (&$insert, $tablenames) {
-            if (!is_array($value)) {
+            if (!is_iterable($value)) {
                 $logs[] = $value;
                 return $this->connection->executeStatement($value);
             }

@@ -78,9 +78,9 @@ class Sql extends AbstractFile
         }
     }
 
-    public function readMigration(): array
+    public function readMigration(): Generator
     {
-        return iterator_to_array($this->readRecords());
+        yield from $this->read();
     }
 
     protected function read(): Generator

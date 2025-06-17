@@ -47,9 +47,9 @@ class Json extends AbstractFile
         $stream->fwrite("\n]\n");
     }
 
-    public function readMigration(): array
+    public function readMigration(): Generator
     {
-        return $this->decode((string) $this);
+        yield from $this->decode((string) $this);
     }
 
     protected function encode($data, $options, $nest = 0)

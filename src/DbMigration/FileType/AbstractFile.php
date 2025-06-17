@@ -131,7 +131,7 @@ abstract class AbstractFile
 
     abstract public function writeRecords(iterable $rows): Generator;
 
-    abstract public function readMigration(): array;
+    abstract public function readMigration(): Generator;
 
     protected function stream(string $mode): SplFileObject
     {

@@ -66,7 +66,7 @@ abstract class AbstractFileTestCase extends AbstractTestCase
 
             public function writeRecords(iterable $rows): Generator { yield null; }
 
-            public function readMigration(): array { return []; }
+            public function readMigration(): Generator { return []; }
 
             public function stream(string $mode): SplFileObject { return parent::stream($mode); }
         };

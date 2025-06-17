@@ -5,6 +5,7 @@ namespace ryunosuke\DbMigration\FileType;
 use DomainException;
 use Generator;
 use ryunosuke\DbMigration\FileType\Tool\Binary;
+use function ryunosuke\DbMigration\iterator_join;
 use function ryunosuke\DbMigration\iterator_split;
 
 class Csv extends AbstractFile
@@ -72,20 +73,42 @@ class Csv extends AbstractFile
         }
     }
 
-    public function readMigration(): array
+    public function readMigration(): Generator
     {
+        [$first, $rows] = iterator_split($this->read(), [1], true);
+
+        $mapper = [];
+        foreach (array_keys(reset($first)) as $n => $column_name) {
+            $original = $column_name;
+            $parts    = explode('.', $column_name, 2);
+            if (count($parts) === 2) {
+                [$table_name, $column_name] = $parts;
+            }
+            if (!isset($table_name)) {
+                throw new DomainException("'{$this->pathinfo['fullname']}'#$n is not specified table name.");
+            }
+            $mapper[$table_name][$column_name] = $original;
+        }
+
+        // single table can enable generator
+        if (count($mapper) === 1) {
+            $table_name = array_keys($mapper)[0];
+            $columns    = array_keys($mapper[$table_name]);
+            yield $table_name => (function () use ($first, $rows, $columns) {
+                foreach (iterator_join([$first, $rows]) as $n => $fields) {
+                    yield $n => array_combine($columns, $fields);
+                }
+            })();
+            return;
+        }
+
         $table_records = [];
-        foreach ($this->read() as $n => $fields) {
-            $table_name = null;
-            foreach ($fields as $column_name => $value) {
-                $parts = explode('.', $column_name, 2);
-                if (count($parts) === 2) {
-                    [$table_name, $column_name] = $parts;
-                }
-                if (!isset($table_name)) {
-                    throw new DomainException("'{$this->pathinfo['fullname']}'#$n is not specified table name.");
-                }
-                $table_records[$table_name][$n][$column_name] = $value;
+        foreach (iterator_join([$first, $rows]) as $n => $fields) {
+            foreach ($mapper as $table_name => $originals) {
+                $columns = array_flip($originals);
+                $row     = array_intersect_key($fields, $columns);
+
+                $table_records[$table_name][$n] = array_combine($columns, $row);
             }
         }
 
@@ -94,7 +117,7 @@ class Csv extends AbstractFile
             $records = array_unique($records, SORT_REGULAR);
         }
 
-        return $table_records;
+        yield from $table_records;
     }
 
     protected function read(): Generator
