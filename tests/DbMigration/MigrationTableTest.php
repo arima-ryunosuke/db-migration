@@ -45,17 +45,29 @@ class MigrationTableTest extends AbstractTestCase
         $this->assertEquals([], $migrationTable->fetch());
         $migrationTable->create();
 
-        $this->assertEquals(2, $migrationTable->apply('1.sql', [
+        $generator = $migrationTable->apply('1.sql', [
             'insert into ttt values("from sql1")',
             'insert into ttt values("from sql2")',
-        ]));
-        $this->assertEquals(2, $migrationTable->apply('2.sql', [
+        ]);
+        $this->assertEquals([
+            'insert into ttt values("from sql1")',
+            'insert into ttt values("from sql2")',
+        ], iterator_to_array($generator, false));
+        $this->assertEquals(2, $generator->getReturn());
+
+        $generator = $migrationTable->apply('2.sql', [
             'ttt' => [
                 ['name' => 'from array1'],
                 ['name' => 'from array2'],
                 ['name' => 'from array2'],
             ],
-        ]));
+        ]);
+        $this->assertEquals([
+            "INSERT INTO ttt (name) VALUES ('from array1') AS new ON DUPLICATE KEY UPDATE name = new.name",
+            "INSERT INTO ttt (name) VALUES ('from array2') AS new ON DUPLICATE KEY UPDATE name = new.name",
+            "INSERT INTO ttt (name) VALUES ('from array2') AS new ON DUPLICATE KEY UPDATE name = new.name",
+        ], iterator_to_array($generator, false));
+        $this->assertEquals(2, $generator->getReturn());
 
         // attached
         $versions = $migrationTable->fetch();
@@ -70,8 +82,17 @@ class MigrationTableTest extends AbstractTestCase
             ['name' => 'from sql2'],
         ], $this->connection->fetchAllAssociative('select * from ttt'));
 
-        $this->assertEquals(4, $migrationTable->apply('11.sql', (array) 'update ttt set name = concat(name, " suffix")'));
-        $this->assertEquals(3, $migrationTable->apply('12.sql', (array) 'delete from ttt where name <> "from sql1 suffix"'));
+        $generator = $migrationTable->apply('11.sql', (array) 'update ttt set name = concat(name, " suffix")');
+        $this->assertEquals([
+            'update ttt set name = concat(name, " suffix")',
+        ], iterator_to_array($generator, false));
+        $this->assertEquals(4, $generator->getReturn());
+
+        $generator = $migrationTable->apply('12.sql', (array) 'delete from ttt where name <> "from sql1 suffix"');
+        $this->assertEquals([
+            'delete from ttt where name <> "from sql1 suffix"',
+        ], iterator_to_array($generator, false));
+        $this->assertEquals(3, $generator->getReturn());
     }
 
     public function test_attach_detach()

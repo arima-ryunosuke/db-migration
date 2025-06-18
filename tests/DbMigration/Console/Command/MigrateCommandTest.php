@@ -212,6 +212,13 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertStringContainsString('INSERT INTO notexist (id) VALUES(32)', $result);
         $this->assertStringContainsString('INSERT INTO notexist (id) VALUES(41)', $result);
         $this->assertStringContainsString('INSERT INTO notexist (id) VALUES(51)', $result);
+        $this->assertStringContainsString("INSERT INTO notexist (id) VALUES ('21') AS new ON DUPLICATE KEY UPDATE id = new.id", $result);
+        $this->assertStringContainsString("INSERT INTO notexist (id) VALUES(32)", $result);
+        $this->assertStringContainsString("INSERT INTO notexist (id) VALUES ('33') AS new ON DUPLICATE KEY UPDATE id = new.id", $result);
+        $this->assertStringContainsString("INSERT INTO notexist (id) VALUES(41)", $result);
+        $this->assertStringContainsString("INSERT INTO notexist (id) VALUES ('42') AS new ON DUPLICATE KEY UPDATE id = new.id", $result);
+        $this->assertStringContainsString("INSERT INTO notexist (id) VALUES(51)", $result);
+        $this->assertStringContainsString("INSERT INTO notexist (id) VALUES ('52') AS new ON DUPLICATE KEY UPDATE id = new.id", $result);
         $this->assertEquals([11, 12, 21, 22, 31, 32, 33, 41, 42, 51, 52], $this->connection->executeQuery('select * from notexist')->fetchFirstColumn());
         $this->assertEquals(['1.sql', '2.tsv', '3.php', '4.json', '5.yaml'], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
 
