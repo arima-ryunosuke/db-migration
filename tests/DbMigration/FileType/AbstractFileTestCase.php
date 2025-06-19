@@ -3,6 +3,7 @@
 namespace ryunosuke\Test\DbMigration\FileType;
 
 use Generator;
+use ReflectionProperty;
 use RuntimeException;
 use ryunosuke\DbMigration\FileType\AbstractFile;
 use ryunosuke\Test\DbMigration\AbstractTestCase;
@@ -12,6 +13,18 @@ use SplFileObject;
 abstract class AbstractFileTestCase extends AbstractTestCase
 {
     abstract function getFile($encoding = 'utf8'): AbstractFile;
+
+    public function test_file_bom()
+    {
+        $refprop = new ReflectionProperty(AbstractFile::class, 'bom');
+        $refprop->setAccessible(true);
+
+        $this->assertSame(null, $refprop->getValue($this->getFile('utf8')));
+        $this->assertSame(null, $refprop->getValue($this->getFile('utf-8')));
+        $this->assertSame(false, $refprop->getValue($this->getFile('utf8n')));
+        $this->assertSame(true, $refprop->getValue($this->getFile('utf8s')));
+        $this->assertSame(true, $refprop->getValue($this->getFile('utf8-sig')));
+    }
 
     public function test_convert()
     {

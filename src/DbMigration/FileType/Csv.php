@@ -39,7 +39,7 @@ class Csv extends AbstractFile
         $typed     = $this->options['typed'] ?? false;
 
         $stream = $this->stream('w');
-        if ($this->bom) {
+        if (($this->bom ?? true) && stripos($this->pathinfo['encoding'], 'utf') === 0) {
             $stream->fwrite(self::BOM);
         }
         foreach ($rows as $i => $row) {
