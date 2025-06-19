@@ -95,7 +95,7 @@ abstract class AbstractFile
             $buffer = $stream->fread(4096);
             if ($first) {
                 $first  = false;
-                $buffer = preg_replace("#^" . self::BOM . "#u", '', $buffer);
+                $buffer = preg_replace("#^" . self::BOM . "#", '', $buffer);
             }
             $contents .= $buffer;
         }
