@@ -72,7 +72,7 @@ class DumpCommandTest extends AbstractTestCase
         rm_rf($dir);
 
         $result = $this->runApp([
-            'directory' => $dir,
+            'files' => ["$dir/database.sql"],
         ]);
 
         $this->assertStringContainsString('table1', $result);
@@ -141,7 +141,7 @@ class DumpCommandTest extends AbstractTestCase
         rm_rf($dir);
 
         $this->runApp([
-            'directory'  => $dir,
+            'files'      => ["$dir/database.sql"],
             '--recreate' => null,
         ]);
 
@@ -153,7 +153,7 @@ class DumpCommandTest extends AbstractTestCase
         $this->assertFileContains("USE `$databasename`", $databasefile);
 
         $this->runApp([
-            'directory'  => $dir,
+            'files'      => ["$dir/database.sql"],
             '--recreate' => 'newdb',
         ]);
 
@@ -173,7 +173,7 @@ class DumpCommandTest extends AbstractTestCase
         rm_rf($dir);
 
         $result = $this->runApp([
-            'directory' => $dir,
+            'files'     => ["$dir/database.sql"],
             '--disable' => ['event', 'routine'],
         ]);
 
@@ -202,7 +202,7 @@ class DumpCommandTest extends AbstractTestCase
         rm_rf($dir);
 
         $result = $this->runApp([
-            'directory'   => $dir,
+            'files'       => ["$dir/database.sql"],
             '--exclude'   => ['view1'],
             '--migration' => 'table1',
         ]);
@@ -245,7 +245,7 @@ class DumpCommandTest extends AbstractTestCase
         $this->schema->dropDatabase($dummydatabasename);
 
         $this->runApp([
-            'directory'  => $dir,
+            'files'      => ["$dir/database.sql"],
             '--recreate' => $dummydatabasename,
         ]);
 
