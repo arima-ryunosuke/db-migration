@@ -65,6 +65,18 @@ class ConnectionTest extends AbstractTestCase
         $this->assertEquals([['id' => 1], ['id' => 2]], [...$conn->queryUnbuffered('select * from t_many')]);
     }
 
+    function test_buildInsertSql()
+    {
+        /** @var Connection $conn */
+        $conn = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);
+
+        $this->assertEquals("INSERT INTO hoge (id,name) VALUES ('1','X')", $conn->buildInsertSql('hoge', ['id' => 1, 'name' => 'X'], false));
+        $this->assertEquals("INSERT INTO hoge () VALUES ()", $conn->buildInsertSql('hoge', [], false));
+
+        $this->assertEquals("INSERT INTO hoge () VALUES ()", $conn->buildInsertSql('hoge', [], true));
+        $this->assertEquals("INSERT INTO hoge (id,name) VALUES ('1','X') AS new ON DUPLICATE KEY UPDATE id = new.id,name = new.name", $conn->buildInsertSql('hoge', ['id' => 1, 'name' => 'X'], true));
+    }
+
     function test_insert()
     {
         $conn       = DriverManager::getConnection($this->connection->getParams() + ['wrapperClass' => Connection::class]);

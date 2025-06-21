@@ -21,7 +21,7 @@ class DumpCommand extends AbstractCommand
         $this->setName('dump')->setDescription('Dump schema and records.');
         $this->setDefinition([
             new InputArgument('dsn', InputArgument::OPTIONAL, 'Specify target DSN.'),
-            new InputArgument('directory', InputArgument::OPTIONAL, 'Specify output directory.'),
+            new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify output files.'),
             new InputOption('recreate', 'R', InputOption::VALUE_OPTIONAL, 'Add DROP DATABASE/CREATE DATABASE.', ''),
             ...$this->getCommonOptions([
                 'migration',
@@ -35,7 +35,7 @@ class DumpCommand extends AbstractCommand
         ]);
         $this->setHelp(<<<EOT
             Dump database (e.g. sakila).
-             e.g. `dbmigration dump mysql://user:pass@localhost/sakila path/to/out`
+             e.g. `dbmigration dump mysql://user:pass@localhost/sakila path/to/out.sql`
             EOT
         );
     }
@@ -49,6 +49,9 @@ class DumpCommand extends AbstractCommand
 
         $this->logger->trace(fn($v) => $this->dump($v), $this->input->getArguments(), true);
         $this->logger->trace(fn($v) => $this->dump($v), $this->input->getOptions(), true);
+
+        // no nomalize(relative is important)
+        $files = $this->input->getArgument('files');
 
         // option
         $includes = $this->splitByComma($this->input->getOption('include'));
@@ -67,14 +70,13 @@ class DumpCommand extends AbstractCommand
         // export sql files from argument
         $transporter = new Transporter($conn);
         $transporter->setDisabled(array_fill_keys((array) $this->input->getOption('disable'), true));
-        $transporter->setDirectory($this->input->getArgument('directory') ?? $conn->getDatabase());
         $transporter->setDataDescriptionOptions([
             'multiline' => true,
         ]);
 
-        $files = $transporter->dump($this->input->getOption('recreate'), $includes, $excludes);
-        $this->transact($conn, function () use ($conn, $transporter, $files) {
-            foreach ($files as $meta => $generator) {
+        $generators = $transporter->dump(array_shift($files), $this->input->getOption('recreate'), $includes, $excludes);
+        $this->transact($conn, function () use ($conn, $transporter, $generators) {
+            foreach ($generators as $meta => $generator) {
                 if ($generator === null) {
                     $this->logger->info("skip <info>{$meta[0]}</info>");
                     continue;

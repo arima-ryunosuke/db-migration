@@ -14,7 +14,7 @@ abstract class AbstractFile
 {
     protected const BOM = "\xEF\xBB\xBF";
 
-    protected bool   $bom;
+    protected ?bool  $bom = null;
     protected string $internal_encoding;
     protected array  $pathinfo;
     protected array  $options;
@@ -68,10 +68,9 @@ abstract class AbstractFile
         $pathinfo2 = pathinfo($pathinfo['filename']);
         $encoding  = $pathinfo2['extension'] ?? $this->internal_encoding;
 
-        $this->bom = false;
-        if (preg_match('#^(utf-?8.*?)(n?)$#i', $encoding, $matches, PREG_UNMATCHED_AS_NULL)) {
+        if (preg_match('#^(utf-?8)(n|s|-sig)$#i', $encoding, $matches)) {
             $encoding  = $matches[1];
-            $this->bom = !$matches[2];
+            $this->bom = strtolower($matches[2]) !== 'n';
         }
 
         $this->pathinfo = [
@@ -96,7 +95,7 @@ abstract class AbstractFile
             $buffer = $stream->fread(4096);
             if ($first) {
                 $first  = false;
-                $buffer = preg_replace("#^" . self::BOM . "#u", '', $buffer);
+                $buffer = preg_replace("#^" . self::BOM . "#", '', $buffer);
             }
             $contents .= $buffer;
         }
@@ -131,7 +130,7 @@ abstract class AbstractFile
 
     abstract public function writeRecords(iterable $rows): Generator;
 
-    abstract public function readMigration(): array;
+    abstract public function readMigration(): Generator;
 
     protected function stream(string $mode): SplFileObject
     {

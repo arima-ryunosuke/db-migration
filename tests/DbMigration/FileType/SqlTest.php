@@ -84,10 +84,10 @@ class SqlTest extends AbstractFileTestCase
 
         $file = AbstractFile::create(self::$tmpdir . '/dummy.sql', ['delimiter' => '///', 'yield' => true]);
         file_put_contents($file->pathinfo()['fullname'], $contents);
-        $this->assertEquals($expected, $file->readMigration());
+        $this->assertEquals($expected, iterator_to_array($file->readMigration()));
 
         $file = AbstractFile::create(self::$tmpdir . '/dummy.sql', ['delimiter' => '///', 'yield' => false]);
         file_put_contents($file->pathinfo()['fullname'], $contents);
-        $this->assertEquals($expected, $file->readMigration());
+        $this->assertEquals($expected, iterator_to_array($file->readMigration()));
     }
 }

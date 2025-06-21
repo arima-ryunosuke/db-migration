@@ -8,6 +8,7 @@ use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Type;
 use DomainException;
+use Generator;
 use ryunosuke\DbMigration\FileType\AbstractFile;
 
 class MigrationTable
@@ -103,39 +104,46 @@ class MigrationTable
         return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAllAssociativeIndexed();
     }
 
-    public function apply(string $version, array $records): int
+    public function apply(string $version, iterable $records): Generator
     {
         $tablenames = array_flip($this->schemaManager->listTableNames());
 
-        $insert = function ($value, &$logs) use (&$insert, $tablenames) {
-            if (!is_array($value)) {
-                $logs[] = $value;
-                return $this->connection->executeStatement($value);
+        $result = (object) [
+            'affect' => 0,
+            'logs'   => [],
+        ];
+        $insert = function ($value) use (&$insert, $result, $tablenames) {
+            if (!is_iterable($value)) {
+                yield $value;
+                $result->logs[] = $value;
+                $result->affect += $this->connection->executeStatement($value);
+                return;
             }
 
-            $affected = 0;
             foreach ($value as $k => $v) {
                 if (isset($tablenames[$k])) {
                     foreach ($v as $row) {
-                        $logs[]   = $row;
-                        $affected += $this->connection->upsert($k, $row);
+                        $sql = $this->connection->buildInsertSql($k, $row, true);
+                        yield $sql;
+                        $result->logs[] = $row;
+                        $result->affect += $this->connection->executeStatement($sql);
                     }
                 }
                 else {
-                    $affected += $insert($v, $logs);
+                    yield from $insert($v);
                 }
             }
-            return $affected;
+            return;
         };
 
-        $affected = $insert($records, $logs);
+        yield from $insert($records);
 
         $this->connection->insert($this->table->getName(), [
             'version'  => $version,
             'apply_at' => date('Y-m-d H:i:s'),
-            'logs'     => json_encode($logs),
+            'logs'     => json_encode($result->logs),
         ]);
-        return $affected;
+        return $result->affect;
     }
 
     public function attach($version): int

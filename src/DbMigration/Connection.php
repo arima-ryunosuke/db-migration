@@ -115,37 +115,12 @@ class Connection extends \Doctrine\DBAL\Connection
 
     public function insert(string $table, array $data, array $types = []): int|string
     {
-        if (count($data) === 0) {
-            return parent::insert($table, $data, $types);
-        }
-
-        $implode = fn($v) => implode(',', $v);
-        return $this->executeStatement("INSERT INTO $table ({$implode(array_keys($data))}) VALUES ({$implode($this->quoteValues($data))})");
+        return $this->executeStatement($this->buildInsertSql($table, $data, false));
     }
 
     public function upsert($table, array $data, array $types = [])
     {
-        if (count($data) === 0) {
-            return parent::insert($table, $data, $types);
-        }
-
-        static $tableObjects = [];
-        $tableObjects[$table] ??= $this->createSchemaManager()->introspectTable($table);
-
-        $cols = array_keys($data);
-
-        $implode = fn($v) => implode(',', $v);
-        $sql     = "INSERT INTO $table ({$implode($cols)}) VALUES ({$implode($this->quoteValues($data))})";
-
-        if ($this->getDatabasePlatform() instanceof MySQLPlatform) {
-            $sql .= " ON DUPLICATE KEY UPDATE {$implode(array_map(fn($c) => "$c = VALUES($c)", $cols))}";
-        }
-        else {
-            $pkcol = $tableObjects[$table]->getPrimaryKey()->getColumns();
-            $sql   .= " ON CONFLICT({$implode($pkcol)}) DO UPDATE SET {$implode(array_map(fn($c) => "$c = EXCLUDED.$c", $cols))}";
-        }
-
-        return $this->executeStatement($sql);
+        return $this->executeStatement($this->buildInsertSql($table, $data, true));
     }
 
     public function quoteValues(mixed $value): int|float|string|array
@@ -197,5 +172,32 @@ class Connection extends \Doctrine\DBAL\Connection
         }
 
         return parent::quoteIdentifier($identifier);
+    }
+
+    public function buildInsertSql(string $table, array $data, bool $upsert)
+    {
+        if (count($data) === 0) {
+            return "INSERT INTO $table () VALUES ()";
+        }
+
+        $cols = array_keys($data);
+
+        $implode = fn($v) => implode(',', $v);
+        $sql     = "INSERT INTO $table ({$implode($cols)}) VALUES ({$implode($this->quoteValues($data))})";
+
+        if ($upsert) {
+            if ($this->getDatabasePlatform() instanceof MySQLPlatform) {
+                $sql .= " AS new ON DUPLICATE KEY UPDATE {$implode(array_map(fn($c) => "$c = new.$c", $cols))}";
+            }
+            else {
+                static $tableObjects = [];
+                $tableObjects[$table] ??= $this->createSchemaManager()->introspectTable($table);
+
+                $pkcol = $tableObjects[$table]->getPrimaryKey()->getColumns();
+                $sql   .= " ON CONFLICT({$implode($pkcol)}) DO UPDATE SET {$implode(array_map(fn($c) => "$c = EXCLUDED.$c", $cols))}";
+            }
+        }
+
+        return $sql;
     }
 }

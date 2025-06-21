@@ -33,6 +33,15 @@
   - [*change] 一部のイベントの廃止（onSchemaCreateTable）
   - [*change] maintain-type のデフォルト値を true に変更
 
+## 3.1.13
+
+- [*change] dump の php 対応と引数体系の変更
+- [fixbug] 4096 の境界で文字化けする不具合
+- [fixbug] CSV 以外でも utf8 で BOM 判定されていた
+- [feature] migration の apply を Generator に変更
+- [feature] writeRecords を Generator に変更
+- [refactor] ログで使いたいので insert/upsert 文の生成と実行を分離
+
 ## 3.1.12
 
 - [feature] dump コマンド追加

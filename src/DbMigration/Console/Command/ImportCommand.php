@@ -162,8 +162,11 @@ class ImportCommand extends AbstractCommand
                 }
                 if ($answer === 0) {
                     $this->transact($conn, function () use ($migrationTable, $version, $migfile) {
-                        $affected = $migrationTable->apply($version, $migfile->readMigration());
-                        $this->logger->log("-- <comment>Attach: $version, Affected rows: $affected</comment>");
+                        $migration = $migrationTable->apply($version, $migfile->readMigration());
+                        foreach ($migration as $sql) {
+                            $this->logger->debug([$this, 'formatSql'], $sql);
+                        }
+                        $this->logger->log("-- <comment>Attach: $version, Affected rows: {$migration->getReturn()}</comment>");
                     }, function (\Exception $ex) {
                         $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
                         if (!$this->input->getOption('force') && $this->confirm('exit?', true)) {

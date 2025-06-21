@@ -17,6 +17,39 @@ class CsvTest extends AbstractFileTestCase
     {
         $file = AbstractFile::create(self::$tmpdir . '/dummy.csv', ['delimiter' => ";"]);
 
+        // single
+        $records = [
+            ['main.id' => 1, 'name' => 'A'],
+            ['main.id' => 2, 'name' => 'B'],
+            ['main.id' => 3, 'name' => 'C'],
+        ];
+
+        $this->assertEquals($records, iterator_to_array($file->writeRecords($records)));
+        $this->assertEquals(<<<CSV
+            main.id;name
+            1;A
+            2;B
+            3;C
+            
+            CSV, (string) $file);
+        $this->assertEquals([
+            "main" => [
+                [
+                    "id"   => "1",
+                    "name" => "A",
+                ],
+                [
+                    "id"   => "2",
+                    "name" => "B",
+                ],
+                [
+                    "id"   => "3",
+                    "name" => "C",
+                ],
+            ],
+        ], array_map('iterator_to_array', iterator_to_array($file->readMigration())));
+
+        // multiple
         $records = [
             ['main.id' => 1, 'name' => 'A', 'sub.mainid' => 1, 'id' => 'a', 'mbstring' => 'あいうえお'],
             ['main.id' => '', 'name' => '', 'sub.mainid' => 1, 'id' => 'b', 'mbstring' => 'かきくけこ'],
@@ -55,14 +88,14 @@ class CsvTest extends AbstractFileTestCase
                     "mbstring" => "さしすせそ",
                 ],
             ],
-        ], $file->readMigration());
+        ], iterator_to_array($file->readMigration()));
 
         $records = [
             ['id' => 1, 'name' => 'A'],
         ];
 
         $this->assertEquals($records, iterator_to_array($file->writeRecords($records)));
-        $this->assertException(new DomainException('specified table name'), fn() => $file->readMigration());
+        $this->assertException(new DomainException('specified table name'), fn() => iterator_to_array($file->readMigration()));
     }
 
     public function test_typed()

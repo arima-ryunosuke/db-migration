@@ -428,9 +428,21 @@ class Transporter
         return $result;
     }
 
-    public function dump(?string $dbname, array $includes = [], array $excludes = []): Generator
+    public function dump(string $schemaFilename, ?string $dbname, array $includes = [], array $excludes = []): Generator
     {
-        assert(strlen($this->directory));
+        $schemaName = $this->connection->getDatabase();
+        $dbname     ??= $schemaName;
+        $directory  = dirname($schemaFilename);
+
+        $rules = [
+            'sql' => [static fn($localfile) => "SOURCE $directory/$localfile;\n"],
+            'php' => [static fn($localfile) => "<?php readfile(__DIR__ . " . var_export("/$localfile", true) . ") ?>\n"],
+        ];
+        $file  = $this->getFileByFilename($schemaFilename);
+        [$import] = $rules[$file->pathinfo()['extension']] ?? [null];
+        if ($import === null) {
+            throw $file->newUnsupported(__FUNCTION__);
+        }
 
         [$before, $after] = $this->getSetStatements([
             'print_identified_with_as_hex' => 1,
@@ -451,15 +463,16 @@ class Transporter
                     continue;
                 }
                 foreach ($setting['get']($this->schema) as $object) {
-                    $name     = $object->getName();
-                    $filename = "$this->directory/$category/$name.sql";
+                    $name      = $object->getName();
+                    $localname = "$category/$name.sql";
+                    $filename  = "$directory/$localname";
 
                     if ($this->filterTable($name, $includes, $excludes) > 0) {
                         yield [$name, $filename] => null;
                         continue;
                     }
 
-                    $sources[$category][$name] = $filename;
+                    $sources[$category][$name] = $localname;
                     yield [$name, $filename] => function () use ($filename, $category, $name, $setting, $object) {
                         $count  = 0;
                         $file   = $this->getFileByFilename($filename);
@@ -495,9 +508,7 @@ class Transporter
                 }
             }
 
-            $schemaName     = $this->connection->getDatabase();
-            $schemaFilename = "$this->directory/database.sql";
-            yield [$schemaName, $schemaFilename] => function () use ($dbname, $schemaName, $schemaFilename, $sources) {
+            yield [$schemaName, $schemaFilename] => function () use ($dbname, $schemaName, $schemaFilename, $import, $sources) {
                 $count  = 0;
                 $file   = $this->getFileByFilename($schemaFilename);
                 $stream = $file->open('w');
@@ -528,7 +539,6 @@ class Transporter
                         yield '-- ' . str_replace(["\r\n", "\r", "\n"], ' ', $create) . ";";
                     }
                     else {
-                        $dbname  ??= $schemaName;
                         $qdbname = $this->connection->quoteIdentifiers($dbname);
                         yield "DROP DATABASE IF EXISTS $qdbname;";
                         yield str_replace($qSchemaName, $qdbname, $create) . ";";
@@ -584,7 +594,7 @@ class Transporter
                 foreach ($sources as $category => $filenames) {
                     $stream->fwrite("-- $category\n");
                     foreach ($filenames as $filename) {
-                        $stream->fwrite("SOURCE $filename;\n");
+                        $stream->fwrite($import($filename));
                         yield $count++;
                     }
                     $stream->fwrite("\n");

@@ -231,10 +231,13 @@ class TransporterTest extends AbstractTestCase
     function dumpSchema()
     {
         // for coverage
-        $this->transporter->setDirectory(self::$tmpdir);
-        $diff = $this->transporter->dump('', ['hoge'], ['fuga']);
+        $diff = $this->transporter->dump(self::$tmpdir . '/dummy.sql', '', ['hoge'], ['fuga']);
 
         $this->assertEquals(18, iterator_count($diff));
+
+        $this->assertException(new \DomainException("does not support dump"), function () {
+            iterator_to_array($this->transporter->dump(self::$tmpdir . '/dummy.json', '', ['hoge'], ['fuga']));
+        });
     }
 
     /**

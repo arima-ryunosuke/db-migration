@@ -13,7 +13,8 @@ class Php extends AbstractFile
 {
     public function readSchema(): array
     {
-        return $this->read();
+        $data = $this->read();
+        return is_array($data) ? $data : iterator_to_array($data);
     }
 
     public function writeSchema(array $schemaArray): string
@@ -47,9 +48,9 @@ class Php extends AbstractFile
         $stream->fwrite("];\n");
     }
 
-    public function readMigration(): array
+    public function readMigration(): Generator
     {
-        return $this->read();
+        yield from $this->read();
     }
 
     protected function encode($data, $options, $nest = 0)
@@ -110,13 +111,13 @@ class Php extends AbstractFile
         return var_export($data, true);
     }
 
-    protected function read(): array
+    protected function read(): iterable
     {
         $result = require $this->filterize($this->pathinfo['fullname'], 'r');
         if ($result instanceof Closure) {
             $result = $result($this->options['connection']);
         }
-        return (array) $result;
+        return is_iterable($result) ? $result : (array) $result;
     }
 
     protected function export($data, $options)

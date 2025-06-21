@@ -256,7 +256,8 @@ class MigrateCommand extends AbstractCommand
         $this->transact($conn, function () use ($conn, $migrationTable, $migration, $new, $old, $upgrades) {
             foreach ($upgrades as $version => $file) {
                 /** @var AbstractFile $file */
-                $this->logger->log((string) $file);
+                $this->logger->log($file->pathinfo()['fullname']);
+                $this->logger->debug((string) $file);
 
                 if ($this->input->getOption('check')) {
                     continue;
@@ -272,8 +273,11 @@ class MigrateCommand extends AbstractCommand
                 }
                 if ($answer === 0) {
                     $this->transact($conn, function () use ($migrationTable, $version, $file) {
-                        $affected = $migrationTable->apply($version, $file->readMigration());
-                        $this->logger->log("-- <comment>Attach: $version, Affected rows: $affected</comment>");
+                        $migration = $migrationTable->apply($version, $file->readMigration());
+                        foreach ($migration as $sql) {
+                            $this->logger->log([$this, 'formatSql'], $sql);
+                        }
+                        $this->logger->log("-- <comment>Attach: $version, Affected rows: {$migration->getReturn()}</comment>");
                     }, function (\Exception $ex) {
                         $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
                         if (!$this->input->getOption('force') && $this->confirm('exit?', true)) {

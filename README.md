@@ -89,10 +89,11 @@ sql は DDL の差分には対応していません。
 エンコーディング指定はファイル名とはみなされず、テーブル名に含まれません。
 
 - hoge.sjis.csv: SJIS の csv として扱います
-- hoge.utf8.csv: BOM 付き UTF8 の csv として扱います
+- hoge.utf8.csv: BOM の扱いはファイルタイプに任せます（過程も推測もしません）
 - hoge.utf8n.csv: BOM 無し UTF8 の csv として扱います
+- hoge.utf8s.csv: BOM 有り UTF8 の csv として扱います
 
-`utf8` で BOM がつくのは CSV だけです。
+`utf8` で BOM が関係するのは CSV だけです。
 他の json や yaml などでは `utf8`, `utf8n` の違いはありません。
 
 #### --directory (-d)
@@ -612,9 +613,9 @@ Help:
 
 ### dump
 
-第1引数の DSN を指定ディレクトリにダンプします。
+第1引数の DSN を指定ファイルにダンプします。
 
-- e.g. `php dbmigration.phar dump mysql://127.0.0.1/dbname outdir
+- e.g. `php dbmigration.phar dump mysql://127.0.0.1/dbname database.sql
 
 引数は下記。
 
@@ -623,11 +624,11 @@ Description:
   Dump schema and records.
 
 Usage:
-  dump [options] [--] [<dsn> [<directory>]]
+  dump [options] [--] [<dsn> [<files>...]]
 
 Arguments:
   dsn                              Specify target DSN.
-  directory                        Specify output directory.
+  files                            Specify output files.
 
 Options:
   -R, --recreate[=RECREATE]        Add DROP DATABASE/CREATE DATABASE. [default: ""]
@@ -647,10 +648,8 @@ Options:
 
 Help:
   Dump database (e.g. sakila).
-   e.g. `dbmigration dump mysql://user:pass@localhost/sakila path/to/out`
+   e.g. `dbmigration dump mysql://user:pass@localhost/sakila path/to/out.sql`
 ```
-
-directory の指定がないとカレントディレクトリに DBNAME で出力します。
 
 このサブコマンドは mysqldump を模倣するものではありますが、バックアップ用途ではありません。そういう用途では使用しないでください。
 データの移行などで mysqldump の吐き出す巨大な1枚岩の sql ファイルのハンドリングがつらいときに使います。
@@ -664,14 +663,23 @@ directory の指定がないとカレントディレクトリに DBNAME で出�
 取り込みサブコマンドは用意されていませんが、トップレベルの database.sql に SOURCE が記載されているため、
 
 ```
+# sql
 mysql dbname < database.sql
+cat database.sql | mysql dbname
+
+# php
+mysql dbname <(php database.sql)
+php database.php | mysql dbname
 ```
 
 ですべて取り込むことができます。
 ただし SOURCE はカレントディレクトリの影響を受けるので実行場所には要注意です。
-directory に絶対パスを渡せば `SOURCE` も絶対パスになります。
+files に絶対パスを渡せば `SOURCE` も絶対パスになります。
 同じホストであれこれする場合は絶対パスの方がいいでしょう。
 別のホストへ移行したい場合は相対パスの方がいいでしょう。
+
+なお、拡張子を .php で出力すればこの制限はありません。
+`__DIR__` で自分のディレクトリが得られるため、トップレベルの database.php はすべて相対パスになります。
 
 ## Licence
 
