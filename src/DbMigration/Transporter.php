@@ -424,7 +424,7 @@ class Transporter
         return $result;
     }
 
-    public function dump(string $schemaFilename, ?string $dbname, array $includes = [], array $excludes = []): Generator
+    public function dump(string $schemaFilename, ?string $dbname, array $includes = [], array $excludes = [], array $options = []): Generator
     {
         $schemaName = $this->connection->getDatabase();
         $dbname     ??= $schemaName;
@@ -469,7 +469,7 @@ class Transporter
                     }
 
                     $sources[$category][$name] = $localname;
-                    yield [$name, $filename] => function () use ($filename, $category, $name, $setting, $object) {
+                    yield [$name, $filename] => function () use ($options, $filename, $category, $name, $setting, $object) {
                         $count  = 0;
                         $file   = $this->getFileByFilename($filename);
                         $stream = $file->open('w');
@@ -484,6 +484,14 @@ class Transporter
                         foreach ($createSQLs as $createSQL) {
                             $stream->fwrite("$createSQL\n");
                             yield $count++;
+                        }
+
+                        // adjust
+                        if ($category === 'table') {
+                            if ($options['no-autoincrement'] ?? false) {
+                                $stream->fwrite("\n");
+                                $stream->fwrite("ALTER TABLE {$this->connection->quoteIdentifier($name)} auto_increment = 1;\n");
+                            }
                         }
 
                         // insert

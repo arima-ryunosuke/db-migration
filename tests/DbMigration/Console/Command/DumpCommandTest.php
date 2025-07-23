@@ -21,7 +21,7 @@ class DumpCommandTest extends AbstractTestCase
     {
         parent::setUp();
 
-        $this->readyObject($this->schema, (new Table('table1', [new Column('id', Type::getType('integer'))]))->setPrimaryKey(['id']));
+        $this->readyObject($this->schema, (new Table('table1', [new Column('id', Type::getType('integer'), ['autoincrement' => true])]))->setPrimaryKey(['id']));
         $this->readyObject($this->schema, new View('view1', 'select * from table1'));
         $this->readyObject($this->schema, new Trigger('trigger1', 'call function1()', 'table1', [
             'timing' => 'before',
@@ -215,6 +215,22 @@ class DumpCommandTest extends AbstractTestCase
         $this->assertStringContainsString('function1', $result);
 
         $this->assertFileDoesNotExist("$dir/table/table1.sql");
+    }
+
+    /**
+     * @test
+     */
+    function run_options()
+    {
+        $dir = self::$tmpdir . '/dump';
+        rm_rf($dir);
+
+        $this->runApp([
+            'files'              => ["$dir/database.sql"],
+            '--no-autoincrement' => null,
+        ]);
+
+        $this->assertFileContains('ALTER TABLE `table1` auto_increment = 1', "$dir/table/table1.sql");
     }
 
     /**
