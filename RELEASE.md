@@ -21,6 +21,12 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.14
+
+- [feature] dump に no-autoincrement オプションを追加
+- [composer] update
+  - 3.10.0
+
 ## 3.1.13
 
 - [*change] dump の php 対応と引数体系の変更
