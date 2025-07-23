@@ -23,6 +23,7 @@ class DumpCommand extends AbstractCommand
             new InputArgument('dsn', InputArgument::OPTIONAL, 'Specify target DSN.'),
             new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify output files.'),
             new InputOption('recreate', 'R', InputOption::VALUE_OPTIONAL, 'Add DROP DATABASE/CREATE DATABASE.', ''),
+            new InputOption('no-autoincrement', 'A', InputOption::VALUE_NONE, 'Add RESET auto_increment.'),
             ...$this->getCommonOptions([
                 'migration',
                 'include',
@@ -74,7 +75,9 @@ class DumpCommand extends AbstractCommand
             'multiline' => true,
         ]);
 
-        $generators = $transporter->dump(array_shift($files), $this->input->getOption('recreate'), $includes, $excludes);
+        $generators = $transporter->dump(array_shift($files), $this->input->getOption('recreate'), $includes, $excludes, [
+            'no-autoincrement' => $this->input->getOption('no-autoincrement'),
+        ]);
         $this->transact($conn, function () use ($conn, $transporter, $generators) {
             foreach ($generators as $meta => $generator) {
                 if ($generator === null) {

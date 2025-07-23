@@ -173,7 +173,7 @@ class Transporter
                     }
 
                     // add indexes
-                    $indexes = $this->tableUnsetImplicitIndex($table)->getIndexes();
+                    $indexes = $table->getIndexes();
                     array_multisort(array_map(fn(Index $v) => $v->isPrimary() ? '' : $v->getName(), $indexes), $indexes);
                     foreach ($indexes as $index) {
                         $array = [
@@ -234,9 +234,6 @@ class Transporter
                     foreach ($array['foreign'] ?? [] as $name => $fkey) {
                         $table->addForeignKeyConstraint($fkey['table'], array_keys($fkey['column']), array_values($fkey['column']), $fkey['option'], $name);
                     }
-
-                    // ignore implicit index
-                    $this->tableUnsetImplicitIndex($table);
 
                     return $table;
                 },
@@ -645,10 +642,6 @@ class Transporter
                     continue;
                 }
 
-                if ($object instanceof Table) {
-                    $this->tableUnsetImplicitIndex($object);
-                }
-
                 if ($file->sqlable()) {
                     $categories[$category][$name] = $object;
                     continue;
@@ -753,10 +746,6 @@ class Transporter
             }
         }
 
-        foreach ($oldSchema->getTables() as $table) {
-            $this->tableUnsetImplicitIndex($table);
-        }
-
         $diff = $this->schemaManager->createComparator()->compareSchemas($oldSchema, $newSchema);
         return $this->platform->getAlterSchemaSQL($diff);
     }
@@ -838,16 +827,6 @@ class Transporter
             $after[]  = "SET $name = @old_$name;";
         }
         return [$before, $after];
-    }
-
-    private function tableUnsetImplicitIndex(Table $table): Table
-    {
-        foreach ($table->getIndexes() as $index) {
-            if ($index->hasFlag('implicit')) {
-                $table->dropIndex($index->getName());
-            }
-        }
-        return $table;
     }
 
     private function arrayToObject(array $array, string ...$unset_keys): array
