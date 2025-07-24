@@ -53,11 +53,6 @@ class TransporterTest extends AbstractTestCase
         $table->addColumn('pid', 'integer');
         $table->setPrimaryKey(['id', 'pid']);
         $table->addForeignKeyConstraint('parent', ['id'], ['id']);
-        foreach ($table->getIndexes() as $index) {
-            if ($index->hasFlag('implicit')) {
-                $table->dropIndex($index->getName());
-            }
-        }
         $this->readyObject($this->schema, $table);
 
         $table = new Table('zzz');
@@ -727,18 +722,6 @@ class TransporterTest extends AbstractTestCase
             ['id' => -2, 'c_int' => 1, 'c_float' => 1, 'c_varchar' => 'char', 'c_text' => 'text', 'c_datetime' => '2000-01-01 00:00:00',],
         ]);
         $this->assertException($e, $migrateDml, $fn);
-    }
-
-    /**
-     * @test
-     */
-    function implicit()
-    {
-        $this->transporter->exportDDL(self::$tmpdir . '/table.yml');
-        $this->assertFileNotContains('IDX_', self::$tmpdir . '/table.yml');
-
-        $ddls = $this->transporter->importDDL(self::$tmpdir . '/table.yml');
-        $this->assertNotContainsString('IDX_', $ddls);
     }
 
     /**

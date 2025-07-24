@@ -174,7 +174,7 @@ class Transporter
                     }
 
                     // add indexes
-                    $indexes = $this->tableUnsetImplicitIndex($table)->getIndexes();
+                    $indexes = $table->getIndexes();
                     array_multisort(array_map(fn(Index $v) => $v->isPrimary() ? '' : $v->getName(), $indexes), $indexes);
                     foreach ($indexes as $index) {
                         $array = [
@@ -235,9 +235,6 @@ class Transporter
                     foreach ($array['foreign'] ?? [] as $name => $fkey) {
                         $table->addForeignKeyConstraint($fkey['table'], array_keys($fkey['column']), array_values($fkey['column']), $fkey['option'], $name);
                     }
-
-                    // ignore implicit index
-                    $this->tableUnsetImplicitIndex($table);
 
                     return $table;
                 },
@@ -428,7 +425,7 @@ class Transporter
         return $result;
     }
 
-    public function dump(string $schemaFilename, ?string $dbname, array $includes = [], array $excludes = []): Generator
+    public function dump(string $schemaFilename, ?string $dbname, array $includes = [], array $excludes = [], array $options = []): Generator
     {
         $schemaName = $this->connection->getDatabase();
         $dbname     ??= $schemaName;
@@ -473,7 +470,7 @@ class Transporter
                     }
 
                     $sources[$category][$name] = $localname;
-                    yield [$name, $filename] => function () use ($filename, $category, $name, $setting, $object) {
+                    yield [$name, $filename] => function () use ($options, $filename, $category, $name, $setting, $object) {
                         $count  = 0;
                         $file   = $this->getFileByFilename($filename);
                         $stream = $file->open('w');
@@ -488,6 +485,14 @@ class Transporter
                         foreach ($createSQLs as $createSQL) {
                             $stream->fwrite("$createSQL\n");
                             yield $count++;
+                        }
+
+                        // adjust
+                        if ($category === 'table') {
+                            if ($options['no-autoincrement'] ?? false) {
+                                $stream->fwrite("\n");
+                                $stream->fwrite("ALTER TABLE {$this->connection->quoteIdentifier($name)} auto_increment = 1;\n");
+                            }
                         }
 
                         // insert
@@ -646,10 +651,6 @@ class Transporter
                     continue;
                 }
 
-                if ($object instanceof Table) {
-                    $this->tableUnsetImplicitIndex($object);
-                }
-
                 if ($file->sqlable()) {
                     $categories[$category][$name] = $object;
                     continue;
@@ -755,10 +756,6 @@ class Transporter
             }
         }
 
-        foreach ($oldSchema->getTables() as $table) {
-            $this->tableUnsetImplicitIndex($table);
-        }
-
         $diff = $this->schemaManager->createComparator()->compareSchemas($oldSchema, $newSchema);
         return $this->platform->getAlterSchemaSQL($diff);
     }
@@ -840,16 +837,6 @@ class Transporter
             $after[]  = "SET $name = @old_$name;";
         }
         return [$before, $after];
-    }
-
-    private function tableUnsetImplicitIndex(Table $table): Table
-    {
-        foreach ($table->getIndexes() as $index) {
-            if ($index->hasFlag('implicit')) {
-                $table->dropIndex($index->getName());
-            }
-        }
-        return $table;
     }
 
     private function arrayToObject(array $array, string ...$unset_keys): array
