@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/arima-ryunosuke/dbal.git",
-                "reference": "fd7a899816ef8a7b84966d7fe1376ba2bd794fb5"
+                "reference": "1f50e75e7117300d901cae1130b2d98542d18f14"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/arima-ryunosuke/dbal/zipball/fd7a899816ef8a7b84966d7fe1376ba2bd794fb5",
-                "reference": "fd7a899816ef8a7b84966d7fe1376ba2bd794fb5",
+                "url": "https://api.github.com/repos/arima-ryunosuke/dbal/zipball/1f50e75e7117300d901cae1130b2d98542d18f14",
+                "reference": "1f50e75e7117300d901cae1130b2d98542d18f14",
                 "shasum": ""
             },
             "require": {
@@ -107,7 +107,7 @@
             "support": {
                 "source": "https://github.com/arima-ryunosuke/dbal/tree/v3.10.0"
             },
-            "time": "2025-07-24T04:20:59+00:00"
+            "time": "2025-07-31T09:58:01+00:00"
         },
         {
             "name": "doctrine/deprecations",
@@ -1415,16 +1415,16 @@
         },
         {
             "name": "nikic/php-parser",
-            "version": "v5.5.0",
+            "version": "v5.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "ae59794362fe85e051a58ad36b289443f57be7a9"
+                "reference": "221b0d0fdf1369c71047ad1d18bb5880017bbc56"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/ae59794362fe85e051a58ad36b289443f57be7a9",
-                "reference": "ae59794362fe85e051a58ad36b289443f57be7a9",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/221b0d0fdf1369c71047ad1d18bb5880017bbc56",
+                "reference": "221b0d0fdf1369c71047ad1d18bb5880017bbc56",
                 "shasum": ""
             },
             "require": {
@@ -1467,9 +1467,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nikic/PHP-Parser/issues",
-                "source": "https://github.com/nikic/PHP-Parser/tree/v5.5.0"
+                "source": "https://github.com/nikic/PHP-Parser/tree/v5.6.0"
             },
-            "time": "2025-05-31T08:24:38+00:00"
+            "time": "2025-07-27T20:03:57+00:00"
         },
         {
             "name": "phar-io/manifest",
