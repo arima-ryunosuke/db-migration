@@ -21,6 +21,13 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.2.3
+
+- Merge tag 'v3.1.14'
+- Merge tag 'v3.1.15'
+- [composer] update
+  - dbal: 4.3
+
 ## 3.2.2
 
 - Merge tag 'v3.1.13'
