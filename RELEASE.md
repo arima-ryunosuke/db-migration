@@ -37,6 +37,11 @@
   - [*change] 一部のイベントの廃止（onSchemaCreateTable）
   - [*change] maintain-type のデフォルト値を true に変更
 
+## 3.1.15
+
+- [composer] update
+  - 3.10.0 でバグがあったので差し替え
+
 ## 3.1.14
 
 - [feature] dump に no-autoincrement オプションを追加
