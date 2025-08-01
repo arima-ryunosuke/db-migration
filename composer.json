@@ -1,7 +1,7 @@
 {
   "config": {
     "platform": {
-      "php": "8.1"
+      "php": "8.2"
     }
   },
   "name": "ryunosuke/db-migration",
@@ -48,8 +48,8 @@
     }
   ],
   "require": {
-    "php": ">=8.1",
-    "doctrine/dbal": "4.2.*",
+    "php": ">=8.2",
+    "doctrine/dbal": "4.3.*",
     "symfony/console": "5.*",
     "symfony/yaml": "*"
   },
