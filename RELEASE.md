@@ -21,6 +21,12 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.1.16
+
+- [feature] dump に no-definer オプションを追加
+- [composer] update
+  - VIEW の DEFINER や SECURITY に対応
+
 ## 3.1.15
 
 - [composer] update
