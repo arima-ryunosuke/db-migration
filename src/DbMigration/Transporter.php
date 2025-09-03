@@ -257,8 +257,11 @@ class Transporter
                     return new View($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreViewOptionAttributes), 'sql'));
                 },
                 'createSQLs' => fn($views) => array_map(fn($view) => $this->platform->getCreateViewSQL($view->getName(), $view->getSql(), $view->getOptions()), $views),
-                'showCreate' => function ($view) {
+                'showCreate' => function ($view, $no_definer) {
                     $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE VIEW {$view->getName()}"));
+                    if ($no_definer) {
+                        $data["create view"] = $this->stripDefinerOf($data["create view"]);
+                    }
                     [$before, $after] = $this->getSetStatements([
                         'character_set_client' => $data['character_set_client'],
                     ]);
@@ -283,8 +286,11 @@ class Transporter
                     return new Trigger($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreTriggerOptionAttributes), 'statement', 'table'));
                 },
                 'createSQLs' => fn($triggers) => array_map(fn($trigger) => $this->platform->getCreateTriggerSQL($trigger), $triggers),
-                'showCreate' => function ($trigger) {
+                'showCreate' => function ($trigger, $no_definer) {
                     $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE TRIGGER {$trigger->getName()}"));
+                    if ($no_definer) {
+                        $data["sql original statement"] = $this->stripDefinerOf($data["sql original statement"]);
+                    }
                     [$before, $after] = $this->getSetStatements([
                         'sql_mode'             => $this->connection->quote($data['sql_mode']),
                         'character_set_client' => $data['character_set_client'],
@@ -312,9 +318,12 @@ class Transporter
                     return new Routine($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreRoutineOptionAttributes), 'statement'));
                 },
                 'createSQLs' => fn($routines) => array_map(fn($routine) => (fn($routine) => $this->platform->{"getCreate{$routine->getType()}SQL"}($routine))($routine), $routines),
-                'showCreate' => function ($routine) {
+                'showCreate' => function ($routine, $no_definer) {
                     $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE {$routine->getType()} {$routine->getName()}"));
                     $type = strtolower($routine->getType());
+                    if ($no_definer) {
+                        $data["create $type"] = $this->stripDefinerOf($data["create $type"]);
+                    }
                     [$before, $after] = $this->getSetStatements([
                         'sql_mode'             => $this->connection->quote($data['sql_mode']),
                         'character_set_client' => $data['character_set_client'],
@@ -342,8 +351,11 @@ class Transporter
                     return new Event($name, ...$this->arrayToObject(array_diff_key($array, $this->ignoreEventOptionAttributes), 'statement'));
                 },
                 'createSQLs' => fn($events) => array_map(fn($event) => $this->platform->getCreateEventSQL($event), $events),
-                'showCreate' => function ($event) {
+                'showCreate' => function ($event, $no_definer) {
                     $data = array_change_key_case($this->connection->fetchAssociative("SHOW CREATE EVENT {$event->getName()}"));
+                    if ($no_definer) {
+                        $data["create event"] = $this->stripDefinerOf($data["create event"]);
+                    }
                     [$before, $after] = $this->getSetStatements([
                         'sql_mode'  => $this->connection->quote($data['sql_mode']),
                         'time_zone' => $this->connection->quote($data['time_zone']),
@@ -480,7 +492,7 @@ class Transporter
                         yield $count++;
 
                         // create
-                        $createSQLs = $setting['showCreate']($object);
+                        $createSQLs = $setting['showCreate']($object, $options['no-definer'] ?? false);
                         foreach ($createSQLs as $createSQL) {
                             $stream->fwrite("$createSQL\n");
                             yield $count++;
@@ -845,6 +857,15 @@ class Transporter
             unset($array[$key]);
         }
         return [...$unsets, $array];
+    }
+
+    private function stripDefinerOf(string $sql)
+    {
+        if ($this->platform instanceof AbstractMySQLPlatform) {
+            $sql = preg_replace('/\s*DEFINER\s*=\s*`[^`]+`@`[^`]+`\s*/', ' ', $sql, 1);
+        }
+
+        return $sql;
     }
 
     private function stripSchemaOf(string $sql)

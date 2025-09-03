@@ -1089,6 +1089,18 @@ TCSV
     /**
      * @test
      */
+    function stripDefinerFromSql()
+    {
+        $stripDefinerOf = $this->refClass->getMethod('stripDefinerOf');
+        $stripDefinerOf->setAccessible(true);
+
+        $this->assertEquals('CREATE VIEW', $stripDefinerOf->invoke($this->transporter, 'CREATE DEFINER=`user`@`localhost` VIEW'));
+        $this->assertEquals('CREATE EVENT COMMENT "DEFINER=`user`@`localhost`"', $stripDefinerOf->invoke($this->transporter, 'CREATE DEFINER=`user`@`localhost` EVENT COMMENT "DEFINER=`user`@`localhost`"'));
+    }
+
+    /**
+     * @test
+     */
     function exchangeSchemaFromSQL()
     {
         $stripSchemaOf = $this->refClass->getMethod('stripSchemaOf');

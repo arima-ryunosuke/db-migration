@@ -24,6 +24,7 @@ class DumpCommand extends AbstractCommand
             new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify output files.'),
             new InputOption('recreate', 'R', InputOption::VALUE_OPTIONAL, 'Add DROP DATABASE/CREATE DATABASE.', ''),
             new InputOption('no-autoincrement', 'A', InputOption::VALUE_NONE, 'Add RESET auto_increment.'),
+            new InputOption('no-definer', null, InputOption::VALUE_NONE, 'Strip DEFINER clause'),
             ...$this->getCommonOptions([
                 'migration',
                 'include',
@@ -77,6 +78,7 @@ class DumpCommand extends AbstractCommand
 
         $generators = $transporter->dump(array_shift($files), $this->input->getOption('recreate'), $includes, $excludes, [
             'no-autoincrement' => $this->input->getOption('no-autoincrement'),
+            'no-definer'       => $this->input->getOption('no-definer'),
         ]);
         $this->transact($conn, function () use ($conn, $transporter, $generators) {
             foreach ($generators as $meta => $generator) {
