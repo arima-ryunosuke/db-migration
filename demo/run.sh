@@ -22,6 +22,7 @@ techo "change database. (ALTER/UPDATE)"
 mysql -h 127.0.0.1 -u $USER -p$PASS demo_migration << SQL
 ALTER TABLE actor ADD COLUMN dummy INT NOT NULL AFTER last_update;
 ALTER EVENT event1 COMMENT 'eventX';
+ALTER SQL SECURITY INVOKER VIEW actor_info AS SELECT * FROM actor;
 UPDATE actor SET first_name = "changed" WHERE actor_id = 1;
 SQL
 
