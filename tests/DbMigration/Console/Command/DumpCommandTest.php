@@ -228,9 +228,15 @@ class DumpCommandTest extends AbstractTestCase
         $this->runApp([
             'files'              => ["$dir/database.sql"],
             '--no-autoincrement' => null,
+            '--no-definer'       => null,
         ]);
 
         $this->assertFileContains('ALTER TABLE `table1` auto_increment = 1', "$dir/table/table1.sql");
+        $this->assertFileNotContains('DEFINER=', "$dir/view/view1.sql");
+        $this->assertFileNotContains('DEFINER=', "$dir/trigger/trigger1.sql");
+        $this->assertFileNotContains('DEFINER=', "$dir/event/event1.sql");
+        $this->assertFileNotContains('DEFINER=', "$dir/routine/procedure1.sql");
+        $this->assertFileNotContains('DEFINER=', "$dir/routine/function1.sql");
     }
 
     /**

@@ -633,6 +633,7 @@ Arguments:
 Options:
   -R, --recreate[=RECREATE]        Add DROP DATABASE/CREATE DATABASE. [default: ""]
   -A, --no-autoincrement           Add RESET auto_increment.
+      --no-definer                 Strip DEFINER clause
   -m, --migration[=MIGRATION]      Specify migration directory.
   -i, --include[=INCLUDE]          Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
   -e, --exclude[=EXCLUDE]          Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)

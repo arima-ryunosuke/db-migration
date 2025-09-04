@@ -90,7 +90,10 @@ class TransporterTest extends AbstractTestCase
             'comment'       => 'event1comment',
         ]));
 
-        $view = new View('vvview', 'select * from hoge');
+        $view = new View('vvview', 'select * from hoge', [
+            'definer'      => 'user@localhost',
+            'securityType' => 'INVOKER',
+        ]);
         $this->readyObject($this->schema, $view);
 
         $this->insertMultiple($this->connection, 'hoge', array_map(function ($i) {
@@ -302,7 +305,7 @@ class TransporterTest extends AbstractTestCase
         $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
         $this->assertFileContains('CREATE TABLE child', self::$tmpdir . '/table.sql');
         $this->assertFileContains('ALTER TABLE child', self::$tmpdir . '/table.sql');
-        $this->assertFileContains('CREATE VIEW', self::$tmpdir . '/table.sql');
+        $this->assertFileContains('CREATE DEFINER=`user`@`localhost` SQL SECURITY INVOKER VIEW', self::$tmpdir . '/table.sql');
         $this->assertFileContains('CREATE DEFINER=`user`@`localhost` TRIGGER', self::$tmpdir . '/table.sql');
         $this->assertFileContains('CREATE DEFINER=`user`@`localhost` FUNCTION', self::$tmpdir . '/table.sql');
         $this->assertFileContains('CREATE DEFINER=`user`@`localhost` EVENT', self::$tmpdir . '/table.sql');
@@ -407,7 +410,7 @@ class TransporterTest extends AbstractTestCase
             $this->assertContainsString('CREATE TABLE fuga', $ddls);
             $this->assertContainsString('CREATE DEFINER=`user`@`localhost` TRIGGER trg1', $ddls);
             $this->assertContainsString('CREATE DEFINER=`user`@`localhost` TRIGGER trg2', $ddls);
-            $this->assertContainsString('CREATE VIEW vvview', $ddls);
+            $this->assertContainsString('CREATE DEFINER=`user`@`localhost` SQL SECURITY INVOKER VIEW vvview', $ddls);
         }
 
         $this->assertEquals([], $this->transporter->importDDL(''));
@@ -1067,7 +1070,7 @@ TCSV
         $this->assertContainsString('CREATE TABLE fuga', $ddls);
         $this->assertContainsString('CREATE TABLE hoge', $ddls);
         $this->assertContainsString('CREATE TABLE parent', $ddls);
-        $this->assertContainsString('CREATE VIEW vvview', $ddls);
+        $this->assertContainsString('CREATE DEFINER=`user`@`localhost` SQL SECURITY INVOKER VIEW vvview', $ddls);
     }
 
     /**
@@ -1081,6 +1084,18 @@ TCSV
         ]);
         $this->transporter->exportDDL(self::$tmpdir . '/table.sql');
         $this->assertFileContains("CREATE DEFINER=`user`@`localhost` TRIGGER trg1 BEFORE UPDATE ON zzz FOR EACH ROW INSERT INTO hoge\nVALUES()//", self::$tmpdir . '/table.sql');
+    }
+
+    /**
+     * @test
+     */
+    function stripDefinerFromSql()
+    {
+        $stripDefinerOf = $this->refClass->getMethod('stripDefinerOf');
+        $stripDefinerOf->setAccessible(true);
+
+        $this->assertEquals('CREATE VIEW', $stripDefinerOf->invoke($this->transporter, 'CREATE DEFINER=`user`@`localhost` VIEW'));
+        $this->assertEquals('CREATE EVENT COMMENT "DEFINER=`user`@`localhost`"', $stripDefinerOf->invoke($this->transporter, 'CREATE DEFINER=`user`@`localhost` EVENT COMMENT "DEFINER=`user`@`localhost`"'));
     }
 
     /**

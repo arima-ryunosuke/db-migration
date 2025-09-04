@@ -44,6 +44,12 @@
   - [*change] 一部のイベントの廃止（onSchemaCreateTable）
   - [*change] maintain-type のデフォルト値を true に変更
 
+## 3.1.16
+
+- [feature] dump に no-definer オプションを追加
+- [composer] update
+  - VIEW の DEFINER や SECURITY に対応
+
 ## 3.1.15
 
 - [composer] update
