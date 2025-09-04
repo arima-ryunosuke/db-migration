@@ -275,8 +275,12 @@ if (!defined('ryunosuke\\DbMigration\\JSON_BARE_AS_STRING')) {
     define('ryunosuke\\DbMigration\\JSON_BARE_AS_STRING', -106);
 }
 
-if (!defined('ryunosuke\\DbMigration\\TOKEN_NAME')) {
-    define('ryunosuke\\DbMigration\\TOKEN_NAME', 2);
+if (!defined('ryunosuke\\DbMigration\\JSON_OBJECT_HANDLER')) {
+    define('ryunosuke\\DbMigration\\JSON_OBJECT_HANDLER', -107);
+}
+
+if (!defined('ryunosuke\\DbMigration\\JSON_ESCAPE_SINGLE_QUOTE')) {
+    define('ryunosuke\\DbMigration\\JSON_ESCAPE_SINGLE_QUOTE', -108);
 }
 
 if (!defined('ryunosuke\\DbMigration\\SI_UNITS')) {
