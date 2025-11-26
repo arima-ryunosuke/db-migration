@@ -38,6 +38,7 @@ class MigrateCommand extends AbstractCommand
                 'dml-type',
                 'exclude',
                 'ignore',
+                'upsert',
                 'bulk-insert',
                 'inline',
                 'indent',
@@ -274,7 +275,7 @@ class MigrateCommand extends AbstractCommand
                 }
                 if ($answer === 0) {
                     $this->transact($conn, function () use ($migrationTable, $version, $file) {
-                        $migration = $migrationTable->apply($version, $file->readMigration());
+                        $migration = $migrationTable->apply($version, $file->readMigration(), $this->input->getOption('upsert'));
                         foreach ($migration as $sql) {
                             $this->logger->log([$this, 'formatSql'], $sql);
                         }

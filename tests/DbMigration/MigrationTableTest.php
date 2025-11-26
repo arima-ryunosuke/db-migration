@@ -48,51 +48,64 @@ class MigrationTableTest extends AbstractTestCase
         $generator = $migrationTable->apply('1.sql', [
             'insert into ttt values("from sql1")',
             'insert into ttt values("from sql2")',
-        ]);
+        ], true);
         $this->assertEquals([
             'insert into ttt values("from sql1")',
             'insert into ttt values("from sql2")',
         ], iterator_to_array($generator, false));
         $this->assertEquals(2, $generator->getReturn());
 
-        $generator = $migrationTable->apply('2.sql', [
+        $generator = $migrationTable->apply('2-insert.sql', [
             'ttt' => [
                 ['name' => 'from array1'],
                 ['name' => 'from array2'],
-                ['name' => 'from array2'],
             ],
-        ]);
+        ], false);
         $this->assertEquals([
-            "INSERT INTO ttt (name) VALUES ('from array1') AS new ON DUPLICATE KEY UPDATE name = new.name",
-            "INSERT INTO ttt (name) VALUES ('from array2') AS new ON DUPLICATE KEY UPDATE name = new.name",
-            "INSERT INTO ttt (name) VALUES ('from array2') AS new ON DUPLICATE KEY UPDATE name = new.name",
+            "INSERT INTO ttt (name) VALUES ('from array1')",
+            "INSERT INTO ttt (name) VALUES ('from array2')",
         ], iterator_to_array($generator, false));
         $this->assertEquals(2, $generator->getReturn());
 
+        $generator = $migrationTable->apply('2-upsert.sql', [
+            'ttt' => [
+                ['name' => 'from array2'],
+                ['name' => 'from array3'],
+            ],
+        ], true);
+        $this->assertEquals([
+            "INSERT INTO ttt (name) VALUES ('from array2') AS new ON DUPLICATE KEY UPDATE name = new.name",
+            "INSERT INTO ttt (name) VALUES ('from array3') AS new ON DUPLICATE KEY UPDATE name = new.name",
+        ], iterator_to_array($generator, false));
+        $this->assertEquals(1, $generator->getReturn());
+
         // attached
         $versions = $migrationTable->fetch();
+        $this->assertEquals(['1.sql', '2-insert.sql', '2-upsert.sql'], array_keys($versions));
         $this->assertJsonStringEqualsJsonString(json_encode(['insert into ttt values("from sql1")', 'insert into ttt values("from sql2")']), $versions['1.sql']['logs']);
-        $this->assertJsonStringEqualsJsonString(json_encode([["name" => "from array1"], ["name" => "from array2"], ["name" => "from array2"]]), $versions['2.sql']['logs']);
+        $this->assertJsonStringEqualsJsonString(json_encode([["name" => "from array1"], ["name" => "from array2"]]), $versions['2-insert.sql']['logs']);
+        $this->assertJsonStringEqualsJsonString(json_encode([["name" => "from array2"], ["name" => "from array3"]]), $versions['2-upsert.sql']['logs']);
 
         // migrated
         $this->assertEquals([
             ['name' => 'from array1'],
             ['name' => 'from array2'],
+            ['name' => 'from array3'],
             ['name' => 'from sql1'],
             ['name' => 'from sql2'],
         ], $this->connection->fetchAllAssociative('select * from ttt'));
 
-        $generator = $migrationTable->apply('11.sql', (array) 'update ttt set name = concat(name, " suffix")');
+        $generator = $migrationTable->apply('11.sql', (array) 'update ttt set name = concat(name, " suffix")', true);
         $this->assertEquals([
             'update ttt set name = concat(name, " suffix")',
         ], iterator_to_array($generator, false));
-        $this->assertEquals(4, $generator->getReturn());
+        $this->assertEquals(5, $generator->getReturn());
 
-        $generator = $migrationTable->apply('12.sql', (array) 'delete from ttt where name <> "from sql1 suffix"');
+        $generator = $migrationTable->apply('12.sql', (array) 'delete from ttt where name <> "from sql1 suffix"', true);
         $this->assertEquals([
             'delete from ttt where name <> "from sql1 suffix"',
         ], iterator_to_array($generator, false));
-        $this->assertEquals(3, $generator->getReturn());
+        $this->assertEquals(4, $generator->getReturn());
     }
 
     public function test_attach_detach()
