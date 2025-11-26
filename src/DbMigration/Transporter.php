@@ -506,12 +506,34 @@ class Transporter
                             }
                         }
 
+                        // disable index
+                        if ($category === 'table') {
+                            if ($options['defer-index'] ?? false) {
+                                $stream->fwrite("\n");
+                                $indexes ??= array_filter($object->getIndexes(), fn($idx) => !$idx->isPrimary());
+                                foreach ($indexes as $index) {
+                                    $stream->fwrite($this->platform->getDropIndexSQL($index->getName(), $object->getName()) . ";\n");
+                                }
+                            }
+                        }
+
                         // insert
                         if ($category === 'table') {
                             $stream->fwrite("\n");
                             $scanner = new TableScanner($this->connection, $object, []);
                             foreach ($file->writeRecords($scanner->getAllRows()) as $ignored) {
                                 yield $count++;
+                            }
+                        }
+
+                        // enable index
+                        if ($category === 'table') {
+                            if ($options['defer-index'] ?? false) {
+                                $stream->fwrite("\n");
+                                $indexes ??= array_filter($object->getIndexes(), fn($idx) => !$idx->isPrimary());
+                                foreach ($indexes as $index) {
+                                    $stream->fwrite($this->platform->getCreateIndexSQL($index, $object->getName()) . ";\n");
+                                }
                             }
                         }
 

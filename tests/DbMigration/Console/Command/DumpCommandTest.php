@@ -4,6 +4,7 @@ namespace ryunosuke\Test\DbMigration\Console\Command;
 
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Event;
+use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Routine;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Schema\Trigger;
@@ -21,7 +22,12 @@ class DumpCommandTest extends AbstractTestCase
     {
         parent::setUp();
 
-        $this->readyObject($this->schema, (new Table('table1', [new Column('id', Type::getType('integer'), ['autoincrement' => true])]))->setPrimaryKey(['id']));
+        $this->readyObject($this->schema, (new Table('table1', [
+            new Column('id', Type::getType('integer'), ['autoincrement' => true]),
+            new Column('name', Type::getType('string'), ['default' => '']),
+        ], [
+            new Index('SECONDARY', ['id']),
+        ]))->setPrimaryKey(['id']));
         $this->readyObject($this->schema, new View('view1', 'select * from table1'));
         $this->readyObject($this->schema, new Trigger('trigger1', 'call function1()', 'table1', [
             'timing' => 'before',
@@ -229,9 +235,12 @@ class DumpCommandTest extends AbstractTestCase
             'files'              => ["$dir/database.sql"],
             '--no-autoincrement' => null,
             '--no-definer'       => null,
+            '--defer-index'      => null,
         ]);
 
         $this->assertFileContains('ALTER TABLE `table1` auto_increment = 1', "$dir/table/table1.sql");
+        $this->assertFileContains('DROP INDEX SECONDARY ON table1', "$dir/table/table1.sql");
+        $this->assertFileContains('CREATE INDEX SECONDARY ON table1 (id)', "$dir/table/table1.sql");
         $this->assertFileNotContains('DEFINER=', "$dir/view/view1.sql");
         $this->assertFileNotContains('DEFINER=', "$dir/trigger/trigger1.sql");
         $this->assertFileNotContains('DEFINER=', "$dir/event/event1.sql");
