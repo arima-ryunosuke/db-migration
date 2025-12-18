@@ -205,6 +205,7 @@ class MigrateCommandTest extends AbstractTestCase
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
             '--yield'     => true,
+            '--upsert'    => true,
             'files'       => [
                 $this->getFile('table.php'),
             ],

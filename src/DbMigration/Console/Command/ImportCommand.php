@@ -162,7 +162,7 @@ class ImportCommand extends AbstractCommand
                 }
                 if ($answer === 0) {
                     $this->transact($conn, function () use ($migrationTable, $version, $migfile) {
-                        $migration = $migrationTable->apply($version, $migfile->readMigration());
+                        $migration = $migrationTable->apply($version, $migfile->readMigration(), false);
                         foreach ($migration as $sql) {
                             $this->logger->debug([$this, 'formatSql'], $sql);
                         }

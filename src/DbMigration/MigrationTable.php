@@ -104,7 +104,7 @@ class MigrationTable
         return $this->connection->executeQuery("SELECT * FROM " . $this->table->getName())->fetchAllAssociativeIndexed();
     }
 
-    public function apply(string $version, iterable $records): Generator
+    public function apply(string $version, iterable $records, bool $upsert): Generator
     {
         $tablenames = array_flip($this->schemaManager->listTableNames());
 
@@ -112,7 +112,7 @@ class MigrationTable
             'affect' => 0,
             'logs'   => [],
         ];
-        $insert = function ($value) use (&$insert, $result, $tablenames) {
+        $insert = function ($value) use (&$insert, $result, $tablenames, $upsert) {
             if (!is_iterable($value)) {
                 yield $value;
                 $result->logs[] = $value;
@@ -123,7 +123,7 @@ class MigrationTable
             foreach ($value as $k => $v) {
                 if (isset($tablenames[$k])) {
                     foreach ($v as $row) {
-                        $sql = $this->connection->buildInsertSql($k, $row, true);
+                        $sql = $this->connection->buildInsertSql($k, $row, $upsert);
                         yield $sql;
                         $result->logs[] = $row;
                         $result->affect += $this->connection->executeStatement($sql);

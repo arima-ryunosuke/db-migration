@@ -490,6 +490,7 @@ Options:
       --dml-type[=DML-TYPE]               Specify dml type (enable comma separated value. e.g. --dml-type insert,update) [default: ["insert","update","delete"]] (multiple values allowed)
   -e, --exclude[=EXCLUDE]                 Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
   -g, --ignore[=IGNORE]                   Ignore column. (multiple values allowed)
+      --upsert                            Switch insert to upsert on migration
       --bulk-insert[=BULK-INSERT]         Specify bulk insert chunk size
       --inline[=INLINE]                   Specify php/json/yaml inline nest level. [default: 4]
       --indent[=INDENT]                   Specify php/json/yaml indent size. [default: 4]
@@ -634,6 +635,7 @@ Options:
   -R, --recreate[=RECREATE]        Add DROP DATABASE/CREATE DATABASE. [default: ""]
   -A, --no-autoincrement           Add RESET auto_increment.
       --no-definer                 Strip DEFINER clause
+      --defer-index                Create index after insert
   -m, --migration[=MIGRATION]      Specify migration directory.
   -i, --include[=INCLUDE]          Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
   -e, --exclude[=EXCLUDE]          Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)

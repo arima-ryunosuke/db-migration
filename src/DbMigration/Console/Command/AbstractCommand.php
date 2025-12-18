@@ -67,6 +67,11 @@ abstract class AbstractCommand extends Command
                 'Specify transaction nest level (0 is not transaction, 1 is only top level, 2 is only per-table)',
                 1,
             ],
+            'upsert'        => [
+                null,
+                InputOption::VALUE_NONE,
+                'Switch insert to upsert on migration',
+            ],
             'bulk-insert'        => [
                 null,
                 InputOption::VALUE_OPTIONAL,
