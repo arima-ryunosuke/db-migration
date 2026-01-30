@@ -6,6 +6,7 @@ use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\AbstractAsset;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
+use Doctrine\DBAL\Schema\DefaultExpression;
 use Doctrine\DBAL\Schema\Event;
 use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Routine;
@@ -154,7 +155,7 @@ class Transporter
                     foreach ($table->getColumns() as $column) {
                         $array = [
                             'type'             => Type::lookupName($column->getType()),
-                            'default'          => $column->getDefault(),
+                            'default'          => $column->getDefault() instanceof DefaultExpression ? $column->getDefault()->toSQL($this->platform) : $column->getDefault(),
                             'notnull'          => $column->getNotnull(),
                             'length'           => $column->getLength(),
                             'precision'        => $column->getPrecision(),
