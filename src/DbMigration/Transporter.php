@@ -165,7 +165,7 @@ class Transporter
                             'autoincrement'    => $column->getAutoincrement(),
                             'columnDefinition' => $column->getColumnDefinition(),
                             'comment'          => $column->getComment(),
-                            'platformOptions'  => array_diff_key($column->getPlatformOptions(), $this->ignoreColumnOptionAttributes),
+                            'platformOptions'  => array_filter(array_diff_key($column->getPlatformOptions(), $this->ignoreColumnOptionAttributes), fn($v) => $v !== null),
                         ];
                         if (!in_array($array['type'], ['smallint', 'integer', 'bigint', 'decimal', 'float'], true)) {
                             unset($array['unsigned']);
