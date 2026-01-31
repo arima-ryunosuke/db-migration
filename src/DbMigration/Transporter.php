@@ -851,7 +851,11 @@ class Transporter
     private function schemaFromArray(array $schemaArray): Schema
     {
         $schema = new class([], [], $this->schemaManager->createSchemaConfig()) extends Schema {
-            public function addTable(Table $table) { return parent::_addTable($table); }
+            public function addTable(Table $table)
+            {
+                $table->setSchemaConfig($this->_schemaConfig);
+                return parent::_addTable($table);
+            }
         };
 
         $definition = $this->getDefinition();
