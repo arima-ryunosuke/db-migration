@@ -1254,6 +1254,44 @@ if (!function_exists('ryunosuke\\DbMigration\\array_dive')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\array_divide') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_divide'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_divide')) {
+    /**
+     * array_chunk の配列長指定版
+     *
+     * Example:
+     * ```php
+     * // ['A', 'B', 'C', 'D', 'E', 'F', 'G'] を3つに分割（余りを左に分配）
+     * that(array_divide(['A', 'B', 'C', 'D', 'E', 'F', 'G'], 3))->isSame([
+     *     ["A", "B", "C"],
+     *     ["D", "E"],
+     *     ["F", "G"],
+     * ]);
+     * // ['A', 'B', 'C', 'D', 'E', 'F', 'G'] を3つに分割（余りを右に分配）
+     * that(array_divide(['A', 'B', 'C', 'D', 'E', 'F', 'G'], -3))->isSame([
+     *     ["A", "B"],
+     *     ["C", "D"],
+     *     ["E", "F", "G"],
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\array
+     */
+    function array_divide(iterable $array, int $divisor, bool $preserve_keys = false): array
+    {
+        $array = is_array($array) ? $array : iterator_to_array($array);
+
+        $last = 0;
+        $result = [];
+        foreach (int_divide(count($array), $divisor) as $int) {
+            $result[] = array_slice($array, $last, $int, $preserve_keys);
+            $last += $int;
+        }
+
+        return $result;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\array_each') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_each'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_each')) {
     /**
@@ -1683,6 +1721,96 @@ if (!function_exists('ryunosuke\\DbMigration\\array_fill_gap')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\array_fill_values') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_fill_values'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_fill_values')) {
+    /**
+     * 既存配列のキーを埋める
+     *
+     * キーベースの array_combine のようなもの。
+     * array_combine を呼ぶときは手元に連想配列があることが多く、array_combine(array_keys($array), ['some', 'thing']) という使い方が多い。
+     * ならばいっそキーベースで値を埋められた方が便利なことがある。
+     *
+     * $values が非配列の場合、単純にその値で埋められる（array_fill_keys 相当の動きになる）。
+     * $values が配列の場合、読み替えはキー・連番の両方で行われる（連想配列を渡した場合は array_shrink_key 相当の動きになる）。
+     * さらに $values の数は一致していなくてもよい。
+     * $values の方が大きい場合は array_combine と同様に例外を投げるが、少ない場合は足りない分はフィルタされる。
+     *
+     * $values はコールバックを受け付けるので、与えられた場合は各要素のコールバック結果が値となる（array_fill_callback 相当の動きになる）。
+     *
+     * Example:
+     * ```php
+     * $array = [
+     *     'a' => 'A',
+     *     'b' => 'B',
+     * ];
+     * # array_fill_keys のような使い方
+     * that(array_fill_values($array, 'hogera'))->isSame(['a' => 'hogera', 'b' => 'hogera']);
+     * # array_combine のような使い方
+     * that(array_fill_values($array, ['hoge', 'fuga']))->isSame(['a' => 'hoge', 'b' => 'fuga']);
+     * # array_shrink_key のような使い方
+     * that(array_fill_values($array, ['b' => 'hoge', 'a' => 'fuga']))->isSame(['a' => 'fuga', 'b' => 'hoge']);
+     * # array_fill_callback のような使い方
+     * that(array_fill_values($array, fn($v, $k, $n) => "$v-$k-$n"))->isSame(['a' => "A-a-0", 'b' => "B-b-1"]);
+     * # 数が少なくてもエラーにはならないが数が多いと例外
+     * that(array_fill_values($array, ['X']))->isSame(['a' => "X"]);
+     * try {
+     *     array_fill_values($array, ['X', 'Y', 'Z']);
+     *     $this->fail();
+     * } catch (\Throwable) {}
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\array
+     *
+     * @template T of iterable&\ArrayAccess
+     * @param T $array
+     * @return T
+     */
+    function array_fill_values(iterable $array, mixed $values)
+    {
+        // Iterator だが ArrayAccess ではないオブジェクト（Generator とか）は unset できないので配列として扱わざるを得ない
+        if (!(function_configure('array.variant') && is_arrayable($array))) {
+            $array = arrayval($array, false);
+        }
+
+        $array2 = arrayval($array, false);
+
+        $n = 0;
+        $settled = [];
+        foreach ($array2 as $k => $v) {
+            if (is_array($values)) {
+                if (array_key_exists($key = $k, $values) || array_key_exists($key = $n, $values)) {
+                    $array[$k] = $values[$key];
+                    unset($values[$k]);
+                    unset($values[$n]);
+                    $settled[$k] = true;
+                }
+            }
+            elseif (is_callback($values)) {
+                $array[$k] = $values($v, $k, $n);
+                $settled[$k] = true;
+            }
+            else {
+                $array[$k] = $values;
+                $settled[$k] = true;
+            }
+
+            $n++;
+        }
+
+        if (is_array($values) && count(array_filter($values, 'is_int', ARRAY_FILTER_USE_KEY))) {
+            throw new \ValueError('array_fill_values(): Argument #2 ($values) must less then number of array');
+        }
+
+        foreach ($array2 as $k => $v) {
+            if (!isset($settled[$k])) {
+                unset($array[$k]);
+            }
+        }
+
+        return $array;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\array_filter_map') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_filter_map'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_filter_map')) {
     /**
@@ -2083,6 +2211,48 @@ if (!function_exists('ryunosuke\\DbMigration\\array_find_recursive')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\array_flatmap') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_flatmap'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_flatmap')) {
+    /**
+     * スタンダードな flatMap
+     *
+     * 同じことは array_kvmap でもできる。
+     * ただあちらは仕様が独自なので、こちらは癖のない万人が想起する flatmap になる。
+     *
+     * コールバック引数:
+     * - array_kvmap: ($k, $v, $callback) # $k が第一で、再帰を意識していたので $callback も渡ってくる
+     * - array_flatmap: ($v, $k, $array)  # シンプルに js に合わせる
+     * null の扱い
+     * - array_kvmap: 変更なしとして扱う
+     * - array_flatmap: 値として扱う
+     * !array & iterable の扱い
+     * - array_kvmap: 配列として扱う
+     * - array_flatmap: 値として扱う
+     *
+     * @package ryunosuke\Functions\Package\array
+     */
+    function array_flatmap(iterable $array, $callback): array
+    {
+        $result = [];
+        foreach ($array as $k => $v) {
+            $kv = $callback($v, $k, $array);
+            if (!is_array($kv)) {
+                $kv = [$kv];
+            }
+            // $result = array_merge($result, $kv); // 遅すぎる
+            foreach ($kv as $k2 => $v2) {
+                if (is_int($k2)) {
+                    $result[] = $v2;
+                }
+                else {
+                    $result[$k2] = $v2;
+                }
+            }
+        }
+        return $result;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\array_flatten') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_flatten'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_flatten')) {
     /**
@@ -2424,6 +2594,145 @@ if (!function_exists('ryunosuke\\DbMigration\\array_insert')) {
 
         $sarray = array_splice($array, 0, $position);
         return array_merge($sarray, $value, $array);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\array_intersection_differences') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_intersection_differences'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_intersection_differences')) {
+    /**
+     * array_intersect+array_diff の組み合わせ
+     *
+     * 集合演算系の標準関数がカオスすぎるのである程度使いやすくしたもの。
+     * (u)intersect,(u)diff,(u)key,(u)assoc の組み合わせで16通りもある。
+     * - array_intersect
+     * - array_uintersect
+     * - array_intersect_key
+     * - array_intersect_ukey
+     * - array_intersect_assoc
+     * - array_uintersect_assoc
+     * - array_intersect_uassoc
+     * - array_uintersect_uassoc
+     * - array_diff
+     * - array_udiff
+     * - array_diff_key
+     * - array_diff_ukey
+     * - array_diff_assoc
+     * - array_udiff_assoc
+     * - array_diff_uassoc
+     * - array_udiff_uassoc
+     *
+     * ドキュメントはアルファベット順であり一覧性が悪いので、どれを使えばいいのかぱっと見では全く分からない。
+     * そして intersect,diff は往々にして両方欲しいことが多いので、この関数でコールバックを工夫すれば一発で済む。
+     * ただし php レイヤーでの実装なので猛烈に遅い。単純な結果でよい場合は普通に標準関数を使うこと。
+     *
+     * コールバックは ([値, キー, 連番], [値, キー, 連番]) を受け取る。
+     * キーで比較をしたければキーだけを見ればよいし、値で比較したければ値だけを見ればよい（もちろん両方でもよい）。
+     * このコールバックを工夫するだけで上記16関数全ての大体となりうる。
+     * コールバック省略時はキー・値の両方を見る（array_u(intersect|diff)_uassoc に相当する）。
+     *
+     * Example:
+     * ```php
+     * // 単純な配列
+     * $a = [
+     *     1 => 'hoge',
+     *     2 => 'fuga',
+     *     3 => 'foo',
+     *     4 => 'bar',
+     *     5 => 'common',
+     *     6 => 'onlyA',
+     * ];
+     * $b = [
+     *     1 => 'foo',
+     *     2 => 'bar',
+     *     3 => 'hoge',
+     *     4 => 'fuga',
+     *     5 => 'common',
+     *     7 => 'onlyB',
+     * ];
+     * // array_* 相当
+     * $result = array_intersection_differences($a, $b, fn($avkn, $bvkn) => $avkn[0] <=> $bvkn[0]);
+     * that($result[''])->isSame(array_intersect($a, $b));
+     * that($result[0])->isSame(array_diff($a, $b));
+     * that($result[1])->isSame(array_diff($b, $a));
+     * // array_*_key 相当
+     * $result = array_intersection_differences($a, $b, fn($avkn, $bvkn) => $avkn[1] <=> $bvkn[1]);
+     * that($result[''])->isSame(array_intersect_key($a, $b));
+     * that($result[0])->isSame(array_diff_key($a, $b));
+     * that($result[1])->isSame(array_diff_key($b, $a));
+     * // array_*_assoc 相当
+     * $result = array_intersection_differences($a, $b, fn($avkn, $bvkn) => $avkn[0] <=> $bvkn[0] ?: $avkn[1] <=> $bvkn[1]);
+     * that($result[''])->isSame(array_intersect_assoc($a, $b));
+     * that($result[0])->isSame(array_diff_assoc($a, $b));
+     * that($result[1])->isSame(array_diff_assoc($b, $a));
+     *
+     * // レコード的な配列（標準関数は基本的に文字列比較なので、u 系が必須。こういう使い分けをしたくないがための関数）
+     * $a = [
+     *     ['id' => 1, 'name' => 'hoge'],
+     *     ['id' => 2, 'name' => 'fuga'],
+     *     ['id' => 3, 'name' => 'foo'],
+     *     ['id' => 4, 'name' => 'bar'],
+     *     ['id' => 5, 'name' => 'common'],
+     *     ['id' => 6, 'name' => 'onlyA'],
+     * ];
+     * $b = [
+     *     ['id' => 1, 'name' => 'foo'],
+     *     ['id' => 2, 'name' => 'bar'],
+     *     ['id' => 3, 'name' => 'hoge'],
+     *     ['id' => 4, 'name' => 'fuga'],
+     *     ['id' => 5, 'name' => 'common'],
+     *     ['id' => 7, 'name' => 'onlyB'],
+     * ];
+     * // array_* 相当
+     * $result = array_intersection_differences($a, $b, fn($avkn, $bvkn) => $avkn[0]['id'] <=> $bvkn[0]['id']);
+     * that($result[''])->isSame(array_uintersect($a, $b, fn($a, $b) => $a['id'] <=> $b['id']));
+     * that($result[0])->isSame(array_udiff($a, $b, fn($a, $b) => $a['id'] <=> $b['id']));
+     * that($result[1])->isSame(array_udiff($b, $a, fn($a, $b) => $a['id'] <=> $b['id']));
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\array
+     *
+     * @param array|callable ...$arrays 対象配列（最後の要素のみ callable を受け付ける）
+     * @return array ['' => 共通配列, $array1 にしかない配列, $array2にしかない配列, ..., $arrayNにしかない配列]
+     */
+    function array_intersection_differences(...$arrays): array
+    {
+        $comparator = null;
+        if ($arrays[count($arrays) - 1] instanceof \Closure) {
+            $comparator = array_pop($arrays);
+        }
+
+        $comparator ??= function (array $avkn, array $bvkn) {
+            [$av, $ak,] = $avkn;
+            [$bv, $bk,] = $bvkn;
+            return $ak <=> $bk ?: $av <=> $bv;
+        };
+
+        $count = count($arrays);
+
+        $result = ['' => [], ...$arrays];
+        foreach ($arrays as $i => $array) {
+            $n1 = -1;
+            foreach ($array as $k1 => $v1) {
+                $n1++;
+                $found = 0;
+                for ($j = $i + 1; $j < $count; $j++) {
+                    $n2 = -1;
+                    foreach ($arrays[$j] as $k2 => $v2) {
+                        $n2++;
+                        if (((int) $comparator([$v1, $k1, $n1], [$v2, $k2, $n2])) === 0) {
+                            $found++;
+                            unset($result[$i][$k1]);
+                            unset($result[$j][$k2]);
+                        }
+                    }
+                }
+                if ($found === $count - 1) {
+                    $result[''][$k1] = $v1;
+                }
+            }
+        }
+
+        return $result;
     }
 }
 
@@ -3607,29 +3916,22 @@ if (!function_exists('ryunosuke\\DbMigration\\array_pos')) {
      *
      * @package ryunosuke\Functions\Package\array
      *
-     * @param array $array 対象配列
+     * @param iterable&\Countable $array 対象配列
      * @param int $position 取得する位置
      * @param bool $return_key true にすると値ではなくキーを返す
      * @return mixed 指定位置の値
      */
-    function array_pos($array, $position, $return_key = false)
+    function array_pos($array, int $position, $return_key = false)
     {
-        $position = (int) $position;
-        $keys = array_keys($array);
+        $target = $position >= 0 ? $position : count($array) + $position;
 
-        if ($position < 0) {
-            $position = abs($position + 1);
-            $keys = array_reverse($keys);
-        }
-
-        $count = count($keys);
-        for ($i = 0; $i < $count; $i++) {
-            if ($i === $position) {
-                $key = $keys[$i];
+        $i = 0;
+        foreach ($array as $k => $v) {
+            if ($i++ === $target) {
                 if ($return_key) {
-                    return $key;
+                    return $k;
                 }
-                return $array[$key];
+                return $v;
             }
         }
 
@@ -6346,7 +6648,7 @@ if (!function_exists('ryunosuke\\DbMigration\\class_extends')) {
                     {
                         return self::$__originalClass::$name(...$arguments);
                     }
-                }
+                },
             );
             // @codeCoverageIgnoreEnd
             $sl = $template_reflection->getStartLine();
@@ -7529,6 +7831,56 @@ if (!function_exists('ryunosuke\\DbMigration\\type_exists')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\import_once') || (new \ReflectionFunction('ryunosuke\\DbMigration\\import_once'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\import_once')) {
+    /**
+     * 一度しか読み込まない require
+     *
+     * require_once と同じだが require_once は2回目以降 true を返すので「そのファイルで生成した何か」を得るのにやや不向き。
+     * js の import のようにファイル側で何かインスタンスを生成してそれを使いまわしたいことは多々ある。
+     * （php の仕様上 js のようにクラス定義を返したりすることは不可能だが）。
+     *
+     * Example:
+     * ```php
+     * $file = sys_get_temp_dir() . '/rf-import_once.php';
+     * file_put_contents($file, '<?php usleep(10000); return microtime(true);');
+     *
+     * // require_once は2回目に true を返す
+     * $require_once1 = require_once($file);
+     * $require_once2 = require_once($file);
+     * that($require_once1)->isFloat();
+     * that($require_once2)->isTrue();
+     * that($require_once1)->isNotSame($require_once2);
+     *
+     * // require は2回読み込めるが毎回読み込む
+     * $require1 = require($file);
+     * $require2 = require($file);
+     * that($require1)->isFloat();
+     * that($require2)->isFloat();
+     * that($require1)->isNotSame($require2);
+     *
+     * // import_once は2回読み込めて同じ結果を返す
+     * $import_once1 = import_once($file);
+     * $import_once2 = import_once($file);
+     * that($import_once1)->isFloat();
+     * that($import_once2)->isFloat();
+     * that($import_once1)->isSame($import_once2);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\core
+     *
+     * @param string $filename
+     * @return mixed require の返り値
+     */
+    function import_once(string $filename)
+    {
+        static $imports = [];
+
+        $filename = realpath($filename);
+        return $imports[$filename] ??= require $filename;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\sql_bind') || (new \ReflectionFunction('ryunosuke\\DbMigration\\sql_bind'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\sql_bind')) {
     /**
@@ -7573,6 +7925,153 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_bind')) {
             '-- ' => "\n",
             '/*'  => "*/",
         ]);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\sql_export') || (new \ReflectionFunction('ryunosuke\\DbMigration\\sql_export'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\sql_export')) {
+    /**
+     * 連想配列の配列を SQL 的文字列に変換する
+     *
+     * xlsx か何かで提供されたファイルを SQL に変換したい状況はままある。
+     * 保守運用などでの使用を想定しており、この関数で得られた SQL を**確認せずに実行してはならない**。
+     *
+     * カラムの読み替えやエンコーディングの変換などは行わない（それは入力元である $array の前処理の仕事）。
+     * とはいえ iterable が来ることもあるので callback で簡単なフィルタ・変換は可能。
+     *
+     * 識別子のエスケープは一切しないので留意。
+     *
+     * Example:
+     * ```php
+     * $arrays = [
+     *     ['id' => 1, 'name' => 'hoge'],
+     *     ['id' => 2, 'name' => 'fuga'],
+     *     ['id' => 3, 'name' => 'piyo'],
+     * ];
+     * // insert
+     * that(sql_export($arrays, ['table' => 't_table']))->isSame(<<<SQL
+     * INSERT INTO t_table(id, name) VALUES(1, 'hoge');
+     * INSERT INTO t_table(id, name) VALUES(2, 'fuga');
+     * INSERT INTO t_table(id, name) VALUES(3, 'piyo');
+     *
+     * SQL,);
+     * // upsert
+     * that(sql_export($arrays, ['table' => 't_table', 'upsert' => 'id']))->isSame(<<<SQL
+     * INSERT INTO t_table(id, name) VALUES(1, 'hoge') ON CONFLICT(id) DO UPDATE SET id = excluded.id, name = excluded.name;
+     * INSERT INTO t_table(id, name) VALUES(2, 'fuga') ON CONFLICT(id) DO UPDATE SET id = excluded.id, name = excluded.name;
+     * INSERT INTO t_table(id, name) VALUES(3, 'piyo') ON CONFLICT(id) DO UPDATE SET id = excluded.id, name = excluded.name;
+     *
+     * SQL,);
+     * // bulk insert
+     * that(sql_export($arrays, ['table' => 't_table', 'bulk' => true]))->isSame(<<<SQL
+     * INSERT INTO t_table(id, name) VALUES
+     *   (1, 'hoge'),
+     *   (2, 'fuga'),
+     *   (3, 'piyo');
+     *
+     * SQL,);
+     * // bulk upsert
+     * that(sql_export($arrays, ['table' => 't_table', 'bulk' => true, 'upsert' => 'id']))->isSame(<<<SQL
+     * INSERT INTO t_table(id, name) VALUES
+     *   (1, 'hoge'),
+     *   (2, 'fuga'),
+     *   (3, 'piyo')
+     * ON CONFLICT(id) DO UPDATE SET id = excluded.id, name = excluded.name;
+     *
+     * SQL,);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\database
+     *
+     * @param iterable $sqlarrays 連想配列の配列
+     * @param array $options オプション配列
+     * @return string SQL 的文字列
+     */
+    function sql_export($sqlarrays, $options = []): string
+    {
+        $options += [
+            'table'     => '',       // テーブル名（必須）
+            'rdbms'     => 'sqlite', // 対象 RDBMS(sqlite|mysql|pgsql) これで SET や upsert 構文が変化する
+            'bulk'      => false,    // BULK INSERT モード
+            'upsert'    => '',       // DUPLICATE(mysql), CONFLICT(pgsql) 等の付与
+            'delimiter' => ';',      // 複文のデリミタ
+            'literal'   => \Stringable::class, // エスケープしないオブジェクト
+            'callback'  => null,     // map + filter 用コールバック（1行が参照で渡ってくるので書き換えられる&&false を返すと結果から除かれる）
+        ];
+
+        assert(strlen($options['table']));
+        assert(strlen($options['delimiter']));
+        assert(in_array($options['rdbms'], ['sqlite', 'mysql', 'pgsql'], true));
+
+        $implode = fn($array, $separator = ', ') => implode($separator, $array);
+
+        $columns = null;
+        $result = [];
+        foreach ($sqlarrays as $n => $sqlarray) {
+            if ($options['callback']) {
+                if ($options['callback']($sqlarray, $n) === false) {
+                    continue;
+                }
+            }
+
+            $vals = array_map(function ($v) use ($options) {
+                if (is_a($v, $options['literal'])) {
+                    return $v;
+                }
+                return sql_quote($v);
+            }, $sqlarray);
+
+            if ($options['bulk']) {
+                $cols = array_keys($vals);
+
+                $comma = ',';
+                if (!isset($columns)) {
+                    $comma = '';
+                    $columns = $cols;
+                    $result[] = "INSERT INTO {$options['table']}({$implode($columns)}) VALUES";
+                }
+                elseif ($columns !== $cols) {
+                    throw new \UnexpectedValueException("columns is mismatch(first:{$implode($columns)} vs $n:{$implode($cols)})");
+                }
+                $result[] = "$comma\n  ({$implode($vals)})";
+            }
+            elseif ($options['rdbms'] === 'mysql') {
+                $sets = array_map(fn($v, $k) => "$k = $v", $vals, array_keys($vals));
+                $result[] = "INSERT INTO {$options['table']} SET {$implode($sets)}";
+
+                if (strlen($options['upsert'])) {
+                    $excludeds = array_map(fn($v) => "$v = excluded.$v", array_keys($vals));
+                    $result[] = array_pop($result) . " AS excluded ON DUPLICATE KEY UPDATE {$implode($excludeds)}";
+                }
+            }
+            else {
+                $cols = array_keys($vals);
+                $result[] = "INSERT INTO {$options['table']}({$implode($cols)}) VALUES({$implode($vals)})";
+
+                if (strlen($options['upsert'])) {
+                    $excludeds = array_map(fn($v) => "$v = excluded.$v", $cols);
+                    $result[] = array_pop($result) . " ON CONFLICT({$options['upsert']}) DO UPDATE SET {$implode($excludeds)}";
+                }
+            }
+        }
+
+        if (!$result) {
+            return '';
+        }
+
+        if ($options['bulk'] && strlen($options['upsert'])) {
+            $excludeds = array_map(fn($v) => "$v = excluded.$v", $columns);
+
+            if ($options['rdbms'] === 'mysql') {
+                $result[] = "\nAS excluded ON DUPLICATE KEY UPDATE {$implode($excludeds)}";
+            }
+            else {
+                $result[] = "\nON CONFLICT({$options['upsert']}) DO UPDATE SET {$implode($excludeds)}";
+            }
+        }
+
+        $delimiter = "{$options['delimiter']}\n";
+        return implode($options['bulk'] ? "" : $delimiter, $result) . $delimiter;
     }
 }
 
@@ -8237,17 +8736,13 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_format')) {
             ];
             $rule = $rules[$options['highlight']] ?? throw new \InvalidArgumentException('highlight must be "cli" or "html".');
             $options['highlight'] = function ($token, $ttype) use ($keywords, $rule) {
-                switch (true) {
-                    case isset($keywords[strtoupper($token)]):
-                        return $rule['KEYWORD']($token);
-                    case in_array($ttype, [T_COMMENT, T_DOC_COMMENT]):
-                        return $rule['COMMENT']($token);
-                    case in_array($ttype, [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE]):
-                        return $rule['STRING']($token);
-                    case in_array($ttype, [T_LNUMBER, T_DNUMBER]):
-                        return $rule['NUMBER']($token);
-                }
-                return $token;
+                return match (true) {
+                    isset($keywords[strtoupper($token)])                                      => $rule['KEYWORD']($token),
+                    in_array($ttype, [T_COMMENT, T_DOC_COMMENT])                              => $rule['COMMENT']($token),
+                    in_array($ttype, [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE]) => $rule['STRING']($token),
+                    in_array($ttype, [T_LNUMBER, T_DNUMBER])                                  => $rule['NUMBER']($token),
+                    default                                                                   => $token,
+                };
             };
         }
         $options['syntaxer'] = function ($token, $ttype) use ($options, $keywords) {
@@ -8974,6 +9469,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
             'escape'    => '\\',
             'encoding'  => ini_get('default_charset'),
             'scrub'     => 'TRANSLIT',
+            'null'      => "",
             'initial'   => '', // "\xEF\xBB\xBF"
             'headers'   => null,
             'structure' => false,
@@ -8992,13 +9488,14 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
 
         $restore = set_error_exception_handler();
         try {
-            $size = (function ($fp, $csvarrays, $delimiter, $enclosure, $escape, $encoding, $scrub, $initial, $headers, $structure, $callback) {
+            $size = (function ($fp, $csvarrays, $delimiter, $enclosure, $escape, $encoding, $scrub, $null, $initial, $headers, $structure, $callback) {
                 $default_charset = ini_get('default_charset');
                 if ($default_charset !== $encoding) {
                     // import とは違い、吐き出すときは明確なエラーだろうので TRANSLIT も IGNORE もしない
                     stream_filter_append($fp, "convert.iconv.$default_charset/$encoding" . (strlen($scrub) ? "//$scrub" : ""), STREAM_FILTER_WRITE);
                 }
 
+                $eol = "\n"; // いつの間にか $eol 引数が生えていたがこの関数自体の対応はしていないので暫定で決め打ちにしてある
                 $size = 0;
 
                 if (!is_array($csvarrays)) {
@@ -9083,10 +9580,24 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_export')) {
                         }
                     }
                     $row = array_intersect_key(array_replace($default, $array), $default);
-                    $size += fputcsv($fp, $row, $delimiter, $enclosure, $escape);
+                    if (strlen($null)) {
+                        $line = [];
+                        foreach ($row as $v) {
+                            if ($v === null) {
+                                $line[] = $null;
+                            }
+                            else {
+                                $line[] = str_putcsv([$v], $delimiter, $enclosure, $escape);
+                            }
+                        }
+                        $size += fwrite($fp, implode($delimiter, $line) . $eol);
+                    }
+                    else {
+                        $size += fputcsv($fp, $row, $delimiter, $enclosure, $escape);
+                    }
                 }
                 return $size;
-            })($fp, $csvarrays, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['initial'], $options['headers'], $options['structure'], $options['callback']);
+            })($fp, $csvarrays, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['null'], $options['initial'], $options['headers'], $options['structure'], $options['callback']);
             if ($output) {
                 return $size;
             }
@@ -9132,6 +9643,19 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
      *     ['a' => 'A1', 'b' => 'B1', 'c' => 'C1'],
      *     ['a' => 'A2', 'b' => 'B2', 'c' => 'C2'],
      *     ['a' => 'A3', 'b' => 'B3', 'c' => 'C3'],
+     * ]);
+     *
+     * // ヘッダを指定しない
+     * that(csv_import("
+     * A1,B1,C1
+     * A2,B2,C2
+     * A3,B3,C3
+     * ", [
+     *     'headers' => null, // null を指定するとヘッダなしになる
+     * ]))->is([
+     *     ['A1', 'B1', 'C1'],
+     *     ['A2', 'B2', 'C2'],
+     *     ['A3', 'B3', 'C3'],
      * ]);
      *
      * // ヘッダを指定できる
@@ -9188,6 +9712,8 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
             'escape'    => '\\',
             'encoding'  => ini_get('default_charset'),
             'scrub'     => 'IGNORE',
+            'null'      => "",
+            'trim'      => "", // 字の文を trim する文字。true の場合は素の trim（"" されていれば trim されない）
             'initial'   => [],
             'headers'   => [],
             'headermap' => null,
@@ -9213,7 +9739,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
         $restore = set_error_exception_handler();
         try {
             $n = -1;
-            return (function ($fp, $delimiter, $enclosure, $escape, $encoding, $scrub, $initial, $headers, $headermap, $structure, $grouping, $callback, $limit) use (&$n) {
+            return (function ($fp, $delimiter, $enclosure, $escape, $encoding, $scrub, $null, $trim, $initial, $headers, $headermap, $structure, $grouping, $callback, $limit) use (&$n) {
                 $default_charset = ini_get('default_charset');
                 if ($default_charset !== $encoding) {
                     stream_filter_append($fp, "convert.iconv.$encoding/$default_charset" . (strlen($scrub) ? "//$scrub" : ""), STREAM_FILTER_READ);
@@ -9234,13 +9760,39 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
                 }
 
                 $result = [];
-                while ($row = fgetcsv($fp, 0, $delimiter, $enclosure, $escape)) {
+                while (true) {
+                    $tell = ftell($fp);
+                    $row = fgetcsv($fp, 0, $delimiter, $enclosure, $escape);
+                    if ($row === false) {
+                        break;
+                    }
                     if ($row === [null]) {
                         continue;
                     }
-                    if (!$headers) {
+                    if (strlen($trim)) {
+                        // 改行を考慮すると fgets で読み込むわけにはいかないが、CSV としての1行も考えると fread も使えない
+                        // 多少無駄だが fgetcsv で読み込んだバイト数で再度 fread して「CSV としての1行」を生のまま得る
+                        $tell2 = ftell($fp);
+                        fseek($fp, $tell);
+                        $line = fread($fp, $tell2 - $tell);
+
+                        // CSV のややこしい仕様に囚われたくないので分割だけ自前でやり、実際のパースは1要素のCSVとして str_getcsv に日和る
+                        $row = [];
+                        foreach (quoteexplode($delimiter, $line, null, $enclosure, $escape) as $field) {
+                            $field = $trim === true ? trim($field) : trim($field, $trim);
+                            $row[] = str_getcsv($field, $delimiter, $enclosure, $escape)[0];
+                        }
+                    }
+                    if (!$headermap && $headers === null) {
+                        $headers = range(0, count($row) - 1);
+                    }
+                    elseif (!$headers) {
                         $headers = $row;
                         continue;
+                    }
+
+                    if (strlen($null)) {
+                        $row = array_map(fn($v) => $v === $null ? null : $v, $row);
                     }
 
                     $n++;
@@ -9300,7 +9852,7 @@ if (!function_exists('ryunosuke\\DbMigration\\csv_import')) {
                 }
 
                 return $result;
-            })($fp, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['initial'], $options['headers'], $options['headermap'], $options['structure'], $options['grouping'], $options['callback'], $options['limit']);
+            })($fp, $options['delimiter'], $options['enclosure'], $options['escape'], $options['encoding'], $options['scrub'], $options['null'], $options['trim'], $options['initial'], $options['headers'], $options['headermap'], $options['structure'], $options['grouping'], $options['callback'], $options['limit']);
         }
         catch (\Throwable $t) {
             // 何行目？ が欲しくなることが非常に多いので例外メッセージを書き換える
@@ -9438,7 +9990,7 @@ if (!function_exists('ryunosuke\\DbMigration\\html_attr')) {
             if (is_array($value)) {
                 return true;
             }
-            if (is_object($value) && $value instanceof \Traversable && !method_exists($value, '__toString')) {
+            if ($value instanceof \Traversable && !method_exists($value, '__toString')) {
                 return true;
             }
             return false;
@@ -10361,7 +10913,7 @@ if (!function_exists('ryunosuke\\DbMigration\\json_import')) {
                     case 'object':
                         $array = array_combine(
                             array_map(fn($value) => $value->value($options), $this->keys),
-                            array_map(fn($value) => $value->value($options), $this->values)
+                            array_map(fn($value) => $value->value($options), $this->values),
                         );
                         return $options[JSON_OBJECT_AS_ARRAY] ? $array : (object) $array;
                     case 'key':
@@ -10725,9 +11277,9 @@ if (!function_exists('ryunosuke\\DbMigration\\markdown_table')) {
             }
             return $result;
         })();
-        $option['stringify'] ??= fn($v) => var_pretty($v, ['return' => true, 'context' => $option['context'], 'table' => false]);
+        $option['stringify'] ??= fn($v) => var_pretty($v, ['return' => true, 'context' => $option['context'], 'table' => false, 'counting' => $option['counting'] ?? true]);
 
-        $stringify = fn($v) => strtr(((is_stringable($v) && !is_null($v) ? $v : $option['stringify']($v)) ?? ''), ["\t" => '    ']);
+        $stringify = fn($v) => strtr(((is_stringable($v) && !is_null($v) && !is_bool($v) ? $v : $option['stringify']($v)) ?? ''), ["\t" => '    ']);
         $is_numeric = function ($v) {
             $v = trim($v);
             if (strlen($v) === 0) {
@@ -11545,18 +12097,13 @@ if (!function_exists('ryunosuke\\DbMigration\\xmlss_import')) {
             'callback' => null,  // map + filter 用コールバック（1行が参照で渡ってくるので書き換えられる&&false を返すと結果から除かれる）
             'type'     => function ($type, $value) {
                 // 実質的に DateTime 専用で DateTime を使わないなら指定する意味は全くない
-                switch ($type) {
-                    case 'String':
-                        return $value;
-                    case 'Boolean':
-                        return (bool) $value;
-                    case 'Number':
-                        return +$value;
-                    case 'DateTime':
-                        return new (function_configure('datetime.class'))($value);
-                    default:
-                        throw new \UnexpectedValueException('Unknown type: ' . $type); // @codeCoverageIgnore
-                }
+                return match ($type) {
+                    'String'   => $value,
+                    'Boolean'  => (bool) $value,
+                    'Number'   => +$value,
+                    'DateTime' => new (function_configure('datetime.class'))($value),
+                    default    => throw new \UnexpectedValueException('Unknown type: ' . $type),
+                };
             },
             'limit'    => null,  // 正味のデータ行の最大値（超えた場合はそこで処理を終了する。例外が飛んだりはしない）
         ];
@@ -13185,7 +13732,7 @@ if (!function_exists('ryunosuke\\DbMigration\\error')) {
         $time = date('d-M-Y H:i:s e');
         $content = stringify($message);
         $location = '';
-        if (!($message instanceof \Exception || $message instanceof \Throwable)) {
+        if (!$message instanceof \Throwable) {
             foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $trace) {
                 if (isset($trace['file'], $trace['line'])) {
                     $location = " in {$trace['file']} on line {$trace['line']}";
@@ -13426,7 +13973,7 @@ if (!function_exists('ryunosuke\\DbMigration\\set_trace_logger')) {
         return register_autoload_function(function ($classname, $filename, $contents) use ($target) {
             if (preg_match($target, $classname)) {
                 $contents ??= file_get_contents($filename);
-                $contents = preg_replace_callback('#((final|public|protected|private|static)\s+){0,3}function\s+[_0-9a-z]+?\([^{]+\{#usmi', function ($m) {
+                $contents = preg_replace_callback('#((final|public|protected|private|static)\s+){0,3}function\s+[_0-9a-z]+?\([^{]+\{#umi', function ($m) {
                     return $m[0] . "(\$GLOBALS['___trace_log_internal'] ?? fn() => null)(__FILE__, __LINE__ - 1, __CLASS__, __FUNCTION__, func_get_args());";
                 }, $contents);
                 return $contents;
@@ -14008,20 +14555,23 @@ if (!function_exists('ryunosuke\\DbMigration\\process_parallel')) {
      * // 1000ms かかる処理を3本実行するが、トータル時間は 3000ms ではなくそれ以下になる（多少のオーバーヘッドはある）
      * that(microtime(true) - $t)->break()->lessThan(2.0);
      * // 実行結果は下記のような配列で返ってくる（その際キーは維持される）
-     * that($result)->isSame([
+     * that($result)->subsetEquals([
      *     'a' => [
+     *         // 'pid' => 12345,
      *         'status' => 0,
      *         'stdout' => "this is stdout",
      *         'stderr' => "this is stderr",
      *         'return' => 3,
      *     ],
      *     'b' => [
+     *         // 'pid' => 12345,
      *         'status' => 0,
      *         'stdout' => "this is stdout",
      *         'stderr' => "this is stderr",
      *         'return' => 5,
      *     ],
      *     [
+     *         // 'pid' => 12345,
      *         'status' => 0,
      *         'stdout' => "this is stdout",
      *         'stderr' => "this is stderr",
@@ -14047,20 +14597,23 @@ if (!function_exists('ryunosuke\\DbMigration\\process_parallel')) {
      * // 300,500,1000ms かかる処理を3本実行するが、トータル時間は 1800ms ではなくそれ以下になる（多少のオーバーヘッドはある）
      * that(microtime(true) - $t)->break()->lessThan(1.5);
      * // 実行結果は下記のような配列で返ってくる（その際キーは維持される）
-     * that($result)->isSame([
+     * that($result)->subsetEquals([
      *     'a' => [
+     *       // 'pid' => 12345,
      *         'status' => 0,
      *         'stdout' => "",
      *         'stderr' => "",
      *         'return' => 3,
      *     ],
      *     'b' => [
+     *         // 'pid' => 12345,
      *         'status' => 0,
      *         'stdout' => "",
      *         'stderr' => "",
      *         'return' => 6,
      *     ],
      *     [
+     *         // 'pid' => 12345,
      *         'status' => 127,  // 終了コードが入ってくる
      *         'stdout' => "",
      *         'stderr' => "",
@@ -14103,8 +14656,10 @@ if (!function_exists('ryunosuke\\DbMigration\\process_parallel')) {
         $results = [];
         foreach ($processes as $key => $process) {
             $return = $process();
+            $status = $process->status();
             $results[$key] = [
-                'status' => $process->status()['exitcode'],
+                'pid'    => $status['pid'],
+                'status' => $status['exitcode'],
                 'stdout' => $process->stdout,
                 'stderr' => $process->stderr,
                 'return' => $return,
@@ -14524,27 +15079,15 @@ if (!function_exists('ryunosuke\\DbMigration\\file_equals')) {
         //return sha1_file($file1) === sha1_file($file2);
 
         // 少しづつ読んで比較する
-        try {
-            $fp1 = fopen($file1, 'r');
-            $fp2 = fopen($file2, 'r');
-
-            while (!(feof($fp1) || feof($fp2))) {
-                $line1 = fread($fp1, $chunk_size);
-                $line2 = fread($fp2, $chunk_size);
-                if ($line1 !== $line2) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        finally {
-            if (isset($fp1)) {
-                fclose($fp1);
-            }
-            if (isset($fp2)) {
-                fclose($fp2);
+        $iterator = new \MultipleIterator(\MultipleIterator::MIT_NEED_ANY);
+        $iterator->attachIterator(file_generator($file1, $chunk_size));
+        $iterator->attachIterator(file_generator($file2, $chunk_size));
+        foreach ($iterator as $buffers) {
+            if ($buffers[0] !== $buffers[1]) {
+                return false;
             }
         }
+        return true;
     }
 }
 
@@ -14586,6 +15129,77 @@ if (!function_exists('ryunosuke\\DbMigration\\file_extension')) {
         }
 
         return $pathinfo['dirname'] . DIRECTORY_SEPARATOR . $basename;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\file_generator') || (new \ReflectionFunction('ryunosuke\\DbMigration\\file_generator'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\file_generator')) {
+    /**
+     * ファイルを少しずつ読む Generator を返す
+     *
+     * $stopper で読み込み単位を指定できる
+     * - null: fgets で1行読み込み
+     * - int: fread でサイズ指定
+     * - string: stream_get_line で特定文字列指定
+     *
+     * $stopper が文字列の場合、$with_stopper でその文字列自体を含むかを指定できる。
+     * というよりも stream_get_line だとデフォルトで含まないので、含むようにするフラグに近い。
+     * 処理を合わせるためデフォルトは true になっている。
+     *
+     * Generator は返り値として「返した文字列長の合計」を返す。
+     * 区切り文字を捨てる場合、単純なファイルサイズとは一致しないので注意。
+     *
+     * Example:
+     * ```php
+     * // 適当にファイルを用意
+     * $testpath = sys_get_temp_dir() . '/file_generator.txt';
+     * file_put_contents($testpath, "hoge\n---\nhogefuga\n---\nhogefugapiyo\n");
+     * // 改行で generator
+     * that(file_generator($testpath))->is(["hoge\n", "---\n", "hogefuga\n", "---\n", "hogefugapiyo\n"]);
+     * // 3文字で generator
+     * that(file_generator($testpath, 3))->is(["hog", "e\n-", "--\n", "hog", "efu", "ga\n", "---", "\nho", "gef", "uga", "piy", "o\n"]);
+     * // 区切り文字で generator
+     * that(file_generator($testpath, "---\n"))->is(["hoge\n---\n", "hogefuga\n---\n", "hogefugapiyo\n"]);
+     * // 区切り文字で generator（そのものを含まない）
+     * that(file_generator($testpath, "---\n", false))->is(["hoge\n", "hogefuga\n", "hogefugapiyo\n"]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\filesystem
+     */
+    function file_generator(
+        /** @var string|resource ファイル名|リソース */ $filename,
+        /** チャンク/区切り文字 */ null|int|string $stopper = null,
+        /** 区切り文字を含めるか */ bool $with_stopper = true,
+    ): \Generator {
+        $fp = is_resource($filename) ? $filename : fopen($filename, 'rb');
+
+        try {
+            $result = 0;
+            while (!feof($fp)) {
+                $buffer = match (true) {
+                    is_null($stopper)   => fgets($fp),
+                    is_int($stopper)    => fread($fp, $stopper),
+                    is_string($stopper) => stream_get_line($fp, PHP_INT_MAX, $stopper),
+                };
+                if ($buffer === false) {
+                    break;
+                }
+
+                if (is_string($stopper) && $with_stopper) {
+                    // 読み込み途中なら $stopper で終了したと言える（stream_get_line はそのものを含まないので付け足す）
+                    if (!feof($fp)) {
+                        $buffer .= $stopper;
+                    }
+                }
+
+                $result += strlen($buffer);
+                yield $buffer;
+            }
+            return $result;
+        }
+        finally {
+            fclose($fp);
+        }
     }
 }
 
@@ -15095,7 +15709,7 @@ if (!function_exists('ryunosuke\\DbMigration\\file_pos')) {
      * that(file_pos($testpath, 'fuga'))->is(5);
      * // 2つ目の fuga の位置を返す
      * that(file_pos($testpath, 'fuga', 6))->is(15);
-     * // 見つからない場合は false を返す
+     * // 見つからない場合は null を返す
      * that(file_pos($testpath, 'hogera'))->is(null);
      * ```
      *
@@ -15134,31 +15748,133 @@ if (!function_exists('ryunosuke\\DbMigration\\file_pos')) {
         assert($chunksize >= $maxlength);
 
         $fp = fopen($filename, 'rb');
-        try {
-            fseek($fp, $start);
-            while (!feof($fp)) {
-                if ($start > $end) {
-                    break;
-                }
-                $last = $part ?? '';
-                $part = fread($fp, $chunksize);
-                if (($p = strpos_array($part, $needle))) {
-                    $min = min($p);
-                    $result = $start + $min;
-                    return $result + strlen($needle[array_flip($p)[$min]]) > $end ? false : $result;
-                }
-                if (($p = strpos_array($last . $part, $needle))) {
-                    $min = min($p);
-                    $result = $start + $min - strlen($last);
-                    return $result + strlen($needle[array_flip($p)[$min]]) > $end ? false : $result;
-                }
-                $start += strlen($part);
+        fseek($fp, $start);
+
+        $last = '';
+        foreach (file_generator($fp, $chunksize) as $part) {
+            if ($start > $end) {
+                break;
             }
-            return null;
+            if (($p = strpos_array($part, $needle))) {
+                $min = min($p);
+                $result = $start + $min;
+                return $result + strlen($needle[array_flip($p)[$min]]) > $end ? false : $result;
+            }
+            if (($p = strpos_array($last . $part, $needle))) {
+                $min = min($p);
+                $result = $start + $min - strlen($last);
+                return $result + strlen($needle[array_flip($p)[$min]]) > $end ? false : $result;
+            }
+            $start += strlen($part);
+            $last = $part;
         }
-        finally {
-            fclose($fp);
+        return null;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\file_rename') || (new \ReflectionFunction('ryunosuke\\DbMigration\\file_rename'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\file_rename')) {
+    /**
+     * ファイルをコールバックでリネームする
+     *
+     * ファイルの上書きは決して行われない（もちろん別プロセスでの競合状態などは考慮しない）。
+     * 対象ファイル名が既に存在する場合は（次の候補でリネームされるかもしれないので）スキップして再試行する。
+     * つまり、いわゆる「連番ずらし」の場合でも安全にリネームできる。
+     *
+     * $callback には元ファイル名が渡ってくる。
+     * null を返した場合、リネームの対象とはならない。
+     * また、相対パスを返すと元ファイルのディレクトリが指定されたものとみなす。
+     *
+     * 結果配列として [元ファイル名 => 新ファイル名] の配列を返す。
+     * 元ファイルが存在しないなどで rename されなかったファイルは null が設定される。
+     *
+     * Example:
+     * ```php
+     * $DS = DIRECTORY_SEPARATOR;
+     * // 適当にファイルを用意
+     * $root = sys_get_temp_dir(). "{$DS}file_rename";
+     * rm_rf($root);
+     * file_set_tree([
+     *     $root => [
+     *         '1.txt'     => '1',
+     *         '2.txt'     => '2',
+     *         'noise.txt' => 'noise',
+     *         '3.txt'     => '3',
+     *     ],
+     * ]);
+     * // 連番ファイルを +1 してrename
+     * that(file_rename(glob("$root/*"), function ($fn) {
+     *     $pathinfo = pathinfo($fn);
+     *     // null を返すと対象にならない
+     *     if (!is_numeric($pathinfo['filename'])) {
+     *         return null;
+     *     }
+     *     return ($pathinfo['filename'] + '1') . '.' . $pathinfo['extension'];
+     * }))->isSame([
+     *     "$root/3.txt" => "$root{$DS}4.txt",
+     *     "$root/2.txt" => "$root{$DS}3.txt",
+     *     "$root/1.txt" => "$root{$DS}2.txt",
+     * ]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\filesystem
+     */
+    function file_rename(
+        /** 対象ファイル名 */ array $filenames,
+        /** リネームコールバック */ callable $callback,
+    ): /** 新ファイル名対応配列 */ array
+    {
+        // まず対応表を得る（いきなり rename すると対象が存在するときに事故る）
+        $newnames = [];
+        foreach ($filenames as $filename) {
+            $pathinfo = pathinfo($filename);
+            $newname = $callback($filename, $pathinfo);
+            if (is_array($newname)) {
+                $newname = path_build($newname);
+            }
+            if ($newname !== null) {
+                if (!path_is_absolute($newname)) {
+                    $newname = "{$pathinfo['dirname']}/$newname";
+                }
+                $newnames[$filename] = path_normalize($newname);
+            }
         }
+
+        // rename 前に意図しない移動・上書きが行われないかチェックして例外を飛ばす
+        $realnames = array_fill_keys(array_map(fn($name) => path_normalize($name), array_keys($newnames)), true);
+        foreach ($newnames as $filename => $newname) {
+            // 候補に存在しないのに対象ファイルが存在する（どうあがいても rename できない or 上書きされてしまう）
+            if (!isset($realnames[$newname]) && file_exists($newname)) {
+                throw new \RuntimeException("$filename => $newname failed. $newname is already exists");
+            }
+        }
+
+        // ここまで来てやっと処理ができる
+        $result = [];
+        while ($newnames) {
+            $count = count($newnames);
+            foreach ($newnames as $filename => $newname) {
+                // 存在するなら後回し（いずれチャンスは来る）
+                if (file_exists($newname)) {
+                    continue;
+                }
+
+                unset($newnames[$filename]);
+                if (@rename($filename, $newname)) {
+                    $result[$filename] = $newname;
+                }
+                else {
+                    $result[$filename] = null;
+                }
+            }
+
+            // 数が変わっていない=別プロセスの割り込み等で無限ループになっている可能性がある
+            if ($count === count($newnames)) {
+                throw new \RuntimeException("failed to rename " . implode(',', $newnames)); // @codeCoverageIgnore
+            }
+        }
+
+        return $result;
     }
 }
 
@@ -15562,28 +16278,24 @@ if (!function_exists('ryunosuke\\DbMigration\\file_slice')) {
             $end_line = -$length + 1;
         }
 
-        $fp = fopen($filename, 'r', $FILE_USE_INCLUDE_PATH, $context);
-        try {
-            $result = [];
-            for ($i = 1; ($line = fgets($fp)) !== false; $i++) {
-                if (isset($end_line) && $i >= $end_line) {
-                    break;
-                }
-                if ($i >= $start_line) {
-                    if ($FILE_IGNORE_NEW_LINES) {
-                        $line = rtrim($line);
-                    }
-                    if ($FILE_SKIP_EMPTY_LINES && trim($line) === '') {
-                        continue;
-                    }
-                    $result[$i] = $line;
-                }
+        $fp = fopen($filename, 'rb', $FILE_USE_INCLUDE_PATH, $context);
+        $result = [];
+        foreach (file_generator($fp) as $i => $line) {
+            $i++;
+            if (isset($end_line) && $i >= $end_line) {
+                break;
             }
-            return $result;
+            if ($i >= $start_line) {
+                if ($FILE_IGNORE_NEW_LINES) {
+                    $line = rtrim($line);
+                }
+                if ($FILE_SKIP_EMPTY_LINES && trim($line) === '') {
+                    continue;
+                }
+                $result[$i] = $line;
+            }
         }
-        finally {
-            fclose($fp);
-        }
+        return $result;
     }
 }
 
@@ -15848,6 +16560,87 @@ if (!function_exists('ryunosuke\\DbMigration\\mkdir_p')) {
         }
 
         return mkdir($dirname, 0777 & (~$umask), true);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\path_build') || (new \ReflectionFunction('ryunosuke\\DbMigration\\path_build'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\path_build')) {
+    /**
+     * パスをビルドする
+     *
+     * pathinfo で得られたパス配列を元にパス文字列を構築する。
+     * pathinfo のパス配列は微妙に癖があるし、一部だけを書き換えたい状況も多いのでこういう関数があると便利なことがある。
+     *
+     * basename は一切使用せず filename+extension だけを使用するのでそれは留意。
+     * また dirname が "." の場合、それはスルーされる。
+     *
+     * Example:
+     * ```php
+     * $DS = DIRECTORY_SEPARATOR;
+     *
+     * that(path_build(pathinfo('/full/path/name.ext')))->is("/full/path{$DS}name.ext");
+     * that(path_build(pathinfo('/full/path/name.')))->is("/full/path{$DS}name.");
+     * that(path_build(pathinfo('/full/path/name')))->is("/full/path{$DS}name");
+     * that(path_build(pathinfo('/full/path/.ext')))->is("/full/path{$DS}.ext");
+     * that(path_build(pathinfo('/full/path/')))->is("/full{$DS}path");
+     * that(path_build(pathinfo('/full/path')))->is("/full{$DS}path");
+     *
+     * that(path_build(pathinfo('relative/name.ext')))->is("relative{$DS}name.ext");
+     * that(path_build(pathinfo('relative/name.')))->is("relative{$DS}name.");
+     * that(path_build(pathinfo('relative/name')))->is("relative{$DS}name");
+     * that(path_build(pathinfo('relative/.ext')))->is("relative{$DS}.ext");
+     * that(path_build(pathinfo('relative/')))->is("relative");
+     * that(path_build(pathinfo('relative')))->is("relative");
+     *
+     * that(path_build(pathinfo('./relative/name.ext')))->is("relative{$DS}name.ext");
+     * that(path_build(pathinfo('./relative/name.')))->is("relative{$DS}name.");
+     * that(path_build(pathinfo('./relative/name')))->is("relative{$DS}name");
+     * that(path_build(pathinfo('./relative/.ext')))->is("relative{$DS}.ext");
+     * that(path_build(pathinfo('./relative/')))->is("relative");
+     * that(path_build(pathinfo('./relative')))->is("relative");
+     *
+     * that(path_build(pathinfo('/root.ext')))->is("{$DS}root.ext");
+     * that(path_build(pathinfo('/root.')))->is("{$DS}root.");
+     * that(path_build(pathinfo('/root.')))->is("{$DS}root.");
+     * that(path_build(pathinfo('/.ext')))->is("{$DS}.ext");
+     * that(path_build(pathinfo('/')))->is($DS);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\filesystem
+     */
+    function path_build(array $pathinfo): string
+    {
+        $pathinfo += [
+            "dirname"   => '',
+            "filename"  => '',
+            "extension" => null,
+        ];
+
+        $result = [];
+
+        if (str_starts_with($pathinfo['dirname'], "." . DIRECTORY_SEPARATOR) || str_starts_with($pathinfo['dirname'], "./")) {
+            $pathinfo['dirname'] = substr($pathinfo['dirname'], 2);
+        }
+        if (strlen($pathinfo['dirname']) && $pathinfo['dirname'] !== '.') {
+            $result[] = $pathinfo['dirname'] === DIRECTORY_SEPARATOR ? '' : $pathinfo['dirname'];
+        }
+
+        if (strlen($pathinfo['filename']) && isset($pathinfo['extension'])) {
+            $result[] = $pathinfo['filename'] . '.' . $pathinfo['extension'];
+        }
+        elseif (strlen($pathinfo['filename'])) {
+            $result[] = $pathinfo['filename'];
+        }
+        elseif (isset($pathinfo['extension'])) {
+            $result[] = '.' . $pathinfo['extension'];
+        }
+
+        if (!$result) {
+            return '';
+        }
+
+        $result = implode(DIRECTORY_SEPARATOR, $result);
+        return strlen($result) ? $result : DIRECTORY_SEPARATOR;
     }
 }
 
@@ -16946,11 +17739,11 @@ if (!function_exists('ryunosuke\\DbMigration\\by_builtin')) {
                     return false;
                 }
                 // for call_user_func([$object, 'func']), (new ReflectionMethod($object, 'func'))->invoke($object)
-                elseif (isset($last) && isset($last['function']) && isset($invoker[$last['function']])) {
+                elseif (isset($last['function']) && isset($invoker[$last['function']])) {
                     return false;
                 }
                 // for func($object)
-                elseif (isset($last) && isset($last['function']) && $last['function'] === $function) {
+                elseif (isset($last['function']) && $last['function'] === $function) {
                     return true;
                 }
             }
@@ -17210,8 +18003,8 @@ if (!function_exists('ryunosuke\\DbMigration\\chain')) {
                         ];
                         foreach ($parameters as $parameter) {
                             $type = $parameter->getType();
-                            $metadata['nullable'][$parameter->getPosition()] = $type ? $type->allowsNull() : null;
-                            $metadata['nullable'][$parameter->getName()] = $type ? $type->allowsNull() : null;
+                            $metadata['nullable'][$parameter->getPosition()] = $type?->allowsNull();
+                            $metadata['nullable'][$parameter->getName()] = $type?->allowsNull();
                             $metadata['positions'][$parameter->getPosition()] = $parameter->getName();
                             $metadata['names'][$parameter->getName()] = $parameter->getPosition();
                         }
@@ -17337,6 +18130,82 @@ if (!function_exists('ryunosuke\\DbMigration\\func_eval')) {
             $cache[$cachekey] = evaluate("return function($args) { return $stmt; };");
         }
         return $cache[$cachekey];
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\func_get_namedargs') || (new \ReflectionFunction('ryunosuke\\DbMigration\\func_get_namedargs'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\func_get_namedargs')) {
+    /**
+     * 呼び出し元の名前付き引数を返す
+     *
+     * 意外にも標準関数には存在しないし、get_defined_vars が近いが、使う場所や use 等で事故りやすい。
+     * この関数を使うと本当の名前付き引数を得ることができる。
+     * ただし、debug_backtrace + Reflection を使用しているので get_defined_vars に比べて猛烈に遅いことに注意。
+     *
+     * また、クロージャの直接呼出しは対応していない（call_user_func や $c->__invoke 等で呼び出す必要がある）。
+     * 呼び元に依存する上、かなりややこしいことになるが言語仕様上不可能なのでしょうがない。
+     *
+     * @package ryunosuke\Functions\Package\funchand
+     *
+     * @param bool $variadic_folding 可変引数を1つにまとめるか
+     * @param bool $default_contain デフォルト引数を含めるか
+     * @return array 名前付き引数
+     */
+    function func_get_namedargs(bool $variadic_folding = false, bool $default_contain = false): array
+    {
+        $traces = debug_backtrace(limit: 3);
+        $argsuments = $traces[1]['args'];
+
+        $ref = (function () use ($traces) {
+            $trace = $traces[1];
+            if (!str_ends_with($trace['function'], '{closure}')) {
+                return isset($trace['class']) ? new \ReflectionMethod($trace['class'], $trace['function']) : new \ReflectionFunction($trace['function']);
+            }
+
+            $trace = $traces[2];
+            if (!isset($trace['class'])) {
+                $closures = array_filter($trace['args'] ?? [], fn($v) => $v instanceof \Closure);
+                if (count($closures) === 1) {
+                    return new \ReflectionFunction(reset($closures));
+                }
+            }
+            elseif ($trace['class'] === \Closure::class) {
+                return new \ReflectionFunction($trace['object']);
+            }
+            elseif ($trace['class'] === \ReflectionFunction::class) {
+                return new \ReflectionFunction($trace['object']->getClosure());
+            }
+            throw new \DomainException("can't detect named argument at {$trace['function']}");
+        })();
+
+        $n = 0;
+        $parameters = [];
+        foreach ($ref->getParameters() as $param) {
+            $pos = $param->getPosition();
+            $nam = $param->getName();
+
+            if ($param->isVariadic()) {
+                $restargs = array_slice($argsuments, $n, null, true);
+                if ($variadic_folding) {
+                    $parameters[$nam] = $restargs;
+                }
+                else {
+                    $parameters = array_replace($parameters, $restargs);
+                }
+            }
+            elseif (array_key_exists($pos, $argsuments)) {
+                $n++;
+                if ($default_contain || !($param->isDefaultValueAvailable() && $argsuments[$pos] === $param->getDefaultValue())) {
+                    $parameters[$nam] = $argsuments[$pos];
+                }
+            }
+            else {
+                if ($default_contain) {
+                    $parameters[$nam] = $param->getDefaultValue();
+                }
+            }
+        }
+        return $parameters;
     }
 }
 
@@ -17499,6 +18368,80 @@ if (!function_exists('ryunosuke\\DbMigration\\func_operator')) {
         }
 
         return $opefunc;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\func_throttle') || (new \ReflectionFunction('ryunosuke\\DbMigration\\func_throttle'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\func_throttle')) {
+    /**
+     * callable の実行間隔を間引いた callable を返す
+     *
+     * 進捗状況や SSE などで間引きたいケースはある。
+     * ループ内で呼んでもいいし、tick に仕込んでもよい。
+     * とにかく高頻度で呼ばれ得る状況においてコール回数を減らしたい場合に使う。
+     *
+     * $leading_arguments を指定するとその引数で初回にコールされる。
+     * $trailing_arguments を指定するとその引数で最後にコールされる。
+     * ただし $trailing_arguments はデストラクタで実装されており、実行タイミングは不確定なので注意（そもそもあまり使われる想定がない）。
+     *
+     * 返り値は実行可能オブジェクトであり、本来の返り値を返す。ただし間引かれた場合は null を返す。
+     * よって正常系で null を返す callable では返り値は使えない。
+     * なお「callable である」という前提以外は置かないこと。
+     *
+     * Example:
+     * ```php
+     * $called = 0;
+     * $callback = func_throttle(function () use (&$called) { $called++; }, 0.1);
+     * // こんなとんでもないループでも数回程度しか呼ばれない
+     * for ($i=0; $i<3_000_000; $i++) {
+     *     $callback($i);
+     * }
+     * that($called)->isBetween(1, 9);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\funchand
+     */
+    function func_throttle(
+        /** 実行される callable */ callable $callback,
+        /** 間引く間隔 */ float $interval,
+        /** 初回実行時の引数 */ ?array $leading_arguments = null,
+        /** 最後実行時の引数 */ ?array $trailing_arguments = null,
+    ): /** 間隔が間引かれた callable */ callable
+    {
+        return new class(\Closure::fromCallable($callback), $interval, $leading_arguments, $trailing_arguments) {
+            private float $time;
+
+            public function __construct(
+                private \Closure $callback,
+                private float $interval,
+                private ?array $leading_arguments,
+                private ?array $trailing_arguments,
+            ) {
+                if ($this->leading_arguments !== null) {
+                    ($this->callback)(...$this->leading_arguments);
+                }
+
+                $this->time = microtime(true);
+            }
+
+            public function __destruct()
+            {
+                if ($this->trailing_arguments !== null) {
+                    ($this->callback)(...$this->trailing_arguments);
+                }
+            }
+
+            public function __invoke(...$arguments): mixed
+            {
+                $now = microtime(true);
+                $elapsed = $now - $this->time;
+                if ($elapsed >= $this->interval) {
+                    $this->time = $now;
+                    return ($this->callback)(...$arguments);
+                }
+                return null;
+            }
+        };
     }
 }
 
@@ -18596,7 +19539,7 @@ if (!function_exists('ryunosuke\\DbMigration\\system_status')) {
      */
     function system_status(
         /** バイト系数値の単位 */ string $siunit = '',
-        /** 日時系のフォーマット */ string $datetime_format = \DateTime::RFC3339,
+        /** 日時系のフォーマット */ string $datetime_format = \DateTimeInterface::RFC3339,
     ): array {
         $unitize = function ($size) use ($siunit) {
             return match ($siunit) {
@@ -19042,6 +19985,213 @@ if (!function_exists('ryunosuke\\DbMigration\\system_status')) {
                 };
             })(),
         ]);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\generatify') || (new \ReflectionFunction('ryunosuke\\DbMigration\\generatify'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\generatify')) {
+    /**
+     * コールバックを Generator に変換する
+     *
+     * Example:
+     * ``php
+     * // - iterable を回して $v,$k でコールバックする
+     * // - その返り値が true ならループを打ち切る
+     * // - 最終的に合計値を返す
+     * // というコールバックな関数
+     * $callbackable_function = function ($iterable, $callback) {
+     *     $sum = 0;
+     *     foreach ($iterable as $k => $v) {
+     *         if ($callback($v, $k) === true) {
+     *             break;
+     *         }
+     *         $sum += $v;
+     *     }
+     *     return $sum;
+     * };
+     *
+     * // 上記を generator 化したもの
+     * $generator = generatify(fn($c) => $callbackable_function(range(1, 9), $c));
+     * that($generator)->isInstanceOf(\Generator::class);
+     * that(iterator_to_array($generator))->isSame([
+     *     [1, 0],
+     *     [2, 1],
+     *     [3, 2],
+     *     [4, 3],
+     *     [5, 4],
+     *     [6, 5],
+     *     [7, 6],
+     *     [8, 7],
+     *     [9, 8],
+     * ]);
+     * that($generator)->getReturn()->isSame(45);
+     *
+     * // 中の foreach を打ち切れる
+     * $generator = generatify(fn($c) => $callbackable_function(range(1, 9), $c));
+     * foreach ($generator as [$v, $k]) {
+     *     if ($k === 5) {
+     *         generator_end($generator, true);
+     *         break;
+     *     }
+     * }
+     * that($generator)->getReturn()->isSame(15);
+     * ```
+     *
+     * @codeCoverageIgnore php < 8.1
+     * @package ryunosuke\Functions\Package\iterator
+     */
+    function generatify(
+        /** 対象 callable */ callable $callable,
+    ) {
+        $fiber = new \Fiber(fn() => $callable(fn(...$args) => \Fiber::suspend($args)));
+
+        for ($args = $fiber->start(); !$fiber->isTerminated(); $args = $fiber->resume($result)) {
+            $result = yield $args;
+        }
+        return $fiber->getReturn();
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\generator_apply') || (new \ReflectionFunction('ryunosuke\\DbMigration\\generator_apply'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\generator_apply')) {
+    /**
+     * generator 専用の iterator_apply
+     *
+     * iterator_apply は正直言って意味が分からない。
+     * - true を返さなければならない（仮に打ち切りのためだとしても普通は false 返しでは…？ これのせいでアロー関数がほぼ使えない）
+     * - 引数に渡ってこない（第3引数で自身を渡しながら中で $it->current する必要がある）
+     * - 返り値が要素数（と、マニュアルは言っているが実際は処理数）
+     *
+     * ので iterator_apply は多分使うことはないが、こと generator に関しては明確に返り値を持つため、回し切りつつ返り値が欲しい、という限定的な状況がある。
+     * その時、count や蓄積配列も得られると便利ではある（generator は一度回すともう回せないため）。
+     * この関数はそんなときに使う。
+     *
+     * 特筆すべき挙動して、回しきった generator を渡してもエラーにはならず、単に返り値を返すのみとなる（$receiver, $count も空）。
+     * この関数は「generator の返り値を雑に得たい」が初期の目的だったためそのようになっている。
+     * （回っている・回っていないを意識せず返り値が得たかった）。
+     * この挙動は将来的に変更される可能性がある。
+     *
+     * $callback が非 null を返すと $receiver に蓄積される。
+     * これは無条件で蓄積したら generator の旨味がなくなってしまうため（全部蓄積するならもう iterator_to_array した方が手っ取り早い）。
+     * キーは格納されないため注意（generator のキーは連想配列のキーになれるとは限らないため）。
+     *
+     * $callback の返り値に関わらず $count には処理数が格納される。
+     *
+     * 要するに
+     * - generator を回しつつ
+     * - 必要ならば蓄積して
+     * - 数も数えて
+     * - generator の返り値を返す
+     * ということを同時に行う。
+     *
+     * Example:
+     * ```php
+     * $g = (function () {
+     *     yield 1;
+     *     yield 2;
+     *     yield 3;
+     *     yield 4;
+     *     yield 5;
+     *     yield 6;
+     *     yield 7;
+     *     yield 8;
+     *     yield 9;
+     *     return 99;
+     * })();
+     *
+     * $return = generator_apply($g, fn ($v) => $v % 2 == 0 ? $v : null, $receiver, $count);
+     *
+     * // generator の返り値を返す
+     * that($return)->isSame(99);
+     * // 偶数のみが格納される
+     * that($receiver)->isSame([2, 4, 6, 8]);
+     * // ループ数が格納される
+     * that($count)->isSame(9);
+     *
+     * // もう一回読んでもエラーにはならない
+     * $return = generator_apply($g, fn ($v) => $v % 2 == 0 ? $v : null, $receiver, $count);
+     * // 返り値は正常に得られる
+     * that($return)->isSame(99);
+     * // receiver は格納されない（もう回せないため）
+     * that($receiver)->isSame(null);
+     * // count は格納されない（もう回せないため）
+     * that($count)->isSame(null);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\iterator
+     */
+    function generator_apply(
+        /** 対象 Generator */ \Generator $generator,
+        /** 実行コールバック */ callable $callback,
+        /** 蓄積配列 */ ?array &$receiver = null,
+        /** ループ数 */ ?int &$count = null,
+    ) {
+        $receiver = null;
+        $count = null;
+        if ($generator->valid()) {
+            $receiver = [];
+            $count = 0;
+            foreach ($generator as $k => $v) {
+                $return = $callback($v, $k, $count++);
+                if ($return !== null) {
+                    $receiver[] = $return;
+                }
+            }
+        }
+        return $generator->getReturn();
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\generator_end') || (new \ReflectionFunction('ryunosuke\\DbMigration\\generator_end'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\generator_end')) {
+    /**
+     * generator を強制的に終了させ最終値を返す
+     *
+     * おまけとして可変引数で最終値を送り込むことができる。
+     *
+     * foreach generator を break で抜けるあとに getReturn したい状況が稀によくある。
+     * いちいち iterator_count 等はしたくないしそもそも valid 判定したり NoRewindIterator をカマしたりする必要がありややめんどくさい。
+     *
+     * ただし、この関数は非常に限定的な用途で、ほぼ使うことはない。
+     * （当然だが）generator を回しきるとは処理の終着点まで行くことになるため、generator の旨味を完全に捨て去る挙動となる。
+     * generator を終了させることで付随する処理も終了するとか、yield 値によって関数が return されるとか、限られたケースでしか有効にはならない。
+     *
+     * Example:
+     * ```php
+     * $generator = (function () {
+     *     yield 1;
+     *     yield 2;
+     *     yield 3;
+     *     yield 4;
+     *     yield 5;
+     *     yield 6;
+     *     yield 7;
+     *     yield 8;
+     *     yield 9;
+     * })();
+     * $generator->next();
+     * $generator->next();
+     * $generator->next();
+     * // まだ途中だが最終値である 9 を返す
+     * that(generator_end($generator))->is(9);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\iterator
+     */
+    function generator_end(
+        /** 対象 Generator */ \Generator $generator,
+        /** 最終値 */ mixed ...$values,
+    ) {
+        foreach ($values as $value) {
+            $generator->send($value);
+        }
+
+        while ($generator->valid()) {
+            $result = $generator->current();
+            $generator->next();
+        }
+
+        return $result ?? null;
     }
 }
 
@@ -19532,53 +20682,111 @@ if (!function_exists('ryunosuke\\DbMigration\\calculate_formula')) {
      *
      * 内部的には eval で計算するが、文字列や関数呼び出しなどは受け付けないため原則としてセーフティ。
      * 許可されるのは定数・数値リテラルと演算子のみ。
-     * 定数を許可しているのは PI(3.14) や HOUR(3600) などの利便性のため。
+     * 定数を許可しているのは PI(3.14) や HOUR(3600) などの利便性のため。ただし定数は $allow_constant で受け付ける物を制限できる。
      * 定数値が非数値の場合、強制的に数値化して警告を促す。
+     *
+     * $allow_comma を true にするとカンマ区切りの数値も許可される。
+     * 内部的には _ への置換であり、シンタックスは保たれる。
+     * つまり ",123" のような変な数値はエラーになるし、逆に言うと3桁等のチェックはされないことになる。
+     * ちょっと懸念があるのでデフォルト false にしているが、将来的に true になるか引数自体が削除される見込み。
+     *
+     * $formula に配列を渡すと全てを計算してそのまま配列で返す。
+     * つまり呼び元で foreach しても同じ結果になる。
+     * 最大の違いは内部的に eval を使用しているため、都度呼ぶのと一括で呼ぶのとでは速度に明らかに違いが出る点。
+     * このような処理は得てして1度で終わらず、何度も呼び出される傾向があるためまとめて呼びやすいようにこのような実装になっている。
      *
      * Example:
      * ```php
+     * // 定数やカンマが使える
      * that(calculate_formula('1 + 2 - 3 * 4'))->isSame(-9);
      * that(calculate_formula('1 + (2 - 3) * 4'))->isSame(-3);
+     * that(calculate_formula('1,234+5,678', allow_comma: true))->isSame(6912);
      * that(calculate_formula('PHP_INT_SIZE * 3'))->isSame(PHP_INT_SIZE * 3);
+     * // 配列を与えると全て計算して配列を返す（キーは維持される）
+     * that(calculate_formula([
+     *     'k1' => '123+456',
+     *     'k2' => '789+123',
+     * ]))->is([
+     *     'k1' => '579',
+     *     'k2' => '912',
+     * ]);
      * ```
      *
      * @package ryunosuke\Functions\Package\math
-     *
-     * @param string $formula 計算式
-     * @return int|float 計算結果
      */
-    function calculate_formula($formula)
-    {
-        // TOKEN_PARSE を渡せばシンタックスチェックも行ってくれる
-        $tokens = php_tokens("<?php ($formula);", TOKEN_PARSE);
-        array_shift($tokens);
-        array_pop($tokens);
+    function calculate_formula(
+        string|array $formula,
+        bool $allow_comma = false,
+        bool|array $allow_constant = true,
+    ): int|float|array {
+        $isarray = is_array($formula);
 
-        $constants = [T_STRING, T_DOUBLE_COLON, T_NS_SEPARATOR, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
-        $operands = [T_LNUMBER, T_DNUMBER];
-        $operators = ['(', ')', '+', '-', '*', '/', '%', '**'];
+        if (is_array($allow_constant)) {
+            $allow_constant = array_flip(array_map(fn($v) => ltrim($v, '\\'), $allow_constant));
+        }
 
-        $constant = '';
-        $expression = '';
-        foreach ($tokens as $token) {
-            if ($token->isIgnorable()) {
-                continue;
-            }
-            if ($token->is($constants)) {
-                $constant .= $token->text;
-            }
-            elseif ($token->is($operands) || $token->is($operators)) {
-                if (strlen($constant)) {
-                    $expression .= constant($constant) + 0;
-                    $constant = '';
-                }
-                $expression .= $token->text;
+        $throw = function ($k, $token) use ($isarray) {
+            if ($isarray) {
+                throw new \ParseError(sprintf("syntax error, unexpected '%s' in %s on line %d", $token->text, $k, $token->line));
             }
             else {
-                throw new \ParseError(sprintf("syntax error, unexpected '%s' in  on line %d", $token->text, $token->line));
+                throw new \ParseError(sprintf("syntax error, unexpected '%s' on line %d", $token->text, $token->line));
             }
+        };
+
+        $expressions = [];
+        foreach ((array) $formula as $k => $v) {
+            $tokens = php_tokens("<?php (\n$v\n);");
+            array_shift($tokens);
+            array_pop($tokens);
+
+            $constants = [T_STRING, T_DOUBLE_COLON, T_NS_SEPARATOR, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
+            $operands = [T_LNUMBER, T_DNUMBER, '_'];
+            $operators = ['(', ')', '+', '-', '*', '/', '%', '**'];
+
+            if ($allow_comma) {
+                foreach ($tokens as $n => $token) {
+                    if ($token->prev(fn() => true)?->is($operands) && $token->is(',') && $token->next(fn() => true)?->is($operands)) {
+                        $tokens[$n] = $token->clone(id: ord('_'), text: '_');
+                    }
+                }
+            }
+
+            $constant = '';
+            $expression = '';
+            foreach ($tokens as $token) {
+                if ($token->isIgnorable()) {
+                    continue;
+                }
+                if ($token->is($constants)) {
+                    $constant .= $token->text;
+                }
+                elseif ($token->is($operands) || $token->is($operators)) {
+                    if (strlen($constant)) {
+                        $constant = ltrim($constant, '\\');
+                        if (!($allow_constant === true || isset($allow_constant[$constant]))) {
+                            $throw($k, $token);
+                        }
+                        if (!defined($constant)) {
+                            $throw($k, $token);
+                        }
+                        $expression .= constant($constant) + 0;
+                        $constant = '';
+                    }
+                    $expression .= $token->text;
+                }
+                else {
+                    $throw($k, $token);
+                }
+            }
+            $expressions[$k] = var_export($k, true) . '=>' . $expression;
         }
-        return evaluate("return $expression;");
+
+        $results = evaluate("return [" . implode(",", $expressions) . "];");
+        if ($isarray) {
+            return $results;
+        }
+        return $results[0];
     }
 }
 
@@ -19702,6 +20910,109 @@ if (!function_exists('ryunosuke\\DbMigration\\decimal')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\hoelder_mean') || (new \ReflectionFunction('ryunosuke\\DbMigration\\hoelder_mean'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\hoelder_mean')) {
+    /**
+     * ヘルダー平均を返す
+     *
+     * 定義に従い、p=-INF,+INF,0 の場合は特別扱いされる。
+     * - -INF: 最小値
+     * - +INF: 最大値
+     * - 0.0: 幾何平均
+     *
+     * 要素が 0 の場合はエラーではなく null を返す。
+     * これは ?? default を意図したもので、呼び側は常に要素数を意識しなければならない。
+     *
+     * Example:
+     * ```php
+     * // 最小値
+     * that(hoelder_mean(-INF, 1, 2, 3, 4, 5, 10))->isSame(1);
+     * // 最大値
+     * that(hoelder_mean(+INF, 1, 2, 3, 4, 5, 10))->isSame(10);
+     * // 算術平均
+     * that(hoelder_mean(1, 1, 2, 3, 4, 5, 10))->isSame(4.166666666666667);
+     * // 平方根平均
+     * that(hoelder_mean(0.5, 1, 2, 3, 4, 5, 10))->isSame(3.7021672285503406);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\math
+     *
+     * @param float $p ヘルダー指数
+     * @param float|int ...$numbers 数値の配列
+     * @return float|int|null 計算結果
+     */
+    function hoelder_mean(float $p, float|int ...$numbers): float|int|null
+    {
+        $count = count($numbers);
+        if (!$count) {
+            return null;
+        }
+
+        if ($p === -INF) {
+            return min($numbers);
+        }
+        if ($p === +INF) {
+            return max($numbers);
+        }
+        if ($p === 0.0) {
+            // 幾何平均で <=0 は定義されない
+            if (array_find_first($numbers, fn($v) => $v <= 0) !== null) {
+                throw new \LogicException("geometric mean must be number>0.");
+            }
+            return exp(array_sum(array_map(fn($v) => log($v), $numbers)) / $count);
+        }
+
+        return pow(array_sum(array_map(fn($v) => pow($v, $p), $numbers)) / $count, 1 / $p);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\int_divide') || (new \ReflectionFunction('ryunosuke\\DbMigration\\int_divide'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\int_divide')) {
+    /**
+     * 整数を除算した配列を返す
+     *
+     * 割り切れるときは array_pad([], $divisor, $int/$divisor) と同じ。
+     * 割り切れないときは余剰を各要素に分配する。
+     * $length が正の場合は左から埋められる。負の場合は右から埋められる。
+     *
+     * Example:
+     * ```php
+     * // 13を3つに分割（余りを左に分配）
+     * that(int_divide(13, 3))->isSame([5, 4, 4]);
+     * // 13を3つに分割（余りを右に分配）
+     * that(int_divide(13, -3))->isSame([4, 4, 5]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\math
+     */
+    function int_divide(int $int, int $divisor): array
+    {
+        $minus = $divisor < 0;
+        $divisor = abs($divisor);
+
+        $div = intdiv($int, $divisor);
+        $mod = abs((int) ($int % $divisor));
+
+        $result = array_pad([], $divisor, $div);
+
+        for ($i = 0; $i < $mod; $i++) {
+            $n = $i;
+            if ($minus) {
+                $n = $divisor - $i - 1;
+            }
+
+            if ($int > 0) {
+                $result[$n]++;
+            }
+            else {
+                $result[$n]--;
+            }
+        }
+
+        return $result;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\maximum') || (new \ReflectionFunction('ryunosuke\\DbMigration\\maximum'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\maximum')) {
     /**
@@ -19750,8 +21061,8 @@ if (!function_exists('ryunosuke\\DbMigration\\mean')) {
     function mean(...$variadic)
     {
         $args = array_flatten($variadic) or throw new \LengthException("argument's length is 0.");
-        $args = array_filter($args, 'is_numeric') or throw new \LengthException("argument's must be contain munber.");
-        return array_sum($args) / count($args);
+        $args = array_filter($args, fn($v) => is_arithmetic($v)) or throw new \LengthException("argument's must be contain number.");
+        return sum($args) / count($args);
     }
 }
 
@@ -19786,7 +21097,7 @@ if (!function_exists('ryunosuke\\DbMigration\\median')) {
         $center = (int) ($count / 2);
         sort($args);
         // 偶数で共に数値なら平均値
-        if ($count % 2 === 0 && (is_numeric($args[$center - 1]) && is_numeric($args[$center]))) {
+        if ($count % 2 === 0 && (is_arithmetic($args[$center - 1]) && is_arithmetic($args[$center]))) {
             return ($args[$center - 1] + $args[$center]) / 2;
         }
         // 奇数なら単純に中央値
@@ -19858,8 +21169,7 @@ if (!function_exists('ryunosuke\\DbMigration\\mode')) {
         $args = array_combine($vals, $args);
         $counts = array_count_values($vals);
         arsort($counts);
-        reset($counts);
-        return $args[key($counts)];
+        return $args[array_key_first($counts)];
     }
 }
 
@@ -19885,8 +21195,13 @@ if (!function_exists('ryunosuke\\DbMigration\\sum')) {
     function sum(...$variadic)
     {
         $args = array_flatten($variadic) or throw new \LengthException("argument's length is 0.");
-        $args = array_filter($args, 'is_numeric') or throw new \LengthException("argument's must be contain munber.");
-        return array_sum($args);
+        $args = array_filter($args, fn($v) => is_arithmetic($v)) or throw new \LengthException("argument's must be contain number.");
+        //return array_sum($args); // for compatible php 8.3
+        $result = 0;
+        foreach ($args as $arg) {
+            $result += $arg;
+        }
+        return $result;
     }
 }
 
@@ -20206,6 +21521,57 @@ if (!function_exists('ryunosuke\\DbMigration\\evaluate')) {
             $message .= "\n in " . realpath($cachefile) . " on line " . $errline . "\n";
             throw new \ParseError($message, $ex->getCode(), $ex);
         }
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\msleep') || (new \ReflectionFunction('ryunosuke\\DbMigration\\msleep'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\msleep')) {
+    /**
+     * float でのミリ秒も指定できる sleep
+     *
+     * ついでに、いくつかある php の sleep 系関数の動作を統一してある。
+     * - sleep: 秒単位で精度が低いが、残り秒数を返してくれる
+     * - usleep: 精度は高いが、返り値がない
+     * - time_nanosleep: 精度が高く（高すぎる）残り秒数も返せるが、シグナルを無視できない
+     * - time_sleep_until: 精度も高くシグナルを無視できるが、逆に言えばシグナルで打ち切れない
+     *
+     * float でのミリ秒で実用上は十分だろうし、上記のような細かな動作差異など覚えていられないので、シグナル無視を引数化し常に「残りミリ秒数」を返すようにした。
+     *
+     * $seconds は DateTime を受け入れ、DateTime の場合は指定日時まで待機という動作になる。
+     * この時、過去日時を指定してもエラーにはならず 0 を返す（用途から考えてスケジューリングの都合で過去になることは多々ある）。
+     * また、$cancel_signal 未指定の場合 false に設定される（time_sleep_until の思想を模した）。
+     * 一方、float 指定の場合は 0 未満だとエラーになる（実装は assert）。
+     *
+     * ちなみに pcntl_signal で php レベルでシグナルをハンドリングしていない場合は $cancel_signal の指定は無意味。
+     * 実際のところ「ミリ秒対応の sleep」という雑な認識で問題ない。
+     *
+     * @package ryunosuke\Functions\Package\misc
+     */
+    function msleep(
+        /** 待機するミリ秒|待機するまでの日時 */ float|\DateTimeInterface $seconds,
+        /** シグナルでキャンセルされるか */ ?bool $cancel_signal = null,
+    ): /** 残りミリ秒数 */ float
+    {
+        $now = microtime(true);
+
+        if ($seconds instanceof \DateTimeInterface) {
+            $cancel_signal ??= false;
+            $seconds = (float) ($seconds->format('U.u') - $now);
+        }
+        else {
+            $cancel_signal ??= true;
+            assert($seconds >= 0);
+        }
+
+        if ($seconds > 0) {
+            if ($cancel_signal) {
+                usleep((int) ($seconds * 1000000));
+            }
+            else {
+                time_sleep_until($now + $seconds);
+            }
+        }
+        return max(0.0, $seconds - (microtime(true) - $now));
     }
 }
 
@@ -21535,16 +22901,16 @@ if (!function_exists('ryunosuke\\DbMigration\\php_tokens')) {
     }
 }
 
-assert(!function_exists('ryunosuke\\DbMigration\\unique_id') || (new \ReflectionFunction('ryunosuke\\DbMigration\\unique_id'))->isUserDefined());
-if (!function_exists('ryunosuke\\DbMigration\\unique_id')) {
+assert(!function_exists('ryunosuke\\DbMigration\\sleetflake') || (new \ReflectionFunction('ryunosuke\\DbMigration\\sleetflake'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\sleetflake')) {
     /**
-     * 一意な文字列を返す
+     * 一意な id を生成するオブジェクトを返す
      *
      * 最大でも8バイト（64ビット）に収まるようにしてある。
      *
-     * - 41bit: 1ミリ秒単位
-     * - 7bit: シーケンス
-     * - 16bit: IPv4ホストアドレス
+     * - 41bit: 1ミリ秒単位（固定）
+     * - 7bit: シーケンス（引数指定可能）
+     * - 16bit: IPv4ホストアドレス（引数指定可能）
      *
      * いわゆる snowflake 系で sonyflake が近い。
      *
@@ -21585,143 +22951,175 @@ if (!function_exists('ryunosuke\\DbMigration\\unique_id')) {
      *
      * @package ryunosuke\Functions\Package\misc
      *
-     * @param array $id_info 元になった生成データのレシーバ引数
-     * @param array $debug デバッグ用引数（配列で内部の動的な値を指定できる）
-     * @return string 一意なバイナリ文字列
+     * @return \Sleetflake|object
      */
-    function unique_id(&$id_info = [], $debug = [])
-    {
-        $id_info = [];
+    function sleetflake(
+        int $sequence_bit = 7,
+        int $ipaddress_bit = 16,
+        ?int $base_timestamp = null,
+        ?float $timestamp = null,
+        ?string $lockfile = null,
+    ) {
+        return new class($sequence_bit, $ipaddress_bit, $base_timestamp, $timestamp, $lockfile) {
+            private int    $sequence_bit;
+            private int    $ipaddress_bit;
+            private int    $machine_id;
+            private int    $base_timestamp;
+            private ?float $timestamp;
+            private        $lock_handle;
 
-        static $config = null;
-        $config ??= function_configure('unique_id.config');
+            private array $debugInfo;
 
-        $TIMESTAMP_BASE = $config['timestamp_base'];
-        $TIMESTAMP_PRECISION = $config['timestamp_precision'];
-        $TIMESTAMP_BIT = $config['timestamp_bit'];
-        $SEQUENCE_BIT = $config['sequence_bit'];
-        $IPADDRESS_BIT = $config['ipaddress_bit'];
-        assert(PHP_INT_SIZE === 8);
-        assert(($TIMESTAMP_BIT + $SEQUENCE_BIT + $IPADDRESS_BIT) === 64);
+            public function __construct(
+                int $sequence_bit,
+                int $ipaddress_bit,
+                ?int $base_timestamp,
+                ?float $timestamp,
+                ?string $lockfile,
+            ) {
+                $this->sequence_bit = $sequence_bit;
+                $this->ipaddress_bit = $ipaddress_bit;
+                $this->base_timestamp = $base_timestamp ?? strtotime('2025/06/01');
+                $this->timestamp = $timestamp;
+                $this->lock_handle = fopen($lockfile ?? (function_configure('cachedir') . "/sleetflake-sequence"), 'c+');
 
-        static $ipaddress = null;
-        $ipaddress ??= (function () use ($IPADDRESS_BIT) {
-            $addrs = [];
-            foreach (net_get_interfaces() as $interface) {
-                foreach ($interface['unicast'] as $addr) {
-                    // IPv4 で・・・
-                    if ($addr['family'] === AF_INET) {
-                        // subnet/16 以上のもの
-                        $subnet = strrpos(decbin((ip2long($addr['netmask']))), '1') + 1;
-                        if ($subnet >= $IPADDRESS_BIT) {
-                            $addrs[] = [$addr['address'], $subnet];
+                assert(($this->sequence_bit + $this->ipaddress_bit) <= 23);
+            }
+
+            public function __destruct()
+            {
+                fclose($this->lock_handle);
+            }
+
+            public function __debugInfo(): array
+            {
+                return $this->debugInfo;
+            }
+
+            public function binaryToInt(string $binary): int
+            {
+                return unpack('J', $binary)[1];
+            }
+
+            public function int(): int
+            {
+                $this->machine_id ??= $this->getMachineId();
+
+                // この順番は決して変えてはならない（getSequence で待機する可能性があるので microtime はその後でなければならない）
+                $machineid = $this->machine_id & ((1 << $this->ipaddress_bit) - 1);
+                $sequence = $this->getSequence();
+                $timestamp = (int) ((($this->timestamp ?? microtime(true)) - $this->base_timestamp) * 1000);
+
+                $ipaddress_right_bits = 0;
+                $sequence_right_bits = $ipaddress_right_bits + $this->ipaddress_bit;
+                $timestamp_right_bits = $sequence_right_bits + $this->sequence_bit;
+
+                $id = ($timestamp << $timestamp_right_bits) | ($sequence << $sequence_right_bits) | ($machineid << $ipaddress_right_bits);
+
+                $this->debugInfo = [
+                    'id'        => $id,
+                    'timestamp' => $timestamp,
+                    'sequence'  => $sequence,
+                    'machineid' => $machineid,
+                ];
+
+                return $id;
+            }
+
+            public function binary(): string
+            {
+                return pack('J', $this->int());
+            }
+
+            public function base62(): string
+            {
+                return base62_encode($this->binary());
+            }
+
+            public function base64(): string
+            {
+                return base64_encode($this->binary());
+            }
+
+            public function base64url(): string
+            {
+                return base64url_encode($this->binary());
+            }
+
+            private function getMachineId(): int
+            {
+                $addrs = [];
+                foreach (net_get_interfaces() as $interface) {
+                    foreach ($interface['unicast'] as $addr) {
+                        // IPv4 で・・・
+                        if ($addr['family'] === AF_INET) {
+                            // subnet/16 以上のもの
+                            $subnet = strrpos(decbin((ip2long($addr['netmask']))), '1') + 1;
+                            if ($subnet >= $this->ipaddress_bit) {
+                                $addrs[] = [$addr['address'], $subnet];
+                            }
+                        }
+                        // @todo subnet が /104 なら IPv6 でもいける？
+                    }
+                }
+                if ($addrs) {
+                    usort($addrs, fn($a, $b) => -($a[1] <=> $b[1]));
+                    return ip2long(reset($addrs)[0]);
+                }
+                throw new \UnexpectedValueException("ip address is not found"); // @codeCoverageIgnore
+            }
+
+            private function getSequence(): int
+            {
+                set_error_handler(function ($severity, $message, $file, $line) { throw new \ErrorException($message, 0, $severity, $file, $line); });
+                flock($this->lock_handle, LOCK_EX);
+
+                try {
+                    rewind($this->lock_handle);
+                    $sequence = 1 + (int) stream_get_contents($this->lock_handle);
+                    if (($sequence >= (1 << $this->sequence_bit))) {
+                        $sequence = 0;
+                        usleep(1000);
+                        if (isset($this->timestamp)) {
+                            $this->timestamp += 0.001;
                         }
                     }
-                    // @todo subnet が /104 なら IPv6 でもいける？
-                }
-            }
-            if ($addrs) {
-                usort($addrs, fn($a, $b) => -($a[1] <=> $b[1]));
-                return reset($addrs)[0];
-            }
-            throw new \UnexpectedValueException("ip address is not found"); // @codeCoverageIgnore
-        })();
-        $ipaddress = $debug['ipaddress'] ?? $ipaddress;
 
-        // プロセスを跨いだ連番生成器（何かに使えそうなのでクラスにまとめて少し冗長になっている）
-        static $sequencer = null;
-        $sequencer ??= new class (sys_get_temp_dir() . "/id-sequence") {
-            private     $handle;
-            private int $lockcount = 0;
-
-            public function __construct(string $lockfile)
-            {
-                $this->handle = fopen($lockfile, 'c+');
-            }
-
-            public function lock(): int
-            {
-                if (flock($this->handle, LOCK_EX)) {
-                    $this->lockcount++;
-                }
-                return $this->lockcount;
-            }
-
-            public function unlock(): int
-            {
-                if (flock($this->handle, LOCK_UN)) {
-                    $this->lockcount--;
-                }
-                return $this->lockcount;
-            }
-
-            public function reset(int $sequence): void
-            {
-                assert($this->lockcount > 0, 'must be lock');
-
-                set_error_handler(function ($severity, $message, $file, $line) { throw new \ErrorException($message, 0, $severity, $file, $line); });
-                try {
-                    rewind($this->handle);
-                    ftruncate($this->handle, 0);
-                    fwrite($this->handle, $sequence);
-                }
-                finally {
-                    restore_error_handler();
-                }
-            }
-
-            public function add(int $increment = 1): int
-            {
-                assert($this->lockcount > 0, 'must be lock');
-
-                set_error_handler(function ($severity, $message, $file, $line) { throw new \ErrorException($message, 0, $severity, $file, $line); });
-                try {
-                    rewind($this->handle);
-                    $sequence = (int) stream_get_contents($this->handle);
-
-                    $next = $sequence + $increment;
-                    $this->reset(is_float($next) ? 0 : $next);
+                    rewind($this->lock_handle);
+                    ftruncate($this->lock_handle, 0);
+                    fwrite($this->lock_handle, $sequence);
 
                     return $sequence;
                 }
                 finally {
                     restore_error_handler();
+                    flock($this->lock_handle, LOCK_UN);
                 }
             }
         };
+    }
+}
 
-        $sequencer->lock();
-        try {
-            $timestamp = $debug['timestamp'] ?? microtime(true);
-            if (isset($debug['sequence'])) {
-                $sequencer->reset($debug['sequence']);
-            }
-
-            $sequence = $sequencer->add() % (1 << $SEQUENCE_BIT);
-            if ($sequence === 0) {
-                usleep(1000 * $TIMESTAMP_PRECISION);
-                $timestamp = microtime(true);
-            }
-        }
-        finally {
-            $sequencer->unlock();
-        }
-
-        $id_info = [
-            'timestamp' => (int) (($timestamp - $TIMESTAMP_BASE) * 1000 / $TIMESTAMP_PRECISION),
-            'sequence'  => $sequence,
-            'ipsegment' => ip2long($ipaddress) & ((1 << $IPADDRESS_BIT) - 1),
-        ];
-
-        assert(($id_info['timestamp'] & ((1 << $TIMESTAMP_BIT) - 1)) === $id_info['timestamp']);
-        assert(($id_info['sequence'] & ((1 << $SEQUENCE_BIT) - 1)) === $id_info['sequence']);
-        assert(($id_info['ipsegment'] & ((1 << $IPADDRESS_BIT) - 1)) === $id_info['ipsegment']);
-
-        $ipaddress_right_bits = 0;
-        $sequence_right_bits = $ipaddress_right_bits + $IPADDRESS_BIT;
-        $timestamp_right_bits = $sequence_right_bits + $SEQUENCE_BIT;
-
-        return pack('J', ($id_info['timestamp'] << $timestamp_right_bits) | ($id_info['sequence'] << $sequence_right_bits) | ($id_info['ipsegment'] << $ipaddress_right_bits));
+assert(!function_exists('ryunosuke\\DbMigration\\unique_id') || (new \ReflectionFunction('ryunosuke\\DbMigration\\unique_id'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\unique_id')) {
+    /**
+     * sleetflake::binary へのエイリアス
+     *
+     * @see sleetflake()
+     * @package ryunosuke\Functions\Package\misc
+     */
+    function unique_id(): string
+    {
+        static $sleetflake = null;
+        $sleetflake ??= (function () {
+            $config = function_configure('unique_id.config');
+            return sleetflake(
+                base_timestamp: $config['timestamp_base'],
+                sequence_bit  : $config['sequence_bit'],
+                ipaddress_bit : $config['ipaddress_bit'],
+            );
+        })();
+        return $sleetflake->binary();
     }
 }
 
@@ -21785,6 +23183,43 @@ if (!function_exists('ryunosuke\\DbMigration\\cidr_parse')) {
 
         $subnet = (int) $subnet;
         return [$address, $subnet, 32 - $subnet];
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\cidr_subnet') || (new \ReflectionFunction('ryunosuke\\DbMigration\\cidr_subnet'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\cidr_subnet')) {
+    /**
+     * cidr をサブネットに分割する
+     *
+     *  ipv6 は今のところ未対応。
+     *
+     * Example:
+     * ```php
+     * // 192.168.0.0/24 を /26 に分割
+     * that(cidr_subnet('192.168.0.0/24', 26))->isSame(['192.168.0.0/26', '192.168.0.64/26', '192.168.0.128/26', '192.168.0.192/26']);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\network
+     */
+    function cidr_subnet(string $cidr, int $mask): array
+    {
+        [$address, $subnet] = explode('/', trim($cidr), 2) + [1 => 32];
+
+        assert(filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4));
+        assert($subnet <= $mask && $mask <= 32);
+
+        $ip_int = ip2long($address);
+        $hosts = 1 << (32 - $mask);
+        $subnets = 1 << ($mask - $subnet);
+
+        $results = [];
+        for ($i = 0; $i < $subnets; $i++) {
+            $network_int = $ip_int + ($i * $hosts);
+            $network_str = long2ip($network_int);
+
+            $results[] = "{$network_str}/{$mask}";
+        }
+        return $results;
     }
 }
 
@@ -23738,7 +25173,7 @@ if (!function_exists('ryunosuke\\DbMigration\\ip_info')) {
                                 expire   INT         NOT NULL,
                                 PRIMARY KEY (registry)
                             )
-                            SQL
+                            SQL,
                         );
                         $pdo->exec(<<<SQL
                             CREATE TABLE IF NOT EXISTS rir_data(
@@ -23749,7 +25184,7 @@ if (!function_exists('ryunosuke\\DbMigration\\ip_info')) {
                                 date      VARCHAR(8),
                                 PRIMARY KEY (ipaddress, netmask)
                             )
-                            SQL
+                            SQL,
                         );
                     }
                     return $pdo;
@@ -26940,7 +28375,7 @@ if (!function_exists('ryunosuke\\DbMigration\\include_stream')) {
 
             #</editor-fold>
 
-            public function register($hook)
+            public function register(callable $hook): self
             {
                 stream_wrapper_unregister('file');
                 stream_wrapper_register('file', get_class($this));
@@ -26948,7 +28383,7 @@ if (!function_exists('ryunosuke\\DbMigration\\include_stream')) {
                 return $this;
             }
 
-            public function restore()
+            public function restore(): callable
             {
                 stream_wrapper_unregister('file');
                 stream_wrapper_restore('file');
@@ -26968,6 +28403,161 @@ if (!function_exists('ryunosuke\\DbMigration\\include_stream')) {
         };
 
         return $declareProtocol;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\iterator_stream') || (new \ReflectionFunction('ryunosuke\\DbMigration\\iterator_stream'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\iterator_stream')) {
+    /**
+     * iterator を resource に変換する
+     *
+     * iterator(generator) は「ちょっとずつ返す」という性質を持つので resource 的に扱えた方が便利なことがある。
+     * 例えば極々稀に iterator を resource として扱いたい場合が存在する。
+     * - 外部ライブラリのメソッドが resource しか受け付けない
+     * - 手元に SplFileObject しかない（SplFileObject から resource を得る手段は存在しない）
+     * そんな時この関数を使えば resource 化することができる。
+     *
+     * 得られた resource は大抵の fxxxx 関数を呼ぶことができる。
+     * が、呼んだところで効果があるのは非常に限定的で、意味があるのは ftell くらいしかない。
+     * あくまで「resource として扱いたい場合にエラーが出て欲しくない」程度の意味でしかない。
+     *
+     * 実質的には tmpfile に全部書いてそのファイルリソースを返すのと同じ。
+     * ただし、tmpfile が（tmpfs などで）メモリ上にあるかもしれないし全部書いて全部読むのは余計なオーバーヘッドがかかるし途中で打ち切ることもできない。
+     * とは言え size が取れたり seek 出来たりと機能面ではそちらの方が優れているので参考実装として引数分岐で残してある。
+     *
+     * Example:
+     * ```php
+     * // Generator を resource 化する
+     * $stream = iterator_stream((function() {
+     *     yield "a\n";
+     *     yield "ab\n";
+     *     yield "abc\n";
+     * })());
+     * // resource として扱える
+     * that(fgets($stream))->is("a\n");
+     * that(fgets($stream))->is("ab\n");
+     * that(fgets($stream))->is("abc\n");
+     * that(fgets($stream))->is(false);
+     *
+     * // SplFileObject を resource 化する
+     * $testpath = sys_get_temp_dir() . '/iterator_stream.txt';
+     * file_put_contents($testpath, "a\nab\nabc\n");
+     * $file = new \SplFileObject($testpath);
+     * $stream = iterator_stream($file);
+     * // resource として扱える（$file->current,next でも fgets($stream) でも同様の作用・副作用が得られる）
+     * // SplFileObject には resource 取得メソッドが無いので resource を要求されると代替手段が無いに等しい
+     * that($file->current())->is("a\n");
+     * $file->next();
+     * that(fgets($stream))->is("ab\n");
+     * that(fgets($stream))->is("abc\n");
+     * that(fgets($stream))->is(false);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\stream
+     *
+     * @return resource iterator の resource
+     */
+    function iterator_stream(\Iterator $iterator, ?string $tmpdir = null)
+    {
+        if ($tmpdir !== null) {
+            $tmp = fopen(tempnam($tmpdir, 'istream'), 'w+b');
+            foreach ($iterator as $it) {
+                fwrite($tmp, $it);
+            }
+            rewind($tmp);
+            return $tmp;
+        }
+
+        static $STREAM_NAME, $stream_class = null;
+        if ($STREAM_NAME === null) {
+            $STREAM_NAME = 'iterator-stream';
+            if (in_array($STREAM_NAME, stream_get_wrappers())) {
+                throw new \DomainException("$STREAM_NAME is registered already."); // @codeCoverageIgnore
+            }
+
+            stream_wrapper_register($STREAM_NAME, $stream_class = get_class(new class() {
+                public static $objects = [];
+
+                private int       $id;
+                private \Iterator $iterator;
+                private int       $position;
+                private string    $buffer;
+
+                public $context;
+
+                /** @noinspection PhpUnusedParameterInspection */
+                public function stream_open(string $path, string $mode, int $options, &$opened_path): bool
+                {
+                    assert(strpos($mode, 'r') !== false);
+
+                    $parsed = parse_url($path);
+
+                    $this->id = $parsed['host'];
+                    $this->iterator = self::$objects[$parsed['host']];
+                    $this->position = 0;
+                    $this->buffer = '';
+
+                    return true;
+                }
+
+                public function stream_close()
+                {
+                    unset(self::$objects[$this->id]);
+                }
+
+                public function stream_read(int $count): string
+                {
+                    $buffer = $this->buffer;
+                    while (strlen($buffer) < $count && $this->iterator->valid()) {
+                        $buffer .= $this->iterator->current();
+                        $this->iterator->next();
+                    }
+
+                    $result = substr($buffer, 0, $count);
+                    $this->buffer = substr($buffer, $count);
+
+                    $this->position += strlen($result);
+                    return $result;
+                }
+
+                public function stream_eof(): bool
+                {
+                    return !($this->iterator->valid() || strlen($this->buffer));
+                }
+
+                public function stream_tell(): int
+                {
+                    return $this->position;
+                }
+
+                public function stream_seek(int $offset, int $whence = SEEK_SET): bool
+                {
+                    if ($offset === 0 && $whence === SEEK_SET) {
+                        $this->position = 0;
+                        $this->buffer = '';
+                        $this->iterator->rewind();
+                        return true;
+                    }
+                    return false;
+                }
+
+                public function stream_stat()
+                {
+                    return [];
+                }
+
+                /** @noinspection PhpUnusedParameterInspection */
+                public function stream_set_option(int $option, int $arg1, ?int $arg2) { return false; }
+
+                /** @noinspection PhpUnusedParameterInspection */
+                public function stream_lock($operation) { return false; }
+            }));
+        }
+
+        $id = spl_object_id($iterator);
+        $stream_class::$objects[$id] = $iterator;
+
+        return fopen("$STREAM_NAME://$id", 'rb');
     }
 }
 
@@ -27239,7 +28829,7 @@ if (!function_exists('ryunosuke\\DbMigration\\memory_stream')) {
                             atime: $var[1] ?? $var[0] ?? $now,
                         ),
                         STREAM_META_ACCESS     => $set_entry(
-                            mode: (self::$entries[$id]->mode & 077_0000) | $var & ~umask(),
+                            mode : (self::$entries[$id]->mode & 077_0000) | $var & ~umask(),
                             ctime: $now,
                         ),
                         STREAM_META_OWNER_NAME => $set_entry(
@@ -27494,6 +29084,453 @@ if (!function_exists('ryunosuke\\DbMigration\\profiler')) {
         };
 
         return $profiler;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\resource_stream') || (new \ReflectionFunction('ryunosuke\\DbMigration\\resource_stream'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\resource_stream')) {
+    /**
+     * resource を (file)stream にプロキシする
+     *
+     * バックエンドが tmpfile になるいわゆる BufferedStream であり、透過的にバッファリングする。
+     * もっとも、今のところ read にしか対応していないため、「seek できる stream にする」くらいの意味合いでしかない。
+     *
+     * resource に対応しているプロダクトでも stream 以外は対応していないことがある。
+     * e.g. doctrine: https://github.com/doctrine/dbal/blob/4.4.1/src/Driver/Mysqli/Statement.php#L102
+     * この関数を通すとファイルシステムを通して file stream 扱いになるのでこのようなプロダクトでも扱えるようになる。
+     * 副作用としてはいったんファイルが出来上がることになるので resource であるメリットを一部捨て去ってしまうこと。
+     *
+     * $max_memory を与えるとそのサイズまではメモリ内で展開される。
+     * 0 を与えると完全にディスクで動作する。
+     * 0 以外では seek 動作が効かないので注意。
+     * （php://temp が seek に対応していないっぽい。とはいえシーケンシャルじゃない seek したい状況がまずないので基本的に気にしなくてよい）。
+     *
+     * @package ryunosuke\Functions\Package\stream
+     *
+     * @return resource
+     */
+    function resource_stream($resource, int $max_memory = 2 * 1024 * 1024, bool $forcely = false)
+    {
+        // seekable だったら無駄なので何もしない
+        if (!$forcely && stream_get_meta_data($resource)['seekable']) {
+            return $resource;
+        }
+
+        static $STREAM_NAME, $stream_class = null;
+        if ($STREAM_NAME === null) {
+            $STREAM_NAME = 'resource-stream';
+            if (in_array($STREAM_NAME, stream_get_wrappers())) {
+                throw new \DomainException("$STREAM_NAME is registered already."); // @codeCoverageIgnore
+            }
+
+            stream_wrapper_register($STREAM_NAME, $stream_class = get_class(new class() {
+                public static $resources = [];
+
+                private int    $id;
+                private        $sourceStream;
+                private        $bufferStream;
+                private object $bufferManager;
+
+                public $context;
+
+                // <editor-fold desc="open/close">
+
+                /** @noinspection PhpUnusedParameterInspection */
+                public function stream_open(string $path, string $mode, int $options, &$opened_path): bool
+                {
+                    // リソース ID とパラメータを取得
+                    $parsed = parse_url($path);
+                    parse_str($parsed['query'], $query);
+
+                    // リソースを取得（unset のために ID は取っておく）
+                    $this->id = $parsed['host'];
+                    $this->sourceStream = self::$resources[$parsed['host']];
+
+                    // バッファー生成（位置は合わせておく）
+                    $this->bufferStream = $query['max_memory'] ? fopen("php://temp/maxmemory:{$query['max_memory']}", 'wb+') : tmpfile();
+                    fseek($this->bufferStream, ftell($this->sourceStream));
+
+                    // 既読管理マネージャ
+                    $this->bufferManager = new class () {
+                        public function __construct(private array $ranges = []) { }
+
+                        public function read(int $start, int $length): self
+                        {
+                            $end = $start + $length;
+
+                            $result = [];
+                            foreach ($this->ranges as [$readFrom, $readTo]) {
+                                if ($readTo < $start) {
+                                    $result[] = [$readFrom, $readTo];
+                                }
+                                elseif ($readFrom > $end) {
+                                    $result[] = [$start, $end];
+                                    $start = $readFrom;
+                                    $end = $readTo;
+                                }
+                                else {
+                                    $start = min($start, $readFrom);
+                                    $end = max($end, $readTo);
+                                }
+                            }
+                            $result[] = [$start, $end];
+                            $this->ranges = $result;
+
+                            return $this;
+                        }
+
+                        public function getUnread(int $start, int $length): array
+                        {
+                            $end = $start + $length;
+
+                            $result = [];
+                            foreach ($this->ranges as [$readFrom, $readTo]) {
+                                if ($readFrom >= $end) {
+                                    break;
+                                }
+                                if ($readTo <= $start) {
+                                    continue;
+                                }
+
+                                if ($readFrom > $start) {
+                                    $result[] = [$start, $readFrom - $start];
+                                }
+
+                                $start = max($start, $readTo);
+
+                                if ($start >= $end) {
+                                    return $result;
+                                }
+                            }
+
+                            if ($start < $end) {
+                                $result[] = [$start, $end - $start];
+                            }
+
+                            return $result;
+                        }
+                    };
+
+                    return true;
+                }
+
+                public function stream_close(): void
+                {
+                    fclose($this->sourceStream);
+                    fclose($this->bufferStream);
+                    unset(self::$resources[$this->id]);
+                }
+
+                // </editor-fold>
+
+                // <editor-fold desc="read/write">
+
+                public function stream_read(int $count): string|false
+                {
+                    $bufferPos = ftell($this->bufferStream);
+
+                    // buffer に無いなら読む（seek 次第で細切れになるが普通はシーケンシャルなので許容する）
+                    $unreads = $this->bufferManager->getUnread($bufferPos, $count);
+                    foreach ($unreads as [$start, $length]) {
+                        // buffer でしか seek していないのでここで seek（もちろんここでエラーになることもある）
+                        if (ftell($this->sourceStream) !== $start) {
+                            if (fseek($this->sourceStream, $start) === -1) {
+                                return false;
+                            }
+                        }
+
+                        // 読んで書いて既読にする
+                        $buffer = fread($this->sourceStream, $length);
+                        fseek($this->bufferStream, $start);
+                        fwrite($this->bufferStream, $buffer);
+                        $this->bufferManager->read($start, strlen($buffer));
+                    }
+
+                    // 上を通過した時点で buffer に溜まっているので単純に読めばよい
+                    fseek($this->bufferStream, $bufferPos);
+                    return fread($this->bufferStream, $count);
+                }
+
+                // </editor-fold>
+
+                // <editor-fold desc="seek">
+
+                public function stream_seek(int $offset, int $whence): bool
+                {
+                    // seek は buffer が主体で読み込み時に source も seek する
+                    return fseek($this->bufferStream, $offset, $whence) === 0;
+                }
+
+                public function stream_tell(): int
+                {
+                    return ftell($this->bufferStream);
+                }
+
+                public function stream_eof(): bool
+                {
+                    return feof($this->sourceStream);
+                }
+
+                // </editor-fold>
+
+                // <editor-fold desc="misc">
+
+                public function stream_stat(): array|false
+                {
+                    return fstat($this->sourceStream);
+                }
+
+                public function stream_set_option(int $option, int $arg1, ?int $arg2): bool
+                {
+                    return match ($option) {
+                        STREAM_OPTION_BLOCKING     => stream_set_blocking($this->sourceStream, $arg1),
+                        STREAM_OPTION_READ_BUFFER  => stream_set_read_buffer($this->sourceStream, $arg2),
+                        STREAM_OPTION_WRITE_BUFFER => stream_set_write_buffer($this->sourceStream, $arg2),
+                        STREAM_OPTION_READ_TIMEOUT => stream_set_timeout($this->sourceStream, $arg1 + $arg2 / 1_000_000),
+                    };
+                }
+
+                public function stream_lock(int $operation): bool
+                {
+                    return flock($this->sourceStream, $operation);
+                }
+
+                /** @noinspection PhpUnusedParameterInspection */
+                public function stream_cast(int $cast_as)
+                {
+                    return $this->bufferStream;
+                }
+
+                // </editor-fold>
+            }));
+        }
+
+        $id = get_resource_id($resource);
+        $stream_class::$resources[$id] = $resource;
+
+        return fopen("$STREAM_NAME://$id?max_memory=$max_memory", 'rb');
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\stream_describe') || (new \ReflectionFunction('ryunosuke\\DbMigration\\stream_describe'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\stream_describe')) {
+    /**
+     * ストリームの雑多な情報を返す
+     *
+     * - descriptor: ファイルデスクリプタ番号
+     * - inode: ファイル inode
+     * - realpath: 現在のファイル名（ファイスシステム上に残っておらず、デスクリプタだけが存在する場合は null）
+     * - filename: 開いた時のファイル名
+     *
+     * procfs を用いていて Windows はテスト用に模倣しているだけなので使用してはならない。
+     *
+     * @package ryunosuke\Functions\Package\stream
+     */
+    function stream_describe($stream = null): ?array
+    {
+        // fd の蒐集（同じファイルを複数のリソースで開いていることもあるので inode 単位で集約する）
+        $descriptors = [];
+        if (DIRECTORY_SEPARATOR === '\\') {
+            exec('handle -v -p ' . getmypid(), $output);
+            foreach (array_slice($output, 6) as $descriptor) {
+                [, , , $fd, $type, , $realpath] = str_getcsv($descriptor);
+                if ($type === 'File') {
+                    clearstatcache(true, $realpath);
+                    if (file_exists($realpath)) {
+                        $inode = hexdec(trim(explode(' ', shell_exec('fsutil file queryfileid ' . escapeshellarg($realpath)))[3]));
+                        $descriptors[$inode][] = [
+                            'realpath'   => $realpath,
+                            'descriptor' => hexdec($fd),
+                        ];
+                    }
+                }
+            }
+        }
+        else {
+            // @codeCoverageIgnoreStart
+            foreach (glob("/proc/self/fd/*") as $descriptor) {
+                clearstatcache(true, $descriptor);
+                $fd = (int) basename($descriptor);
+                // always failing
+                // $stat = stat("php://fd/$fd");
+
+                // fd は残っているがファイルが消されていると realpath は失敗する
+                // もはやファイル名が存在しないので fileinode は使えない（幸いにも fd から resource を開く機能があるので代替する）
+                $realpath = realpath($descriptor);
+                if ($realpath === false) {
+                    $fp = @fopen("php://fd/$fd", "r");
+                    if ($fp === false) {
+                        continue;
+                    }
+                    $fstat = fstat($fp);
+                    $inode = $fstat['ino'];
+                    $realpath = null;
+                    fclose($fp);
+                }
+                else {
+                    $inode = fileinode($realpath);
+                }
+
+                $descriptors[$inode][] = [
+                    'realpath'   => $realpath,
+                    'descriptor' => $fd,
+                ];
+            }
+            // @codeCoverageIgnoreEnd
+        }
+
+        $results = [];
+        foreach (get_resources('stream') as $resource) {
+            $metadata = stream_get_meta_data($resource);
+            if (isset($metadata['uri'])) {
+                $fstat = fstat($resource);
+                if ($fstat) {
+                    if (isset($descriptors[$fstat['ino']])) {
+                        // resource と fd は id は一致しないが時系列での増減は同じなので順番に取り出せば一致する
+                        $descriptor = array_shift($descriptors[$fstat['ino']]);
+                        $results[(int) $resource] = [
+                            'type'       => $metadata['wrapper_type'],
+                            'descriptor' => $descriptor['descriptor'],
+                            'inode'      => $fstat['ino'],
+                            'realpath'   => $descriptor['realpath'],
+                            'filename'   => $metadata['uri'],
+                        ];
+                        if ($stream === $resource) {
+                            return $results[(int) $resource];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $results;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\stream_transfer') || (new \ReflectionFunction('ryunosuke\\DbMigration\\stream_transfer'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\stream_transfer')) {
+    /**
+     * ストリームの転送を並列で行う
+     *
+     * $streams は下記の配列を指定する。
+     * ```
+     * [
+     *     'read'  => resource|string|callable, // 読み込み対象
+     *     'write' => resource|string|callable, // 書き込み対象
+     *     'done'  => callable, // 完了時コールバック
+     *     'fail'  => callable, // 失敗時コールバック
+     * ]
+     * ```
+     *
+     * ローカルストリームはファイル名で渡すことが多いので、文字列が来たら fopen する。
+     * 大量に実行したい場合に全て fopen したくない場合は callable を渡せば必要に応じてコールされる。
+     *
+     * done, fail 成功/失敗時にコールされるがほぼオマケ。
+     * 未指定だと成功時 size, 失敗時 null が格納される。
+     *
+     * @package ryunosuke\Functions\Package\stream
+     *
+     * @param array<array{read:resource|string|callable, write:resource|string|callable, done?:callable, fail?:callable}> $streams
+     */
+    function stream_transfer(array $streams, array $options = []): array
+    {
+        $options += [
+            'concurrency'   => 8,    // 同時並列数
+            'buffer_size'   => 8192, // 読み込みバッファサイズ
+            'select_second' => 1.5,  // stream_select の待機秒数（stream_select なので多少大きくてもよい）
+            'sleep_second'  => 0.01, // 読めるものがなかった場合の待機秒数（select 未対応時の sleep なのであまり大きいとスループットが下がる）
+            'done'          => null, // 共通の done
+            'fail'          => null, // 共通の fail
+        ];
+
+        $open = fn($target, $mode) => match (true) {
+            default              => $target,
+            is_callable($target) => $target(),
+            is_string($target)   => fopen($target, $mode),
+        };
+
+        $result = array_fill_keys(array_keys($streams), 0);
+        $currents = [];
+        $noselectable_streams = [];
+
+        while ($streams || $currents) {
+            while ($streams && count($currents) < $options['concurrency']) {
+                // 次の要素を取得
+                $first = array_key_first($streams);
+                $stream = $streams[$first];
+                unset($streams[$first]);
+
+                // 呼び出し時点で全部開かれるのもアレなので callable/string を許容する
+                $stream['read'] = $open($stream['read'], 'rb');
+                $stream['write'] = $open($stream['write'], 'wb');
+
+                // キューに追加
+                stream_set_blocking($stream['read'], false);
+                $currents[$first] = $stream;
+            }
+
+            $read = false;
+            foreach ($currents as $key => $current) {
+                $data = fread($current['read'], $options['buffer_size']);
+
+                // 読めなかったら諦める
+                if ($data === false) {
+                    // @codeCoverageIgnoreStart
+                    unset($currents[$key]);
+                    $result[$key] = ($currents['fail'] ?? $options['fail'] ?? fn() => null)($current, $key, $current['read']);
+                    continue;
+                    // @codeCoverageIgnoreEnd
+                }
+
+                // 読めたら書く
+                if ($data !== '') {
+                    // https://www.php.net/manual/ja/function.fwrite.php
+                    // ネットワークストリームへの書き込みは、 すべての文字列を書き込み終える前に終了する可能性があります。 fwrite() の戻り値を確かめるようにしましょう
+                    for ($written = 0; $written < strlen($data); $written += $fwrite) {
+                        $fwrite = fwrite($current['write'], substr($data, $written));
+                        if ($fwrite === false) {
+                            // @codeCoverageIgnoreStart
+                            $result[$key] = ($currents['fail'] ?? $options['fail'] ?? fn() => null)($current, $key, $current['write']);
+                            unset($currents[$key]);
+                            continue 2;
+                            // @codeCoverageIgnoreEnd
+                        }
+                    }
+
+                    $read = true;
+                    $result[$key] = ($currents['done'] ?? $options['done'] ?? fn() => $result[$key] + strlen($data))($current, $key, null);
+                }
+
+                // 読み終わったらそいつは終わり
+                if (feof($current['read'])) {
+                    unset($currents[$key]);
+                }
+            }
+
+            // 読めなかったら待つ（読めてるなら次も読める可能性が高いので待たない）
+            if (!$read && $currents) {
+                // stream_select は対応していない resource をフィルタするらしく、全て未対応だと ValueError(No stream arrays were passed) を投げてくる（1つでも対応していれば投げない）
+                // のでエラーになった resource を覚えておいてフィルタする
+                $r = array_filter(array_column($currents, 'read'), fn($r) => !isset($noselectable_streams[get_resource_id($r)]));
+                $w = $e = [];
+
+                // stream_select が使えるなら使いたい。しかし対応していないプロトコルもあるだろうので usleep にフォールバック
+                $ret = false;
+                if ($r) {
+                    try {
+                        $ret = @stream_select($r, $w, $e, ...timeval($options['select_second']));
+                    }
+                    catch (\Throwable) {
+                        $noselectable_streams += array_fill_keys(array_map('get_resource_id', $r), false);
+                    }
+                }
+                if (!$ret) {
+                    usleep($options['sleep_second'] * 1_000_000);
+                }
+            }
+        }
+
+        return $result;
     }
 }
 
@@ -29549,7 +31586,9 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
      * `$options['allow-binary']` でバイナリ文字列の扱いを指定する（false: 例外, null: null を返す）。
      * `$options['ignore-case'] = true` で大文字小文字を無視する。
      * `$options['ignore-space-change'] = true` で空白文字の数を無視する。
-     * `$options['ignore-all-space'] = true` ですべての空白文字を無視する
+     * `$options['ignore-all-space'] = true` ですべての空白文字を無視する。
+     * `$options['color']` で色を指定する。
+     * `$options['lineno']` で行番号表示を指定する。ただし行番号が出るのは sisple unified と split と html のみ（これら以外は由緒正しい形式なので行を出すと壊れてしまう）。
      * `$options['stringify']` で差分データを文字列化するクロージャを指定する。
      *
      * - normal: 標準形式（diff のオプションなしに相当する）
@@ -29558,6 +31597,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
      *     - unified のみを指定するとヘッダを含まない +- のみの差分を出す
      * - split: サイドバイサイド形式（split=3,120 のような形式で diff の -y -W 120 に相当する）
      *     - diff -y と互換性はなく、あくまでそれっぽくしているのみ
+     *     - 120 部分は省略でき、省略した場合自動で算出される
      * - html: ins, del の html タグ形式
      *     - html=perline とすると行レベルでの差分も出す
      *
@@ -29587,22 +31627,26 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
      * +this is changed line
      * ');
      * // html で差分を返す
-     * that(str_diff($old, $new, ['stringify' => 'html']))->isSame('same
+     * that(str_diff($old, $new, ['stringify' => 'html']))->isSame(<<<HTML
+     * <span>same</span>
      * <del>delete</del>
-     * same
+     * <span>same</span>
      * <ins>append</ins>
-     * same
+     * <span>same</span>
      * <del>change</del>
      * <ins>this is changed line</ins>
-     * ');
+     *
+     * HTML);
      * // 行レベルの html で差分を返す
-     * that(str_diff($old, $new, ['stringify' => 'html=perline']))->isSame('same
+     * that(str_diff($old, $new, ['stringify' => 'html=perline']))->isSame(<<<HTML
+     * <span>same</span>
      * <del>delete</del>
-     * same
+     * <span>same</span>
      * <ins>append</ins>
-     * same
-     * <ins>this is </ins>chang<ins>ed lin</ins>e
-     * ');
+     * <span>same</span>
+     * <ins>this is </ins><span>chang</span><ins>ed lin</ins><span>e</span>
+     *
+     * HTML);
      * // raw な配列で差分を返す
      * that(str_diff($old, $new, ['stringify' => null]))->isSame([
      *     // 等価行（'=' という記号と前後それぞれの文字列を返す（キーは行番号））
@@ -29640,8 +31684,18 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                     'ignore-case'         => false,
                     'ignore-space-change' => false,
                     'ignore-all-space'    => false,
+                    'trailing-break'      => false, // for compatible
+                    'color'               => false,
+                    'lineno'              => false,
                     'stringify'           => 'unified',
                 ];
+                $options['color'] ??= is_ansi(STDOUT);
+                if ($options['color'] === true) {
+                    $options['color'] = ['-' => 'RED+white|bold', '+' => 'CYAN+white|bold'];
+                }
+                if ($options['color'] === false) {
+                    $options['color'] = [];
+                }
                 $this->options = $options;
 
                 $this->recover = mb_ereg_options([
@@ -29697,6 +31751,13 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                 if (!$stringfy) {
                     return $diffs;
                 }
+
+                $lineno_length = null;
+                if ($this->options['lineno']) {
+                    $this->recursive($diffs, function ($line, $no) use (&$lineno_length) {
+                        $lineno_length = max(strlen($no), $lineno_length ?? 0);
+                    });
+                }
                 if ($stringfy === 'normal') {
                     $stringfy = [$this, 'normal'];
                 }
@@ -29706,16 +31767,29 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                 }
                 if (is_string($stringfy) && preg_match('#unified(=(\d+))?#', $stringfy, $m)) {
                     $block_size = isset($m[2]) ? (int) $m[2] : null;
-                    $stringfy = fn($diff) => $this->unified($diff, $block_size);
+                    $stringfy = fn($diff) => $this->unified($diff, $block_size, $lineno_length);
                 }
                 if (is_string($stringfy) && preg_match('#split(=(\d+),?(\d+)?)?#', $stringfy, $m)) {
                     $block_size = (int) ($m[2] ?? 3);
-                    $column_size = (int) ($m[3] ?? 100);
-                    $stringfy = fn($diff) => $this->split($diff, $column_size);
+                    $column_size = $m[3] ?? null;
+                    if ($column_size === null) {
+                        // FullHD での一般的な COLUMNS は 220～240 くらいで、ツールバーなども加味して最大幅は 200 程度を想定しておく
+                        // mb_monospace は強烈に遅いので打ち切りの意味もある
+                        $sizes = [1 => 0, 2 => 0];
+                        $this->recursive($diffs, function ($line, $no, $n) use (&$sizes) {
+                            return ($sizes[$n] = max(mb_monospace($line), $sizes[$n])) <= 200;
+                        });
+                        $column_size = array_maps($sizes, fn($v) => $v + $lineno_length + 1);
+                    }
+                    $stringfy = fn($diff) => $this->split($diff, $column_size, $lineno_length);
                 }
                 if (is_string($stringfy) && preg_match('#html(=(.+))?#', $stringfy, $m)) {
                     $mode = $m[2] ?? null;
                     $stringfy = fn($diff) => $this->html($diff, $mode);
+                }
+
+                if (is_string($stringfy)) {
+                    throw new \InvalidArgumentException("$stringfy is not supported");
                 }
 
                 if (isset($block_size)) {
@@ -29725,7 +31799,11 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                     $result = $stringfy($diffs);
                 }
 
-                return !strlen($result) ? $result : $result . $trailingN;
+                $result = strlen($result) ? $result . $trailingN : $result;
+                if ($this->options['trailing-break']) {
+                    $result .= "\n";
+                }
+                return $result;
             }
 
             private function diff(array $xarray, array $yarray)
@@ -29929,8 +32007,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                     if (isset($rule[$diff[0]])) {
                         $difftext = [];
                         foreach ($rule[$diff[0]][1] as $n => $sign) {
-                            /** @noinspection PhpIllegalArrayKeyTypeInspection */
-                            $difftext[] = implode("\n", array_map(fn($v) => $sign . $v, $diff[$n]));
+                            $difftext[] = implode("\n", array_map(fn($v) => $this->color($sign . $v, $diff[0], $n), $diff[$n]));
                         }
                         $result[] = "{$index($diff[1])}{$rule[$diff[0]][0]}{$index($diff[2])}";
                         $result[] = implode("\n---\n", $difftext);
@@ -29965,7 +32042,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                     if (array_filter($diffs, fn($d) => strpos($key, $d[0]) !== false)) {
                         foreach ($diffs as $diff) {
                             foreach ($rule[$diff[0]] ?? [] as $n => $sign) {
-                                $result[] = implode("\n", array_map(fn($v) => $sign . $v, $diff[$n]));
+                                $result[] = implode("\n", array_map(fn($v) => $this->color($sign . $v, $diff[0], $n), $diff[$n]));
                             }
                         }
                     }
@@ -29973,7 +32050,7 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                 return implode("\n", $result);
             }
 
-            private function unified($diffs, $block_size)
+            private function unified($diffs, $block_size, $lineno_length)
             {
                 $result = [];
 
@@ -29984,40 +32061,89 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                     $result[] = "@@ -{$xheader} +{$yheader} @@";
                 }
 
+                $pad = function ($no, $n) use ($block_size, $lineno_length) {
+                    if ($block_size !== null || !$this->options['lineno']) {
+                        return "";
+                    }
+                    if ($no !== null) {
+                        $no++;
+                    }
+                    if ($n === 3) {
+                        return str_pad($no ?? "", $lineno_length * 2 + 2, ' ', STR_PAD_BOTH);
+                    }
+                    $s = str_pad($no ?? "", $lineno_length, ' ', STR_PAD_LEFT);
+                    $e = str_repeat(' ', $lineno_length);
+                    $l = $n === 1 ? $s : $e;
+                    $r = $n === 2 ? $s : $e;
+                    return "$l $r ";
+                };
+
                 $rule = [
                     '+' => [2 => '+'],
                     '-' => [1 => '-'],
                     '*' => [1 => '-', 2 => '+'],
-                    '=' => [1 => ' '],
+                    '=' => [3 => ' '],
                 ];
                 foreach ($diffs as $diff) {
                     foreach ($rule[$diff[0]] as $n => $sign) {
-                        $result[] = implode("\n", array_map(fn($v) => $sign . $v, $diff[$n]));
+                        $nx = $n === 3 ? 1 : $n;
+                        $result[] = implode("\n", array_maps($diff[$nx], fn($v, $k) => $this->color($pad($k, $n) . $sign . $v, $diff[0], $n)));
                     }
                 }
                 return implode("\n", $result);
             }
 
-            private function split($diffs, $column_size)
+            private function split($diffs, $column_size, $lineno_length)
             {
-                $columns = floor(($column_size - 3) / 2);
-
-                $result = [];
+                if (is_array($column_size)) {
+                    $overwidth = max(0, ($column_size[1] + $column_size[2]) - 200) / 2;
+                    $left_width = max(40, $column_size[1] - $overwidth);
+                    $right_width = max(40, $column_size[2] - $overwidth);
+                }
+                else {
+                    $column = ($column_size - 3) / 2;
+                    $left_width = floor($column);
+                    $right_width = ceil($column);
+                }
+                $pad = function ($no) use ($lineno_length) {
+                    if (!$this->options['lineno']) {
+                        return "";
+                    }
+                    if ($no !== null) {
+                        $no++;
+                    }
+                    return str_pad($no ?? "", $lineno_length, ' ', STR_PAD_LEFT) . ' ';
+                };
 
                 $rules = [
-                    '+' => ['>', 1 => null, 2 => 2],
-                    '-' => ['<', 1 => 1, 2 => null],
+                    '+' => ['+', 1 => null, 2 => 2],
+                    '-' => ['-', 1 => 1, 2 => null],
                     '*' => ['*', 1 => 1, 2 => 2],
                     '=' => ['|', 1 => 1, 2 => 2],
                 ];
+
+                $result = [];
                 foreach ($diffs as $diff) {
-                    $rule = $rules[$diff[0]];
-                    foreach (array_zip($diff[$rule[1]] ?? [], $diff[$rule[2]] ?? []) as $d) {
-                        $d0 = mb_wordwrap($d[0] ?? '', $columns, null);
-                        $d1 = mb_wordwrap($d[1] ?? '', $columns, null);
+                    [$sign, $before, $after] = $rules[$diff[0]];
+
+                    $mi = new \MultipleIterator(\MultipleIterator::MIT_NEED_ANY | \MultipleIterator::MIT_KEYS_NUMERIC);
+                    $mi->attachIterator(new \ArrayIterator($diff[$before] ?? []));
+                    $mi->attachIterator(new \ArrayIterator($diff[$after] ?? []));
+
+                    foreach ($mi as $k => $v) {
+                        $d0 = mb_wordwrap($v[0] ?? '', $left_width - $lineno_length - 1, null);
+                        $d1 = mb_wordwrap($v[1] ?? '', $right_width - $lineno_length - 1, null);
                         foreach (array_zip($d0, $d1) as $n => $dd) {
-                            $gutter = $n === 0 ? $rule[0] : " ";
-                            $result[] = mb_pad_width($dd[0] ?? '', $columns) . " $gutter " . $dd[1] ?? '';
+                            if ($n === 0) {
+                                $p0 = $pad($k[0]);
+                                $p1 = $pad($k[1]);
+                            }
+                            else {
+                                $p0 = $p1 = $pad(null);
+                            }
+                            $before = $this->color(mb_pad_width($p0 . ($dd[0] ?? ''), $left_width), $k[0] === null ? '' : $diff[0], 1);
+                            $after = $this->color(mb_pad_width($p1 . ($dd[1] ?? ''), $right_width), $k[1] === null ? '' : $diff[0], 2);
+                            $result[] = "$before $sign $after";
                         }
                     }
                 }
@@ -30026,14 +32152,27 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
 
             private function html($diffs, $mode)
             {
-                $htmlescape = function ($v) use (&$htmlescape) { return is_array($v) ? array_map($htmlescape, $v) : htmlspecialchars($v, ENT_QUOTES); };
-                $taging = fn($tag, $content) => strlen($tag) && strlen($content) ? "<$tag>$content</$tag>" : $content;
+                $htmlescape = function ($v) use (&$htmlescape) {
+                    if (is_array($v)) {
+                        return array_map($htmlescape, $v);
+                    }
+                    return htmlspecialchars($v, ENT_QUOTES);
+                };
+                $taging = function ($tag, $content, $no) {
+                    if (strlen($tag) && strlen($content)) {
+                        if ($this->options['lineno'] && $no !== null) {
+                            return "<$tag data-line-number='$no'>$content</$tag>";
+                        }
+                        return "<$tag>$content</$tag>";
+                    }
+                    return $content;
+                };
 
                 $rule = [
                     '+' => [2 => 'ins'],
                     '-' => [1 => 'del'],
                     '*' => [1 => 'del', 2 => 'ins'],
-                    '=' => [1 => ''],
+                    '=' => [3 => 'span'],
                 ];
                 $result = [];
                 foreach ($diffs as $diff) {
@@ -30042,13 +32181,14 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                         $delete = array_splice($diff[1], 0, $length, []);
                         $append = array_splice($diff[2], 0, $length, []);
                         for ($i = 0; $i < $length; $i++) {
-                            $options2 = ['stringify' => null] + $this->options;
+                            $options2 = ['stringify' => null, 'lineno' => false] + $this->options;
                             $diffs2 = str_diff(preg_split('/(?<!^)(?!$)/u', $delete[$i]), preg_split('/(?<!^)(?!$)/u', $append[$i]), $options2);
                             //$diffs2 = str_diff(mb_split('(?<!^)(?!$)', $delete[$i]), mb_split('(?<!^)(?!$)', $append[$i]), $options2);
                             $result2 = [];
                             foreach ($diffs2 as $diff2) {
                                 foreach ($rule[$diff2[0]] as $n => $tag) {
-                                    $content = $taging($tag, implode("", (array) $htmlescape($diff2[$n])));
+                                    $nx = $n === 3 ? 1 : $n;
+                                    $content = $taging($tag, implode("", (array) $htmlescape($diff2[$nx])), null);
                                     if (strlen($content)) {
                                         $result2[] = $content;
                                     }
@@ -30058,7 +32198,12 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                         }
                     }
                     foreach ($rule[$diff[0]] as $n => $tag) {
-                        $content = $taging($tag, implode("\n", (array) $htmlescape($diff[$n])));
+                        $nx = $n === 3 ? 1 : $n;
+                        $contents = [];
+                        foreach ($diff[$nx] as $no => $line) {
+                            $contents[] = $taging($tag, $htmlescape($line), $no);
+                        }
+                        $content = implode("\n", $contents);
                         if ($diff[0] === '=' && !strlen($content)) {
                             $result[] = "";
                         }
@@ -30115,9 +32260,68 @@ if (!function_exists('ryunosuke\\DbMigration\\str_diff')) {
                 }
                 return $blocks;
             }
+
+            private function recursive($diffs, $callback)
+            {
+                foreach ($diffs as $diff) {
+                    foreach (array_filter($diff, fn($v) => is_array($v)) as $n => $dd) {
+                        foreach ($dd as $no => $d) {
+                            if ($callback($d, $no, $n) === false) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+
+            private function color($string, $mode, $n)
+            {
+                $color = $this->options['color'][$mode] ?? null;
+                if ($mode === '*' && $color === null) {
+                    $fallback = match ($n) {
+                        1 => '-',
+                        2 => '+',
+                    };
+                    $color = $this->options['color'][$fallback] ?? null;
+                }
+
+                if ($color !== null) {
+                    $string = ansi_colorize($string, $color);
+                }
+                return $string;
+            }
         };
 
         return $differ($xstring, $ystring);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\str_divide') || (new \ReflectionFunction('ryunosuke\\DbMigration\\str_divide'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\str_divide')) {
+    /**
+     * str_split の配列長指定版
+     *
+     * Example:
+     * ```php
+     * // "abcdefg" を3つに分割（余りを左に分配）
+     * that(str_divide("abcdefg", 3))->isSame(["abc", "de", "fg"]);
+     * // "abcdefg" を3つに分割（余りを右に分配）
+     * that(str_divide("abcdefg", -3))->isSame(["ab", "cd", "efg"]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     */
+    function str_divide(string $string, int $divisor): array
+    {
+        $last = 0;
+        $result = [];
+        foreach (int_divide(strlen($string), $divisor) as $int) {
+            $result[] = substr($string, $last, $int);
+            $last += $int;
+        }
+
+        return $result;
     }
 }
 
@@ -30469,6 +32673,66 @@ if (!function_exists('ryunosuke\\DbMigration\\str_lchop')) {
     function str_lchop(?string $string, ?string $prefix, $case_insensitivity = false)
     {
         return str_chop($string, $prefix, '', $case_insensitivity);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\str_partition') || (new \ReflectionFunction('ryunosuke\\DbMigration\\str_partition'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\str_partition')) {
+    /**
+     * 文字列をトークンで分割して後ろ優先で詰めて返す
+     *
+     * 非常にしばしば下記のような必要性に出くわす。
+     * - "namespace\\classname" => ["namespace", "classname"]
+     * - "classname"            => ["", "classname"]
+     * - "table.column"         => ["table", "column"]
+     * - "column"               => ["", "column"]
+     *
+     * つまり「修飾子的なものがあってもなくてもよい（あるなら修飾子も得たい）」ケース。
+     * explode+array_pad で一発で書けるんだが、ややややこしいし煩雑なので関数化した。
+     *
+     * それだけだとつまらないので $require_count の負数の特殊化も加えてある。
+     * 負数を与えると要素が $require_count に一致しなかったときの挙動が前詰めになる。
+     *
+     * 分かりづらいが、端的に
+     * - 必ず $require_count 個の配列を返す。その上で・・・
+     *   - 正数の場合は「必要そうなもの」が右に来る
+     *   - 負数の場合は「必要そうなもの」が左に来る
+     * というだけ。
+     *
+     * Example:
+     * ```php
+     * // 0 の場合は常に空配列を返す
+     * that(str_partition('a.b.c.d', '.', 0))->isSame([]);
+     *
+     * // 正数は右に必要そうなものが来る（不必要≒溢れた null や足りなかったので分割されなかった文字）
+     * that(str_partition('a.b.c.d', '.', 1))->isSame(["a.b.c.d"]);
+     * that(str_partition('a.b.c.d', '.', 2))->isSame(["a.b.c", "d"]);
+     * that(str_partition('a.b.c.d', '.', 3))->isSame(["a.b", "c", "d"]);
+     * that(str_partition('a.b.c.d', '.', 4))->isSame(["a", "b", "c", "d"]);
+     * that(str_partition('a.b.c.d', '.', 5))->isSame([null, "a", "b", "c", "d"]);
+     *
+     * // 負数は左に必要そうなものが来る（不必要≒溢れた null や足りなかったので分割されなかった文字）
+     * that(str_partition('a.b.c.d', '.', -1))->isSame(["a.b.c.d"]);
+     * that(str_partition('a.b.c.d', '.', -2))->isSame(["a", "b.c.d"]);
+     * that(str_partition('a.b.c.d', '.', -3))->isSame(["a", "b", "c.d"]);
+     * that(str_partition('a.b.c.d', '.', -4))->isSame(["a", "b", "c", "d"]);
+     * that(str_partition('a.b.c.d', '.', -5))->isSame(["a", "b", "c", "d", null]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     */
+    function str_partition(
+        /** 対象文字列 */ string                $string,
+        /** セパレータ */ string                $separator,
+        /** 最終的に欲しい数 */ int             $require_count,
+        /** 満たない場合のデフォルト値 */ mixed $default = null,
+    ): array {
+        // 0 で呼ばれることはほぼないが、仕様としては「何があろうと $require_count 個の配列を返す」としているので 0 の時は空配列を返さないと整合性が取れない
+        if ($require_count === 0) {
+            return [];
+        }
+
+        return array_pad(multiexplode($separator, $string, -$require_count), -$require_count, $default);
     }
 }
 
@@ -31152,6 +33416,57 @@ if (!function_exists('ryunosuke\\DbMigration\\strcat')) {
     function strcat(?string ...$variadic)
     {
         return implode('', $variadic);
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\stritr') || (new \ReflectionFunction('ryunosuke\\DbMigration\\stritr'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\stritr')) {
+    /**
+     * 大文字小文字を区別しない strtr
+     *
+     * それ以外のすべての動作は strtr と同じ。
+     * ただし3引数版は用途がほぼないので2引数版のみ。
+     *
+     * また str_replace を真似て $count に置換回数が格納される。
+     * ただしこの $count はマッチ回数ではなく置換回数を返す。
+     * つまり検索文字が見つかったが、結果として変わらなかった場合は $count には計上されない。
+     * $count は往々にして「置換が行われたか？」の判断に使われるのでマッチ回数だとやや不便。
+     * （そのようなことは strtr や str_replace では検索と置換を同じ文字にしない限りあり得ないが、大文字小文字を区別しない場合はそこそこあり得る話である）。
+     *
+     * Example:
+     * ```php
+     * // 長いものから置換される
+     * that(stritr('Hello', ['Hel' => 'X', 'Hell' => 'Y']))->isSame('Yo');
+     * // 一度置換したものは置換しない
+     * that(stritr('Hello', ['Hel' => 'X', 'X' => 'Y', 'Y' => 'Z']))->isSame('Xlo');
+     * // 大文字小文字は区別しない
+     * that(stritr('Hello', ['hel' => 'X', 'hell' => 'Y']))->isSame('Yo');
+     * // $count には置換回数が格納される
+     * // この場合、apple という単語を Apple という upper に置換する処理で、マッチ回数は4,置換回数は2 である
+     * that(stritr('apple to Apple, APPLE to Apple', ['apple' => 'Apple'], $count))->isSame('Apple to Apple, Apple to Apple');
+     * that($count)->is(2);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     */
+    function stritr(string $string, array $replace_pairs, ?int &$count = null): string
+    {
+        uksort($replace_pairs, fn($a, $b) => strlen($b) <=> strlen($a));
+
+        $patterns = array_map(fn($s) => preg_quote($s, '#'), array_keys($replace_pairs));
+        $pattern = '#' . implode('|', $patterns) . '#iu';
+
+        $replace_pairs = array_change_key_case($replace_pairs, CASE_LOWER);
+
+        $count = 0;
+        return preg_replace_callback($pattern, function ($matches) use ($replace_pairs, &$count) {
+            $lower = strtolower($matches[0]);
+            if ($matches[0] !== $replace_pairs[$lower]) {
+                $count++;
+                return $replace_pairs[$lower];
+            }
+            return $matches[0];
+        }, $string);
     }
 }
 
@@ -31919,12 +34234,7 @@ if (!function_exists('ryunosuke\\DbMigration\\try_catch_finally')) {
             return $try(...$variadic);
         }
         catch (\Exception $tried_ex) {
-            try {
-                return $catch($tried_ex);
-            }
-            catch (\Exception $catched_ex) {
-                throw $catched_ex;
-            }
+            return $catch($tried_ex);
         }
         finally {
             if ($finally !== null) {
@@ -32638,7 +34948,7 @@ if (!function_exists('ryunosuke\\DbMigration\\formdata_parse')) {
             $formdata = str_resource($formdata);
         }
 
-        $generator = (function () use ($formdata, $decoder) {
+        $generator = (function () use ($formdata, $boundary, $decoder) {
             $line = fgets($formdata);
             $boundary ??= trim(substr($line, 2));
 
@@ -33594,11 +35904,11 @@ if (!function_exists('ryunosuke\\DbMigration\\cacheobject')) {
                     return $props;
                 }
 
-                private function _exception(string $message = "", int $code = 0, \Throwable $previous = null): \Throwable
+                private function _exception(string $message = ""): \Throwable
                 {
                     return interface_exists(\Psr\SimpleCache\InvalidArgumentException::class)
-                        ? new class ( $message, $code, $previous ) extends \InvalidArgumentException implements \Psr\SimpleCache\InvalidArgumentException { }
-                        : new class ( $message, $code, $previous ) extends \InvalidArgumentException { };
+                        ? new class ( $message ) extends \InvalidArgumentException implements \Psr\SimpleCache\InvalidArgumentException { }
+                        : new class ( $message ) extends \InvalidArgumentException { };
                 }
 
                 private function _validateKey(string $key): void
@@ -34238,6 +36548,149 @@ if (!function_exists('ryunosuke\\DbMigration\\number_serial')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\progressor') || (new \ReflectionFunction('ryunosuke\\DbMigration\\progressor'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\progressor')) {
+    /**
+     * 進捗(%)と見積もり(秒)を返すオブジェクトを返す
+     *
+     * $total に 0 を与えたり proceed していない状態だと結構なメソッドが null を返すので注意。
+     *
+     * 引数 $p は要するに外れ値の影響度だと思えばよい（高ければ高いほど見積もりが外れ値の影響を受ける）。
+     * とはいえ 1 以上を与えることは（外れ値が逆方向に作用するため）ほぼあり得なく、0.5~1.0 あたりを与えておけばよいだろう。
+     *
+     * Example:
+     * ```php
+     * // このようにすると例えば下記のようになる
+     * $progressor = progressor(11, 0.5);
+     * foreach (range(1, 11) as $i) {
+     *     $progressor->proceed(1);
+     *
+     *     // 基本100msかかるとするがたまに何かが刺さって1秒かかるとする
+     *     usleep(100_000);
+     *     if ($i === 2) {
+     *         sleep(1);
+     *     }
+     *
+     *     printf("%d: %.2f[%%], %.3f[s]\n", $progressor->current(), $progressor->percent(), $progressor->estimate());
+     * }
+     * <<<'OUT'
+     * 1: 9.09[%], 0.000[s]
+     * 2: 18.18[%], 0.237[s]
+     * 3: 27.27[%], 1.689[s]    // $p はここの跳ね上がり具合に影響する
+     * 4: 36.36[%], 1.277[s]
+     * 5: 45.45[%], 0.996[s]
+     * 6: 54.55[%], 0.778[s]
+     * 7: 63.64[%], 0.594[s]
+     * 8: 72.73[%], 0.429[s]
+     * 9: 81.82[%], 0.279[s]
+     * 10: 90.91[%], 0.136[s]
+     * 11: 100.00[%], 0.000[s]
+     * OUT;
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\utility
+     *
+     * @param int $total 全件数
+     * @param float $p ヘルダー平均の p
+     * @return \Progressor|object プログレスインスタンス
+     */
+    function progressor(int $total, float $p = 1.0)
+    {
+        assert($total >= 0);
+        assert($p > 0);
+
+        return new class($total, $p) {
+            private int   $current    = 0;
+            private float $hoelderSum = 0;
+            private float $startTime;
+            private float $previousTime;
+
+            public function __construct(private int $total, private float $p)
+            {
+                $this->startTime = microtime(true);
+                $this->previousTime = microtime(true);
+            }
+
+            /**
+             * 処理を進める
+             */
+            public function proceed(int $step = 1)
+            {
+                $now = microtime(true);
+
+                $this->current = min($this->total, $this->current + $step);
+                $this->hoelderSum += pow(($now - $this->previousTime) * $step, $this->p);
+                $this->previousTime = $now;
+            }
+
+            /**
+             * 現在値を返す
+             */
+            public function current(): int
+            {
+                return $this->current;
+            }
+
+            /**
+             * 残件数を返す
+             */
+            public function remain(): int
+            {
+                return $this->total - $this->current;
+            }
+
+            /**
+             * 全件数を返す
+             */
+            public function total(): int
+            {
+                return $this->total;
+            }
+
+            /**
+             * 進捗パーセントを返す
+             */
+            public function percent(): ?float
+            {
+                if ($this->total === 0) {
+                    return null;
+                }
+                return $this->current / $this->total * 100;
+            }
+
+            /**
+             * 実行時間を返す
+             */
+            public function elapse(): float
+            {
+                return microtime(true) - $this->startTime;
+            }
+
+            /**
+             * 見積もり秒を返す
+             */
+            public function estimate(): ?float
+            {
+                if ($this->current === 0) {
+                    return null;
+                }
+                return $this->remain() * $this->mean();
+            }
+
+            /**
+             * 平均実行秒を返す
+             */
+            public function mean(): ?float
+            {
+                if ($this->current === 0) {
+                    return null;
+                }
+                return pow($this->hoelderSum / $this->current, 1 / $this->p);
+            }
+        };
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\arrayable_key_exists') || (new \ReflectionFunction('ryunosuke\\DbMigration\\arrayable_key_exists'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\arrayable_key_exists')) {
     /**
@@ -34607,6 +37060,57 @@ if (!function_exists('ryunosuke\\DbMigration\\cipher_metadata')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\decimalstr') || (new \ReflectionFunction('ryunosuke\\DbMigration\\decimalstr'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\decimalstr')) {
+    /**
+     * 10進数小数文字列を返す
+     *
+     * 指数表記や誤差などは除去してできるだけ「一般人の感覚」に近い文字列を返す。
+     * $precision で精度も指定できるがまぁ渡すことはあまりないだろう。
+     *
+     * Example:
+     * ```php
+     * // 右0詰めは行われない（%F だと詰められる）
+     * that(decimalstr(1.234))->isSame('1.234');
+     * // .0 は失われない（%H だと失われる）
+     * that(decimalstr(3.0))->isSame('3.0');
+     * // 指数表記にならない（%F は指数表記になる）
+     * that(decimalstr(1000000.0))->isSame('1000000.0');
+     * that(decimalstr(0.000001))->isSame('0.000001');
+     * // -INF は -INF になる（%H,%F だとなぜか INF になる）
+     * that(decimalstr(-INF))->isSame('-INF');
+     * // デフォルトの精度は16
+     * that(decimalstr(M_PI))->isSame('3.141592653589793');
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\var
+     */
+    function decimalstr(float $number, int $precision = 16): string
+    {
+        // -INF が INF になる不具合？ があるっぽいので特別扱いしておく（これらだけ E 以外の文字が出現するので特別扱いは別におかしくない）
+        if (is_infinite($number) || is_nan($number)) {
+            return (string) $number;
+        }
+
+        $string = sprintf("%.{$precision}H", $number);
+
+        // %H は 1.0 などが 1 になるので付け足す
+        if (!str_contains($string, '.')) {
+            return "$string.0";
+        }
+
+        // 指数記法が出現したら %F で戻す
+        if (str_contains($string, 'E')) {
+            $string = rtrim(sprintf("%.{$precision}F", $number), '0');
+            if ($string[-1] === '.') {
+                $string .= '0';
+            }
+        }
+
+        return $string;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\decrypt') || (new \ReflectionFunction('ryunosuke\\DbMigration\\decrypt'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\decrypt')) {
     /**
@@ -34919,6 +37423,42 @@ if (!function_exists('ryunosuke\\DbMigration\\hashvar')) {
 
         // 仕組み上ここへは到達しないはず（呼び出し元のシンタックスが壊れてるときに到達しうるが、それならばそもそもこの関数自体が呼ばれないはず）。
         throw new \DomainException('syntax error.'); // @codeCoverageIgnore
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\is_arithmetic') || (new \ReflectionFunction('ryunosuke\\DbMigration\\is_arithmetic'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\is_arithmetic')) {
+    /**
+     * 変数が算術可能か調べる
+     *
+     * Example:
+     * ```php
+     * // 整数
+     * that(is_arithmetic(123))->isTrue();
+     * // 小数
+     * that(is_arithmetic(3.14))->isTrue();
+     * // 数値文字列
+     * that(is_arithmetic('-3.14'))->isTrue();
+     * // GMP
+     * that(is_arithmetic(gmp_init('3')))->isTrue();
+     * // 変な文字列やオブジェクトは false
+     * that(is_arithmetic('hoge'))->isFalse();
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\var
+     *
+     * @param mixed $var 調べる値
+     * @return bool 配列アクセス可能なら true
+     * @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection
+     */
+    function is_arithmetic($var)
+    {
+        // cast_object レベルで実装されているので計算可能
+        if ($var instanceof \GMP || $var instanceof \BcMath\Number || $var instanceof \SimpleXMLElement) {
+            return true;
+        }
+
+        return is_numeric($var);
     }
 }
 
@@ -35345,8 +37885,14 @@ if (!function_exists('ryunosuke\\DbMigration\\is_stringable')) {
         if (is_array($var)) {
             return false;
         }
-        if (is_object($var) && !method_exists($var, '__toString')) {
-            return false;
+        if (is_object($var)) {
+            // toString は未実装だが cast_object レベルで文字列化可能になっている
+            if ($var instanceof \GMP) {
+                return true;
+            }
+            if (!method_exists($var, '__toString')) {
+                return false;
+            }
         }
         return true;
     }
@@ -35800,6 +38346,10 @@ if (!function_exists('ryunosuke\\DbMigration\\stringify')) {
             case 'array':
                 return var_export2($var, true);
             case 'object':
+                // toString は未実装だが cast_object レベルで文字列化可能になっている
+                if ($var instanceof \GMP) {
+                    return strval($var);
+                }
                 if (method_exists($var, '__toString')) {
                     return (string) $var;
                 }
@@ -35814,6 +38364,32 @@ if (!function_exists('ryunosuke\\DbMigration\\stringify')) {
             default:
                 return (string) $var;
         }
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\timeval') || (new \ReflectionFunction('ryunosuke\\DbMigration\\timeval'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\timeval')) {
+    /**
+     * float（秒）を int[秒, マイクロ秒] に変換する
+     *
+     * stream_select のような(秒, マイクロ秒)を要求してくる関数があるので、ササっと呼び出したい時に使う非常にニッチな関数。
+     * いわゆる timeval 構造体を返す（ただし、連想配列ではなく通常配列）。
+     *
+     * Example:
+     * ```php
+     * // 1.5 秒を 1 と 500000 に分離
+     * that(timeval(1.5))->isSame([1, 500_000]);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\var
+     *
+     * @return int[] [秒, マイクロ秒]
+     */
+    function timeval(float|int $seconds): array
+    {
+        $tv_sec = (int) $seconds;
+        $tv_usec = (int) (($seconds - $tv_sec) * 1000000);
+        return [$tv_sec, $tv_usec];
     }
 }
 
@@ -35913,10 +38489,19 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
      *
      * - 配列は 5.4 以降のショートシンタックス（[]）で出力
      * - ただの配列は1行（[1, 2, 3]）でケツカンマなし、連想配列は桁合わせインデントでケツカンマあり
+     *   - 多少の整形は下記の minify オプションで指定可能（4 ～ 8 は未定義）
+     *     - 0: 完全なるフォーマット
+     *     - 1: アライン無しフォーマット
+     *     - 2: スペースありのワンライン
+     *     - 3: 要素ペアごとにスペースありのワンライン
+     *     - 9: 一切スペースなし最短縮
      * - 文字列はダブルクオート
      * - null は null（小文字）
      * - 再帰構造を渡しても警告がでない（さらに NULL ではなく `'*RECURSION*'` という文字列になる）
      * - 配列の再帰構造の出力が異なる（Example参照）
+     *
+     * named オプションを渡すと出力が名前付き引数形式になる。
+     * シンタックスのチェックや値の検証などは行わないので注意。
      *
      * Example:
      * ```php
@@ -35952,6 +38537,8 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
      *         ],
      *     ],
      * ]');
+     * // 名前付き引数形式
+     * that(var_export2(['name' => 'taro', 'age' => 27, 'opt' => ['X', 'Y', 'Z']], ['return' => true, 'minify' => 2, 'named' => true]))->isSame('name: "taro", age: 27, opt: ["X", "Y", "Z"]');
      * ```
      *
      * @package ryunosuke\Functions\Package\var
@@ -35969,46 +38556,71 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
         }
 
         $options += [
-            'minify' => false, // 短縮形で返す（実質的には情報を減らして1行で返す）
-            'indent' => 4,     // インデントの空白数
-            'return' => false, // 値を戻すか出力するか
+            'minify'   => 0,     // 短縮レベル
+            'named'    => false, // 名前付き引数の形式で返す
+            'indent'   => 4,     // インデントの空白数
+            'return'   => false, // 値を戻すか出力するか
+            'nest'     => 0,     // ネストの初期値
+            'callback' => null,  // コールバック
         ];
+        // for compatible
+        if ($options['minify'] === true) {
+            $options['minify'] = 9;
+        }
+        $options['minify'] = (int) $options['minify'];
+
+        $options['first-nest'] = $options['nest'] + ($options['named'] ? -1 : 0);
 
         // 再帰用クロージャ
-        $export = function ($value, $context, $nest = 0, $parents = []) use (&$export, $options) {
+        $export = function ($value, $context, $nest, $parents = []) use (&$export, $options) {
+            // コールバックを最優先とする
+            if ($options['callback']) {
+                if (($string = $options['callback']($value)) !== null) {
+                    return $string;
+                }
+            }
             // 再帰を検出したら *RECURSION* とする（処理に関しては is_recursive のコメント参照）
             foreach ($parents as $parent) {
                 if ($parent === $value) {
-                    return $export('*RECURSION*', 'recursion');
+                    return $export('*RECURSION*', 'recursion', $nest);
                 }
             }
 
-            $space = $options['minify'] ? "" : " ";
-            $break = $options['minify'] ? "" : "\n";
+            $space = $options['minify'] < 9 ? " " : "";
+            $break = $options['minify'] > 1 ? "" : "\n";
+            $lastcomma = $options['minify'] === 0 || $options['minify'] === 1 ? "," : "";
+            $tailcomma = 1 < $options['minify'] && $options['minify'] < 9 ? ", " : ",";
+            $indent = $options['minify'] === 0 || $options['minify'] === 1 ? $space : "";
+            $align = $options['minify'] === 0 ? $space : "";
+            $arrow = $options['minify'] <= 2 ? $space : "";
+            $delim = $options['named'] && $nest === $options['first-nest'] ? ":$arrow" : "$arrow=>$arrow";
 
             // 配列は連想判定したり再帰したり色々
             if (is_array($value)) {
-                $spacer1 = str_repeat($space, ($nest + 1) * $options['indent']);
-                $spacer2 = str_repeat($space, $nest * $options['indent']);
+                $spacer1 = str_repeat($indent, ($nest + 1) * $options['indent']);
+                $spacer2 = str_repeat($indent, max(0, $nest) * $options['indent']);
 
                 $hashed = is_hasharray($value);
 
                 // スカラー値のみで構成されているならシンプルな再帰
                 if (!$hashed && array_and($value, fn(...$args) => is_primitive(...$args))) {
-                    return '[' . implode(",$space", array_map(fn($v) => $export($v, 'array-value'), $value)) . ']';
+                    return '[' . implode(",$arrow", array_map(fn($v) => $export($v, 'array-value', $nest), $value)) . ']';
                 }
 
                 // 連想配列はキーを含めて桁あわせ
                 if ($hashed) {
-                    $keys = array_map(fn($v) => $export($v, 'array-key'), array_combine($keys = array_keys($value), $keys));
+                    $keys = array_map(fn($v) => $export($v, 'array-key', $nest), array_combine($keys = array_keys($value), $keys));
                     $maxlen = max(array_map('strlen', $keys));
                 }
                 $kvl = '';
                 $lastkey = array_key_last($value);
                 $parents[] = $value;
                 foreach ($value as $k => $v) {
-                    $keystr = $hashed ? $keys[$k] . str_repeat($space, $maxlen - strlen($keys[$k])) . "$space=>$space" : '';
-                    $kvl .= $spacer1 . $keystr . $export($v, 'array-value', $nest + 1, $parents) . ($k === $lastkey && $options['minify'] ? "" : ",") . "$break";
+                    $keystr = $hashed ? $keys[$k] . str_repeat($align, $maxlen - strlen($keys[$k])) . $delim : '';
+                    $kvl .= $spacer1 . $keystr . $export($v, 'array-value', $nest + 1, $parents) . ($k === $lastkey ? $lastcomma : $tailcomma) . $break;
+                }
+                if ($options['named'] && $nest === $options['first-nest']) {
+                    return $kvl;
                 }
                 return "[$break{$kvl}{$spacer2}]";
             }
@@ -36025,6 +38637,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
             elseif (is_string($value)) {
                 // 列揃えのため配列のキーは常にダブルクォート
                 if ($context === 'array-key') {
+                    if ($options['named'] && $nest === $options['first-nest']) {
+                        return $value;
+                    }
                     return str_quote($value);
                 }
                 // 改行を含むならヒアドキュメント
@@ -36050,7 +38665,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
         };
 
         // 結果を返したり出力したり
-        $result = $export($value, null);
+        $result = $export($value, null, $options['first-nest']);
         if ($options['return']) {
             return $result;
         }
@@ -36908,6 +39523,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
             'callback'      => null,  // 値1つごとのコールバック（値と文字列表現（参照）が引数で渡ってくる）
             'debuginfo'     => true,  // debugInfo を利用してオブジェクトのプロパティを絞るか
             'table'         => true,  // 連想配列の配列の場合にテーブル表示するか（コールバック。true はマークダウン風味固定）
+            'counting'      => true,  // 個数の表示
             'maxcolumn'     => null,  // 1行あたりの文字数
             'maxcount'      => null,  // 複合型の要素の数
             'maxdepth'      => null,  // 複合型の深さ
@@ -36997,6 +39613,11 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                 return $this->_append($token, $style);
             }
 
+            public function comment($token): self
+            {
+                return $this->_append($token, 'italic');
+            }
+
             public function index($token): self
             {
                 if (is_int($token)) {
@@ -37078,6 +39699,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         $token = str_ellipsis($token, $this->options['maxlength'], '...(too length)...');
                     }
                     return json_encode($token, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                }
+                elseif (is_float($token)) {
+                    return decimalstr($token);
                 }
                 elseif (is_scalar($token)) {
                     return var_export($token, true);
@@ -37186,7 +39810,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                             }
                         }
 
-                        return $objective ? "{$first_condition}[]" : 'array[]';
+                        return ($objective ? "{$first_condition}[]" : "array[]") . ($this->options['counting'] ? "($count)" : "");
                     })();
 
                     $key = null;
@@ -37211,7 +39835,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         }
                         // 要素が1つなら複数行化するメリットがないので2以上とする
                         if (count($lengths) >= 2 && ($this->options['maxlistcolumn'] ?? PHP_INT_MAX) <= array_sum($lengths)) {
-                            $assoc = !$this->options['minify'] && true;
+                            $assoc = !$this->options['minify'];
                         }
                     }
 
@@ -37225,6 +39849,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                             $this->plain(preg_replace('#^#um', $spacer1, markdown_table(array_map(fn($v) => $this->array($v), $value), [
                                 'keylabel' => "#",
                                 'context'  => $this->options['context'],
+                                'counting' => $this->options['counting'],
                             ])));
                         }
                         else {
@@ -37234,6 +39859,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                     }
                     elseif ($assoc) {
                         $n = 0;
+                        if ($this->options['counting']) {
+                            $this->comment("($count)");
+                        }
                         if ($is_hasharray) {
                             $this->plain("{\n");
                         }
@@ -37267,6 +39895,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                     else {
                         $lastkey = last_key($value);
                         $n = 0;
+                        if ($this->options['counting']) {
+                            $this->comment("($count)");
+                        }
                         $this->plain('[');
                         if (!$value) {
                             $this->plain('...(too length)...')->plain(', ');
@@ -37343,6 +39974,13 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         $this->plain(' use ');
                         $this->export($properties, $nest, $parents, $keys, false);
                     }
+                }
+                elseif ($value instanceof \GMP) {
+                    $this->value($value);
+
+                    $this->plain("(");
+                    $this->export((string) $value, $nest, $parents, $keys, false);
+                    $this->plain(")");
                 }
                 elseif (is_object($value)) {
                     $this->value($value);

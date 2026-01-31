@@ -1590,17 +1590,13 @@ if (!function_exists('ryunosuke\\DbMigration\\sql_format')) {
             ];
             $rule = $rules[$options['highlight']] ?? throw new \InvalidArgumentException('highlight must be "cli" or "html".');
             $options['highlight'] = function ($token, $ttype) use ($keywords, $rule) {
-                switch (true) {
-                    case isset($keywords[strtoupper($token)]):
-                        return $rule['KEYWORD']($token);
-                    case in_array($ttype, [T_COMMENT, T_DOC_COMMENT]):
-                        return $rule['COMMENT']($token);
-                    case in_array($ttype, [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE]):
-                        return $rule['STRING']($token);
-                    case in_array($ttype, [T_LNUMBER, T_DNUMBER]):
-                        return $rule['NUMBER']($token);
-                }
-                return $token;
+                return match (true) {
+                    isset($keywords[strtoupper($token)])                                      => $rule['KEYWORD']($token),
+                    in_array($ttype, [T_COMMENT, T_DOC_COMMENT])                              => $rule['COMMENT']($token),
+                    in_array($ttype, [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE]) => $rule['STRING']($token),
+                    in_array($ttype, [T_LNUMBER, T_DNUMBER])                                  => $rule['NUMBER']($token),
+                    default                                                                   => $token,
+                };
             };
         }
         $options['syntaxer'] = function ($token, $ttype) use ($options, $keywords) {
@@ -2098,9 +2094,9 @@ if (!function_exists('ryunosuke\\DbMigration\\markdown_table')) {
             }
             return $result;
         })();
-        $option['stringify'] ??= fn($v) => var_pretty($v, ['return' => true, 'context' => $option['context'], 'table' => false]);
+        $option['stringify'] ??= fn($v) => var_pretty($v, ['return' => true, 'context' => $option['context'], 'table' => false, 'counting' => $option['counting'] ?? true]);
 
-        $stringify = fn($v) => strtr(((is_stringable($v) && !is_null($v) ? $v : $option['stringify']($v)) ?? ''), ["\t" => '    ']);
+        $stringify = fn($v) => strtr(((is_stringable($v) && !is_null($v) && !is_bool($v) ? $v : $option['stringify']($v)) ?? ''), ["\t" => '    ']);
         $is_numeric = function ($v) {
             $v = trim($v);
             if (strlen($v) === 0) {
@@ -5403,6 +5399,57 @@ if (!function_exists('ryunosuke\\DbMigration\\arrayval')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\decimalstr') || (new \ReflectionFunction('ryunosuke\\DbMigration\\decimalstr'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\decimalstr')) {
+    /**
+     * 10進数小数文字列を返す
+     *
+     * 指数表記や誤差などは除去してできるだけ「一般人の感覚」に近い文字列を返す。
+     * $precision で精度も指定できるがまぁ渡すことはあまりないだろう。
+     *
+     * Example:
+     * ```php
+     * // 右0詰めは行われない（%F だと詰められる）
+     * that(decimalstr(1.234))->isSame('1.234');
+     * // .0 は失われない（%H だと失われる）
+     * that(decimalstr(3.0))->isSame('3.0');
+     * // 指数表記にならない（%F は指数表記になる）
+     * that(decimalstr(1000000.0))->isSame('1000000.0');
+     * that(decimalstr(0.000001))->isSame('0.000001');
+     * // -INF は -INF になる（%H,%F だとなぜか INF になる）
+     * that(decimalstr(-INF))->isSame('-INF');
+     * // デフォルトの精度は16
+     * that(decimalstr(M_PI))->isSame('3.141592653589793');
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\var
+     */
+    function decimalstr(float $number, int $precision = 16): string
+    {
+        // -INF が INF になる不具合？ があるっぽいので特別扱いしておく（これらだけ E 以外の文字が出現するので特別扱いは別におかしくない）
+        if (is_infinite($number) || is_nan($number)) {
+            return (string) $number;
+        }
+
+        $string = sprintf("%.{$precision}H", $number);
+
+        // %H は 1.0 などが 1 になるので付け足す
+        if (!str_contains($string, '.')) {
+            return "$string.0";
+        }
+
+        // 指数記法が出現したら %F で戻す
+        if (str_contains($string, 'E')) {
+            $string = rtrim(sprintf("%.{$precision}F", $number), '0');
+            if ($string[-1] === '.') {
+                $string .= '0';
+            }
+        }
+
+        return $string;
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\is_arrayable') || (new \ReflectionFunction('ryunosuke\\DbMigration\\is_arrayable'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\is_arrayable')) {
     /**
@@ -5727,8 +5774,14 @@ if (!function_exists('ryunosuke\\DbMigration\\is_stringable')) {
         if (is_array($var)) {
             return false;
         }
-        if (is_object($var) && !method_exists($var, '__toString')) {
-            return false;
+        if (is_object($var)) {
+            // toString は未実装だが cast_object レベルで文字列化可能になっている
+            if ($var instanceof \GMP) {
+                return true;
+            }
+            if (!method_exists($var, '__toString')) {
+                return false;
+            }
         }
         return true;
     }
@@ -5757,6 +5810,10 @@ if (!function_exists('ryunosuke\\DbMigration\\stringify')) {
             case 'array':
                 return var_export2($var, true);
             case 'object':
+                // toString は未実装だが cast_object レベルで文字列化可能になっている
+                if ($var instanceof \GMP) {
+                    return strval($var);
+                }
                 if (method_exists($var, '__toString')) {
                     return (string) $var;
                 }
@@ -5783,10 +5840,19 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
      *
      * - 配列は 5.4 以降のショートシンタックス（[]）で出力
      * - ただの配列は1行（[1, 2, 3]）でケツカンマなし、連想配列は桁合わせインデントでケツカンマあり
+     *   - 多少の整形は下記の minify オプションで指定可能（4 ～ 8 は未定義）
+     *     - 0: 完全なるフォーマット
+     *     - 1: アライン無しフォーマット
+     *     - 2: スペースありのワンライン
+     *     - 3: 要素ペアごとにスペースありのワンライン
+     *     - 9: 一切スペースなし最短縮
      * - 文字列はダブルクオート
      * - null は null（小文字）
      * - 再帰構造を渡しても警告がでない（さらに NULL ではなく `'*RECURSION*'` という文字列になる）
      * - 配列の再帰構造の出力が異なる（Example参照）
+     *
+     * named オプションを渡すと出力が名前付き引数形式になる。
+     * シンタックスのチェックや値の検証などは行わないので注意。
      *
      * Example:
      * ```php
@@ -5822,6 +5888,8 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
      *         ],
      *     ],
      * ]');
+     * // 名前付き引数形式
+     * that(var_export2(['name' => 'taro', 'age' => 27, 'opt' => ['X', 'Y', 'Z']], ['return' => true, 'minify' => 2, 'named' => true]))->isSame('name: "taro", age: 27, opt: ["X", "Y", "Z"]');
      * ```
      *
      * @package ryunosuke\Functions\Package\var
@@ -5839,46 +5907,71 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
         }
 
         $options += [
-            'minify' => false, // 短縮形で返す（実質的には情報を減らして1行で返す）
-            'indent' => 4,     // インデントの空白数
-            'return' => false, // 値を戻すか出力するか
+            'minify'   => 0,     // 短縮レベル
+            'named'    => false, // 名前付き引数の形式で返す
+            'indent'   => 4,     // インデントの空白数
+            'return'   => false, // 値を戻すか出力するか
+            'nest'     => 0,     // ネストの初期値
+            'callback' => null,  // コールバック
         ];
+        // for compatible
+        if ($options['minify'] === true) {
+            $options['minify'] = 9;
+        }
+        $options['minify'] = (int) $options['minify'];
+
+        $options['first-nest'] = $options['nest'] + ($options['named'] ? -1 : 0);
 
         // 再帰用クロージャ
-        $export = function ($value, $context, $nest = 0, $parents = []) use (&$export, $options) {
+        $export = function ($value, $context, $nest, $parents = []) use (&$export, $options) {
+            // コールバックを最優先とする
+            if ($options['callback']) {
+                if (($string = $options['callback']($value)) !== null) {
+                    return $string;
+                }
+            }
             // 再帰を検出したら *RECURSION* とする（処理に関しては is_recursive のコメント参照）
             foreach ($parents as $parent) {
                 if ($parent === $value) {
-                    return $export('*RECURSION*', 'recursion');
+                    return $export('*RECURSION*', 'recursion', $nest);
                 }
             }
 
-            $space = $options['minify'] ? "" : " ";
-            $break = $options['minify'] ? "" : "\n";
+            $space = $options['minify'] < 9 ? " " : "";
+            $break = $options['minify'] > 1 ? "" : "\n";
+            $lastcomma = $options['minify'] === 0 || $options['minify'] === 1 ? "," : "";
+            $tailcomma = 1 < $options['minify'] && $options['minify'] < 9 ? ", " : ",";
+            $indent = $options['minify'] === 0 || $options['minify'] === 1 ? $space : "";
+            $align = $options['minify'] === 0 ? $space : "";
+            $arrow = $options['minify'] <= 2 ? $space : "";
+            $delim = $options['named'] && $nest === $options['first-nest'] ? ":$arrow" : "$arrow=>$arrow";
 
             // 配列は連想判定したり再帰したり色々
             if (is_array($value)) {
-                $spacer1 = str_repeat($space, ($nest + 1) * $options['indent']);
-                $spacer2 = str_repeat($space, $nest * $options['indent']);
+                $spacer1 = str_repeat($indent, ($nest + 1) * $options['indent']);
+                $spacer2 = str_repeat($indent, max(0, $nest) * $options['indent']);
 
                 $hashed = is_hasharray($value);
 
                 // スカラー値のみで構成されているならシンプルな再帰
                 if (!$hashed && array_and($value, fn(...$args) => is_primitive(...$args))) {
-                    return '[' . implode(",$space", array_map(fn($v) => $export($v, 'array-value'), $value)) . ']';
+                    return '[' . implode(",$arrow", array_map(fn($v) => $export($v, 'array-value', $nest), $value)) . ']';
                 }
 
                 // 連想配列はキーを含めて桁あわせ
                 if ($hashed) {
-                    $keys = array_map(fn($v) => $export($v, 'array-key'), array_combine($keys = array_keys($value), $keys));
+                    $keys = array_map(fn($v) => $export($v, 'array-key', $nest), array_combine($keys = array_keys($value), $keys));
                     $maxlen = max(array_map('strlen', $keys));
                 }
                 $kvl = '';
                 $lastkey = array_key_last($value);
                 $parents[] = $value;
                 foreach ($value as $k => $v) {
-                    $keystr = $hashed ? $keys[$k] . str_repeat($space, $maxlen - strlen($keys[$k])) . "$space=>$space" : '';
-                    $kvl .= $spacer1 . $keystr . $export($v, 'array-value', $nest + 1, $parents) . ($k === $lastkey && $options['minify'] ? "" : ",") . "$break";
+                    $keystr = $hashed ? $keys[$k] . str_repeat($align, $maxlen - strlen($keys[$k])) . $delim : '';
+                    $kvl .= $spacer1 . $keystr . $export($v, 'array-value', $nest + 1, $parents) . ($k === $lastkey ? $lastcomma : $tailcomma) . $break;
+                }
+                if ($options['named'] && $nest === $options['first-nest']) {
+                    return $kvl;
                 }
                 return "[$break{$kvl}{$spacer2}]";
             }
@@ -5895,6 +5988,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
             elseif (is_string($value)) {
                 // 列揃えのため配列のキーは常にダブルクォート
                 if ($context === 'array-key') {
+                    if ($options['named'] && $nest === $options['first-nest']) {
+                        return $value;
+                    }
                     return str_quote($value);
                 }
                 // 改行を含むならヒアドキュメント
@@ -5920,7 +6016,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
         };
 
         // 結果を返したり出力したり
-        $result = $export($value, null);
+        $result = $export($value, null, $options['first-nest']);
         if ($options['return']) {
             return $result;
         }
@@ -6040,6 +6136,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
             'callback'      => null,  // 値1つごとのコールバック（値と文字列表現（参照）が引数で渡ってくる）
             'debuginfo'     => true,  // debugInfo を利用してオブジェクトのプロパティを絞るか
             'table'         => true,  // 連想配列の配列の場合にテーブル表示するか（コールバック。true はマークダウン風味固定）
+            'counting'      => true,  // 個数の表示
             'maxcolumn'     => null,  // 1行あたりの文字数
             'maxcount'      => null,  // 複合型の要素の数
             'maxdepth'      => null,  // 複合型の深さ
@@ -6129,6 +6226,11 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                 return $this->_append($token, $style);
             }
 
+            public function comment($token): self
+            {
+                return $this->_append($token, 'italic');
+            }
+
             public function index($token): self
             {
                 if (is_int($token)) {
@@ -6210,6 +6312,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         $token = str_ellipsis($token, $this->options['maxlength'], '...(too length)...');
                     }
                     return json_encode($token, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                }
+                elseif (is_float($token)) {
+                    return decimalstr($token);
                 }
                 elseif (is_scalar($token)) {
                     return var_export($token, true);
@@ -6318,7 +6423,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                             }
                         }
 
-                        return $objective ? "{$first_condition}[]" : 'array[]';
+                        return ($objective ? "{$first_condition}[]" : "array[]") . ($this->options['counting'] ? "($count)" : "");
                     })();
 
                     $key = null;
@@ -6343,7 +6448,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         }
                         // 要素が1つなら複数行化するメリットがないので2以上とする
                         if (count($lengths) >= 2 && ($this->options['maxlistcolumn'] ?? PHP_INT_MAX) <= array_sum($lengths)) {
-                            $assoc = !$this->options['minify'] && true;
+                            $assoc = !$this->options['minify'];
                         }
                     }
 
@@ -6357,6 +6462,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                             $this->plain(preg_replace('#^#um', $spacer1, markdown_table(array_map(fn($v) => $this->array($v), $value), [
                                 'keylabel' => "#",
                                 'context'  => $this->options['context'],
+                                'counting' => $this->options['counting'],
                             ])));
                         }
                         else {
@@ -6366,6 +6472,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                     }
                     elseif ($assoc) {
                         $n = 0;
+                        if ($this->options['counting']) {
+                            $this->comment("($count)");
+                        }
                         if ($is_hasharray) {
                             $this->plain("{\n");
                         }
@@ -6399,6 +6508,9 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                     else {
                         $lastkey = last_key($value);
                         $n = 0;
+                        if ($this->options['counting']) {
+                            $this->comment("($count)");
+                        }
                         $this->plain('[');
                         if (!$value) {
                             $this->plain('...(too length)...')->plain(', ');
@@ -6475,6 +6587,13 @@ if (!function_exists('ryunosuke\\DbMigration\\var_pretty')) {
                         $this->plain(' use ');
                         $this->export($properties, $nest, $parents, $keys, false);
                     }
+                }
+                elseif ($value instanceof \GMP) {
+                    $this->value($value);
+
+                    $this->plain("(");
+                    $this->export((string) $value, $nest, $parents, $keys, false);
+                    $this->plain(")");
                 }
                 elseif (is_object($value)) {
                     $this->value($value);

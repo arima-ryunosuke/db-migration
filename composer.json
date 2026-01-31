@@ -49,7 +49,7 @@
   ],
   "require": {
     "php": ">=8.2",
-    "doctrine/dbal": "4.3.*",
+    "doctrine/dbal": "4.4.*",
     "symfony/console": "5.*",
     "symfony/yaml": "*"
   },
