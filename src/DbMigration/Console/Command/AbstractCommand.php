@@ -287,11 +287,27 @@ abstract class AbstractCommand extends Command
 
     protected function parseDsn($dsn)
     {
-        $parser = new DsnParser([]);
+        $parser = new DsnParser([
+            'pdo_sqlite' => \Doctrine\DBAL\Driver\PDO\SQLite\Driver::class,
+            'pdo_mysql'  => \Doctrine\DBAL\Driver\PDO\MySQL\Driver::class,
+            'pdo_pgsql'  => \Doctrine\DBAL\Driver\PDO\PgSQL\Driver::class,
+            'pdo_sqlsrv' => \Doctrine\DBAL\Driver\PDO\SQLSrv\Driver::class,
+            'pdo_mssql'  => \Doctrine\DBAL\Driver\PDO\SQLSrv\Driver::class,
+            'pdo_oci'    => \Doctrine\DBAL\Driver\PDO\OCI\Driver::class,
+            'oci8'       => \Doctrine\DBAL\Driver\OCI8\Driver::class,
+            'ibm_db2'    => \Doctrine\DBAL\Driver\IBMDB2\Driver::class,
+            'mysqli'     => \Doctrine\DBAL\Driver\Mysqli\Driver::class,
+            'mysql'      => \Doctrine\DBAL\Driver\Mysqli\Driver::class,
+            'pgsql'      => \Doctrine\DBAL\Driver\PgSQL\Driver::class,
+            'sqlsrv'     => \Doctrine\DBAL\Driver\SQLSrv\Driver::class,
+            'mssql'      => \Doctrine\DBAL\Driver\SQLSrv\Driver::class,
+            'sqlite'     => \Doctrine\DBAL\Driver\SQLite3\Driver::class,
+            'sqlite3'    => \Doctrine\DBAL\Driver\SQLite3\Driver::class,
+        ]);
         $params = $parser->parse($dsn);
 
         // for .my.cnf
-        if (isset($_SERVER['HOME']) && stripos($params['driver'], 'mysql') !== false) {
+        if (isset($_SERVER['HOME']) && stripos($params['driver'] ?? $params['driverClass'] ?? '', 'mysql') !== false) {
             $mycnf = $_SERVER['HOME'] . '/.my.cnf';
             if (is_readable($mycnf)) {
                 $mycnfini = parse_ini_file($mycnf, true);

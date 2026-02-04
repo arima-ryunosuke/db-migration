@@ -169,42 +169,42 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->setInputOutput($input, $output);
 
         $this->assertEquals([
-            'driver'       => 'mysql',
             'host'         => 'hostname',
             'port'         => 3306,
             'user'         => 'user',
             'password'     => 'pass',
             'dbname'       => 'dbname',
             'charset'      => 'utf8',
+            'driverClass'  => \Doctrine\DBAL\Driver\PDO\MySQL\Driver::class,
+            'wrapperClass' => Connection::class,
+        ], $this->command->parseDsn('pdo-mysql://user:pass@hostname:3306/dbname?charset=utf8'));
+
+        $this->assertEquals([
+            'host'         => 'hostname',
+            'port'         => 3306,
+            'user'         => 'user',
+            'password'     => 'pass',
+            'dbname'       => 'dbname',
+            'charset'      => 'utf8',
+            'driverClass'  => \Doctrine\DBAL\Driver\Mysqli\Driver::class,
             'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('mysql://user:pass@hostname:3306/dbname?charset=utf8'));
 
         $this->assertEquals([
-            'driver'       => 'mysqli',
-            'host'         => 'hostname',
-            'port'         => 3306,
-            'user'         => 'user',
-            'password'     => 'pass',
-            'dbname'       => 'dbname',
-            'charset'      => 'utf8',
-            'wrapperClass' => Connection::class,
-        ], $this->command->parseDsn('mysqli://user:pass@hostname:3306/dbname?charset=utf8'));
-
-        $this->assertEquals([
-            'driver'       => 'sqlite',
             'host'         => 'hostname',
             'user'         => (posix_getpwuid(posix_geteuid())['name']),
-            'path'         => 'dbname',
+            'dbname'       => 'dbname',
+            'driverClass'  => \Doctrine\DBAL\Driver\SQLite3\Driver::class,
             'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('sqlite://hostname/dbname'));
 
         $this->questionSetInputStream('this_is_password');
         $this->assertEquals([
-            'driver'       => 'sqlite',
             'host'         => 'hostname',
             'user'         => 'user',
             'password'     => 'this_is_password',
-            'path'         => 'dbname',
+            'dbname'       => 'dbname',
+            'driverClass'  => \Doctrine\DBAL\Driver\SQLite3\Driver::class,
             'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('sqlite://user:@hostname/dbname'));
 
@@ -215,11 +215,11 @@ user = hoge
 password = fuga
 ');
         $this->assertEquals([
-            'driver'       => 'mysql',
             'host'         => 'hostname',
             'user'         => 'hoge',
             'password'     => 'fuga',
             'dbname'       => 'dbname',
+            'driverClass'  => \Doctrine\DBAL\Driver\Mysqli\Driver::class,
             'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('mysql://hostname/dbname'));
         $_SERVER['HOME'] = $home;
