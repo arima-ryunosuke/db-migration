@@ -411,9 +411,9 @@ routine:
         definer: root@%
         comment: ''
         parameters:
-            p_film_id: { type: int, typeDeclaration: int, mode: IN }
-            p_store_id: { type: int, typeDeclaration: int, mode: IN }
-            p_film_count: { type: int, typeDeclaration: int, mode: OUT }
+            p_film_id: { mode: IN, type: int, typeDeclaration: int }
+            p_store_id: { mode: IN, type: int, typeDeclaration: int }
+            p_film_count: { mode: OUT, type: int, typeDeclaration: int }
     film_not_in_stock:
         statement: |-
             BEGIN
@@ -440,9 +440,9 @@ routine:
         definer: root@%
         comment: ''
         parameters:
-            p_film_id: { type: int, typeDeclaration: int, mode: IN }
-            p_store_id: { type: int, typeDeclaration: int, mode: IN }
-            p_film_count: { type: int, typeDeclaration: int, mode: OUT }
+            p_film_id: { mode: IN, type: int, typeDeclaration: int }
+            p_store_id: { mode: IN, type: int, typeDeclaration: int }
+            p_film_count: { mode: OUT, type: int, typeDeclaration: int }
     get_customer_balance:
         statement: |-
             BEGIN
@@ -492,8 +492,8 @@ routine:
         definer: root@%
         comment: ''
         parameters:
-            p_customer_id: { type: int, typeDeclaration: int, mode: IN }
-            p_effective_date: { type: datetime, typeDeclaration: datetime, mode: IN }
+            p_customer_id: { mode: IN, type: int, typeDeclaration: int }
+            p_effective_date: { mode: IN, type: datetime, typeDeclaration: datetime }
     inventory_held_by_customer:
         statement: |-
             BEGIN
@@ -517,7 +517,7 @@ routine:
         definer: root@%
         comment: ''
         parameters:
-            p_inventory_id: { type: int, typeDeclaration: int, mode: IN }
+            p_inventory_id: { mode: IN, type: int, typeDeclaration: int }
     inventory_in_stock:
         statement: |-
             BEGIN
@@ -556,7 +556,7 @@ routine:
         definer: root@%
         comment: ''
         parameters:
-            p_inventory_id: { type: int, typeDeclaration: int, mode: IN }
+            p_inventory_id: { mode: IN, type: int, typeDeclaration: int }
     rewards_report:
         statement: |-
             proc: BEGIN
@@ -612,9 +612,9 @@ routine:
         definer: root@%
         comment: 'Provides a customizable report on best customers'
         parameters:
-            min_monthly_purchases: { type: tinyint, typeDeclaration: 'tinyint unsigned', mode: IN }
-            min_dollar_amount_purchased: { type: decimal, typeDeclaration: 'decimal(10,2)', mode: IN }
-            count_rewardees: { type: int, typeDeclaration: int, mode: OUT }
+            min_monthly_purchases: { mode: IN, type: tinyint, typeDeclaration: 'tinyint unsigned' }
+            min_dollar_amount_purchased: { mode: IN, type: decimal, typeDeclaration: 'decimal(10,2)' }
+            count_rewardees: { mode: OUT, type: int, typeDeclaration: int }
 event:
     event1:
         statement: |-
