@@ -21,6 +21,14 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.2.6
+
+- [feature] ドライバマッピングを更新
+- [fixbug] setSchemaConfig の漏れ
+- [fixbug] カラム型に寄らずに platformOptions がすべて返ってくるようになっている
+- [fixbug] current timestamp のデフォルト値はオブジェクトの場合がある
+- [composer] update
+
 ## 3.2.5
 
 - Merge tag 'v3.1.17'
