@@ -76,6 +76,8 @@ class ImportCommandTest extends AbstractTestCase
             ['3.php'], // "p" なので当たっている
             ['4.json'],
             ['5.yaml'],
+            ['x-post.php'],
+            ['x-pre.php'],
         ], $this->connection->fetchAllNumeric('select version from migs'));
 
         $this->questionSetInputStream('y', 'y');

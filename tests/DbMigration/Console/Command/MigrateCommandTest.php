@@ -203,10 +203,11 @@ class MigrateCommandTest extends AbstractTestCase
     function run_type_data()
     {
         $result = $this->runApp([
-            '--migration' => $this->getFile('migs'),
-            '--yield'     => true,
-            '--upsert'    => true,
-            'files'       => [
+            '--migration'  => $this->getFile('migs'),
+            '--pre-suffix' => '-pre',
+            '--yield'      => true,
+            '--upsert'     => true,
+            'files'        => [
                 $this->getFile('table.php'),
             ],
         ]);
@@ -222,7 +223,9 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertStringContainsString("INSERT INTO notexist (id) VALUES(51)", $result);
         $this->assertStringContainsString("INSERT INTO notexist (id) VALUES (52) AS new ON DUPLICATE KEY UPDATE id = new.id", $result);
         $this->assertEquals([11, 12, 21, 22, 31, 32, 33, 41, 42, 51, 52], $this->connection->executeQuery('select * from notexist')->fetchFirstColumn());
-        $this->assertEquals(['1.sql', '2.tsv', '3.php', '4.json', '5.yaml'], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
+        $this->assertEquals(['1.sql', '2.tsv', '3.php', '4.json', '5.yaml', 'x-post.php', 'x-pre.php'], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
+        $this->assertEquals(false, $GLOBALS['pre-migration']);
+        $this->assertEquals(true, $GLOBALS['post-migration']);
 
         $this->connection->executeStatement('insert into migs values("hoge", "2011-12-24 12:34:56", "null")');
         $result = $this->runApp([
@@ -234,7 +237,7 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertStringNotContainsString('insert into notexist (id) VALUES(9);', $result);
         $this->assertStringContainsString('[2011-12-24 12:34:56] hoge', $result);
         $this->assertEquals([11, 12, 21, 22, 31, 32, 33, 41, 42, 51, 52], $this->connection->executeQuery('select * from notexist')->fetchFirstColumn());
-        $this->assertEquals(['1.sql', '2.tsv', '3.php', '4.json', '5.yaml'], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
+        $this->assertEquals(['1.sql', '2.tsv', '3.php', '4.json', '5.yaml', 'x-post.php', 'x-pre.php'], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
 
         $result = $this->runApp([
             '--migration' => $this->getFile('nodir'),
@@ -253,7 +256,7 @@ class MigrateCommandTest extends AbstractTestCase
     {
         unset($this->defaultArgs['-n']);
 
-        $this->questionSetInputStream('y', ['n' => 5], 'y');
+        $this->questionSetInputStream('y', ['n' => 7], 'y');
 
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
@@ -261,13 +264,13 @@ class MigrateCommandTest extends AbstractTestCase
         $this->assertStringContainsString('migs is created', $result);
         $this->assertEquals([], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
 
-        $this->questionSetInputStream(['p' => 5], 'y');
+        $this->questionSetInputStream(['p' => 7], 'y');
 
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
         ]);
         $this->assertStringNotContainsString('migs is created', $result);
-        $this->assertEquals(['1.sql', '2.tsv', '3.php', '4.json', '5.yaml'], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
+        $this->assertEquals(['1.sql', '2.tsv', '3.php', '4.json', '5.yaml', 'x-post.php', 'x-pre.php'], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
     }
 
     /**

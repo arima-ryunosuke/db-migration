@@ -9,6 +9,7 @@ use ryunosuke\DbMigration\MigrationTable;
 use ryunosuke\DbMigration\Transporter;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use function ryunosuke\DbMigration\iterator_join;
 use function ryunosuke\DbMigration\iterator_split;
@@ -17,6 +18,9 @@ class MigrateCommand extends AbstractCommand
 {
     /** @var Transporter */
     private $transporter;
+
+    /** @var MigrationTable */
+    private $migrationTable;
 
     /**
      * {@inheritdoc}
@@ -27,6 +31,7 @@ class MigrateCommand extends AbstractCommand
         $this->setDefinition([
             new InputArgument('dsn', InputArgument::OPTIONAL, 'Specify target DSN.'),
             new InputArgument('files', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Specify database files. First argument is meaned schema.'),
+            new InputOption('pre-suffix', null, InputOption::VALUE_REQUIRED, 'Specify pre-migration suffix'),
             ...$this->getCommonOptions([
                 'disable-constraint',
                 'maintain-type',
@@ -94,10 +99,34 @@ class MigrateCommand extends AbstractCommand
 
         $files = $this->normalizeFile($this->input->getArgument('files'));
 
+        $migration = $this->input->getOption('migration');
+        if ($migration) {
+            $migtable             = basename($migration);
+            $this->migrationTable = new MigrationTable($conn, $migtable);
+
+            if (!$this->migrationTable->exists()) {
+                if ($this->confirm('create migration table? (' . $migtable . ')', true)) {
+                    if ($this->migrationTable->create()) {
+                        $this->logger->log("-- <info>" . $migtable . "</info> <comment>is created.</comment>");
+                    }
+                }
+            }
+            if ($this->migrationTable->diff()) {
+                if ($this->confirm('alter migration table? (' . $migtable . ')', true)) {
+                    if ($this->migrationTable->alter()) {
+                        $this->logger->log("-- <info>" . $migtable . "</info> <comment>is altered.</comment>");
+                    }
+                }
+            }
+        }
+
         // migrate
         try {
             // pre migration
             $this->dispatchEvent('pre-migration', $conn);
+
+            // pre-Data
+            $this->migrateData($conn, 'pre');
 
             // DDL
             $this->migrateDDL($conn, $files);
@@ -105,8 +134,8 @@ class MigrateCommand extends AbstractCommand
             // DML
             $this->migrateDML($conn, $files);
 
-            // Data
-            $this->migrateData($conn);
+            // post-Data
+            $this->migrateData($conn, 'post');
         }
         finally {
             // post migration
@@ -223,83 +252,80 @@ class MigrateCommand extends AbstractCommand
         }
     }
 
-    private function migrateData(Connection $conn)
+    private function migrateData(Connection $conn, string $timing)
     {
         $migration = $this->input->getOption('migration');
         if (!$migration) {
             return;
         }
 
-        $this->logger->log("-- <comment>diff Data</comment>");
+        $this->logger->log("-- <comment>$timing diff Data</comment>");
 
-        $migtable       = basename($migration);
-        $migrationTable = new MigrationTable($conn, $migtable);
+        $presuffix = $this->input->getOption('pre-suffix');
 
-        if (!$migrationTable->exists()) {
-            if ($this->confirm('create migration table? (' . $migtable . ')', true)) {
-                if ($migrationTable->create()) {
-                    $this->logger->log("-- <info>" . $migtable . "</info> <comment>is created.</comment>");
-                }
+        $migfiles = $this->migrationTable->glob($migration);
+        $currents = $this->migrationTable->fetch();
+        $upgrades = array_diff_key(array_filter($migfiles, function (AbstractFile $file) use ($timing, $presuffix) {
+            if (!strlen($presuffix ?? '')) {
+                return $timing === 'post'; // if no suffix default post
             }
+            if ($timing === 'pre') {
+                return str_ends_with($file->pathinfo()['filename'], $presuffix);
+            }
+            if ($timing === 'post') {
+                return !str_ends_with($file->pathinfo()['filename'], $presuffix);
+            }
+        }), $currents);
+
+        if ($upgrades) {
+            $this->transact($conn, function () use ($conn, $upgrades) {
+                foreach ($upgrades as $version => $file) {
+                    /** @var AbstractFile $file */
+                    $this->logger->log($file->pathinfo()['fullname']);
+                    $this->logger->debug((string) $file);
+
+                    if ($this->input->getOption('check')) {
+                        continue;
+                    }
+
+                    $answer = $this->choice('exec this file?', ['y', 'n', 'p'], 0);
+                    if ($answer === 2) {
+                        $this->migrationTable->attach($version);
+                        continue;
+                    }
+                    if ($answer === 1) {
+                        continue;
+                    }
+                    if ($answer === 0) {
+                        $this->transact($conn, function () use ($version, $file) {
+                            $migration = $this->migrationTable->apply($version, $file->readMigration(), $this->input->getOption('upsert'));
+                            foreach ($migration as $sql) {
+                                $this->logger->log([$this, 'formatSql'], $sql);
+                            }
+                            $this->logger->log("-- <comment>Attach: $version, Affected rows: {$migration->getReturn()}</comment>");
+                        }, function (\Exception $ex) {
+                            $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
+                            if (!$this->input->getOption('force') && $this->confirm('exit?', true)) {
+                                throw $ex;
+                            }
+                        });
+                    }
+                }
+            });
         }
-        if ($migrationTable->diff()) {
-            if ($this->confirm('alter migration table? (' . $migtable . ')', true)) {
-                if ($migrationTable->alter()) {
-                    $this->logger->log("-- <info>" . $migtable . "</info> <comment>is altered.</comment>");
-                }
-            }
-        }
-
-        $new      = $migrationTable->glob($migration);
-        $old      = $migrationTable->fetch();
-        $upgrades = array_diff_key($new, $old);
-
-        $this->transact($conn, function () use ($conn, $migrationTable, $migration, $new, $old, $upgrades) {
-            foreach ($upgrades as $version => $file) {
-                /** @var AbstractFile $file */
-                $this->logger->log($file->pathinfo()['fullname']);
-                $this->logger->debug((string) $file);
-
-                if ($this->input->getOption('check')) {
-                    continue;
-                }
-
-                $answer = $this->choice('exec this file?', ['y', 'n', 'p'], 0);
-                if ($answer === 2) {
-                    $migrationTable->attach($version);
-                    continue;
-                }
-                if ($answer === 1) {
-                    continue;
-                }
-                if ($answer === 0) {
-                    $this->transact($conn, function () use ($migrationTable, $version, $file) {
-                        $migration = $migrationTable->apply($version, $file->readMigration(), $this->input->getOption('upsert'));
-                        foreach ($migration as $sql) {
-                            $this->logger->log([$this, 'formatSql'], $sql);
-                        }
-                        $this->logger->log("-- <comment>Attach: $version, Affected rows: {$migration->getReturn()}</comment>");
-                    }, function (\Exception $ex) {
-                        $this->logger->log('/* <error>' . $ex->getMessage() . '</error> */');
-                        if (!$this->input->getOption('force') && $this->confirm('exit?', true)) {
-                            throw $ex;
-                        }
-                    });
-                }
-            }
-        });
-
-        if (!$upgrades) {
+        else {
             $this->logger->log("-- no diff data.");
         }
 
-        $degrades = array_diff_key($old, $new);
-        if ($degrades) {
-            foreach ($degrades as $applied => $version) {
-                $this->logger->log("-- <info>[{$version['apply_at']}] $applied</info>");
-            }
-            if ($this->confirm('probably down migration. delete applying these?', true)) {
-                $migrationTable->detach(array_keys($degrades));
+        if ($timing === 'post') {
+            $degrades = array_diff_key($currents, $migfiles);
+            if ($degrades) {
+                foreach ($degrades as $version => $applied) {
+                    $this->logger->log("-- <info>[{$applied['apply_at']}] $version</info>");
+                }
+                if ($this->confirm('probably down migration. delete applying these?', true)) {
+                    $this->migrationTable->detach(array_keys($degrades));
+                }
             }
         }
     }
