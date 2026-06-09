@@ -34,11 +34,16 @@ class TableScanner
     /** @var string */
     private string $primaryKeyString;
 
-    public function __construct(Connection $conn, Table $table, $filterCondition, array $ignoreColumn = [])
+    /** @var string */
+    private string $orderBy;
+
+    public function __construct(Connection $conn, Table $table, $filterCondition, array $ignoreColumn = [], array $orderBy = [])
     {
         if (!$table->getPrimaryKey()) {
             throw new MigrationException("has no primary key.");
         }
+
+        $orderBy = $conn->quoteIdentifiers(array_filter(array_map('trim', $orderBy), fn($column) => $table->hasColumn($column)));
 
         // set property from argument
         $this->conn  = $conn;
@@ -49,6 +54,7 @@ class TableScanner
         $this->primaryKeys        = $this->table->getPrimaryKey()->getColumns();
         $this->flippedPrimaryKeys = array_flip($this->primaryKeys);
         $this->primaryKeyString   = implode(', ', $this->conn->quoteIdentifiers($this->primaryKeys));
+        $this->orderBy            = $orderBy ? implode(', ', $orderBy) : $this->primaryKeyString;
 
         // column to array(ColumnNanme => Column)
         $this->columns = array_combine(array_map(fn($c) => $c->getName(), $table->getColumns()), $table->getColumns());
@@ -172,7 +178,7 @@ class TableScanner
             SELECT   {$this->primaryKeyString}
             FROM     {$this->quotedName}
             WHERE    {$this->filterCondition}
-            ORDER BY {$this->primaryKeyString}
+            ORDER BY {$this->orderBy}
         ";
 
         foreach ($this->conn->queryUnbuffered($sql) as $row) {
@@ -189,7 +195,7 @@ class TableScanner
             SELECT   {$columnString}
             FROM     {$this->quotedName}
             WHERE    {$this->filterCondition}
-            ORDER BY {$this->primaryKeyString}
+            ORDER BY {$this->orderBy}
         ";
 
         foreach ($this->conn->queryUnbuffered($sql) as $row) {
@@ -293,7 +299,7 @@ class TableScanner
             SELECT   {$columnString}
             FROM     {$this->quotedName}
             WHERE    {$this->filterCondition} AND ($tuplesString)
-            ORDER BY {$this->primaryKeyString}
+            ORDER BY {$this->orderBy}
         ";
 
         return $this->conn->executeQuery($sql)->iterateAssociative();

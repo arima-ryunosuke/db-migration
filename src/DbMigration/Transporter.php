@@ -522,7 +522,9 @@ class Transporter
                         // insert
                         if ($category === 'table') {
                             $stream->fwrite("\n");
-                            $scanner = new TableScanner($this->connection, $object, []);
+                            $scanner = new TableScanner($this->connection, $object, [], [],
+                                $options['order-by'][$object->getName()] ?? $options['order-by']['*'] ?? [],
+                            );
                             foreach ($file->writeRecords($scanner->getAllRows()) as $ignored) {
                                 yield $count++;
                             }

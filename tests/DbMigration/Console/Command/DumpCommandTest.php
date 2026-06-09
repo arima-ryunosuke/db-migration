@@ -60,7 +60,9 @@ class DumpCommandTest extends AbstractTestCase
             'comment'               => '',
         ]));
 
-        $this->connection->insert('table1', ['id' => 1]);
+        $this->connection->insert('table1', ['id' => 1, 'name' => 'hoge']);
+        $this->connection->insert('table1', ['id' => 2, 'name' => 'fuga']);
+        $this->connection->insert('table1', ['id' => 3, 'name' => 'piyo']);
 
         $this->app->add(new DumpCommand());
 
@@ -246,6 +248,30 @@ class DumpCommandTest extends AbstractTestCase
         $this->assertFileNotContains('DEFINER=', "$dir/event/event1.sql");
         $this->assertFileNotContains('DEFINER=', "$dir/routine/procedure1.sql");
         $this->assertFileNotContains('DEFINER=', "$dir/routine/function1.sql");
+
+        $this->runApp([
+            'files'      => ["$dir/database.sql"],
+            '--order-by' => ['table1.name'],
+        ]);
+        $this->assertFileContains("('2', 'fuga'),\n('1', 'hoge'),\n('3', 'piyo');", "$dir/table/table1.sql");
+
+        $this->runApp([
+            'files'      => ["$dir/database.sql"],
+            '--order-by' => ['*.name'],
+        ]);
+        $this->assertFileContains("('2', 'fuga'),\n('1', 'hoge'),\n('3', 'piyo');", "$dir/table/table1.sql");
+
+        $this->runApp([
+            'files'      => ["$dir/database.sql"],
+            '--order-by' => ['name'],
+        ]);
+        $this->assertFileContains("('2', 'fuga'),\n('1', 'hoge'),\n('3', 'piyo');", "$dir/table/table1.sql");
+
+        $this->runApp([
+            'files'      => ["$dir/database.sql"],
+            '--order-by' => ['*.dummy'],
+        ]);
+        $this->assertFileContains("('1', 'hoge'),\n('2', 'fuga'),\n('3', 'piyo');", "$dir/table/table1.sql");
     }
 
     /**
@@ -302,6 +328,6 @@ class DumpCommandTest extends AbstractTestCase
         $this->assertEquals(['event1'], array_values(array_map(fn($object) => $object->getName(), $schema->getEvents())));
         $this->assertEquals(['function1', 'procedure1'], array_values(array_map(fn($object) => $object->getName(), $schema->getRoutines())));
 
-        $this->assertEquals([1], $this->connection->fetchFirstColumn("SELECT * FROM $dummydatabasename.table1"));
+        $this->assertEquals([1, 2, 3], $this->connection->fetchFirstColumn("SELECT * FROM $dummydatabasename.table1"));
     }
 }

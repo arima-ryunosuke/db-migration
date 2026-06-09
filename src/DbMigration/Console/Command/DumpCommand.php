@@ -26,6 +26,7 @@ class DumpCommand extends AbstractCommand
             new InputOption('no-autoincrement', 'A', InputOption::VALUE_NONE, 'Add RESET auto_increment.'),
             new InputOption('no-definer', null, InputOption::VALUE_NONE, 'Strip DEFINER clause'),
             new InputOption('defer-index', null, InputOption::VALUE_NONE, 'Create index after insert'),
+            new InputOption('order-by', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Specify output ORDER BY'),
             ...$this->getCommonOptions([
                 'migration',
                 'include',
@@ -81,6 +82,14 @@ class DumpCommand extends AbstractCommand
             'no-autoincrement' => $this->input->getOption('no-autoincrement'),
             'no-definer'       => $this->input->getOption('no-definer'),
             'defer-index'      => $this->input->getOption('defer-index'),
+            'order-by'         => (function ($orderBys) {
+                $result = [];
+                foreach ($orderBys as $orderBy) {
+                    [$table, $column] = array_pad(explode('.', $orderBy, 2), -2, '*');
+                    $result[$table] = array_merge($result[$table] ?? [], explode(',', $column));
+                }
+                return $result;
+            })($this->input->getOption('order-by')),
         ]);
         $this->transact($conn, function () use ($conn, $transporter, $generators) {
             foreach ($generators as $meta => $generator) {
