@@ -21,6 +21,10 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.2.8
+
+- [feature] dump コマンドに order-by オプションを追加
+
 ## 3.2.7
 
 - [feature] migration をスキーマ変更前後に分割できる機能

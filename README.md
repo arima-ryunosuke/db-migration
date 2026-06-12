@@ -653,6 +653,7 @@ Options:
   -A, --no-autoincrement           Add RESET auto_increment.
       --no-definer                 Strip DEFINER clause
       --defer-index                Create index after insert
+      --order-by                   Specify output ORDER BY
   -m, --migration[=MIGRATION]      Specify migration directory.
   -i, --include[=INCLUDE]          Target tables pattern (enable comma separated value. e.g. --include table1,table2) (multiple values allowed)
   -e, --exclude[=EXCLUDE]          Except tables pattern (enable comma separated value. e.g. --exclude table1,table2) (multiple values allowed)
@@ -680,6 +681,12 @@ Help:
 ただし、これらは安全のためデフォルトでコメントアウトされています（DATABASE に関して recreate オプションで有効化できます）。
 もっとも、上記の通り1枚岩ではないのでテキストエディタで簡単に開いて編集可能です。
 完全に復元名可能なクエリ（`SHOW CREATE USER` の結果）で出力されるため、情報の共有には注意を払ってください。
+
+レコード配列は単一行ではなく複数行で出力されます。
+これもエディタで容易に開けるようにするためです（1行が長いとエディタによっては固まることがある）。
+`order-by` オプションで出力順を指定できます。指定しなかった場合は主キー順です。
+`table_name.column_name` でそのテーブルのみ、 `*.column_name` で column_name が存在するすべてのテーブルという意味になります。
+DESC は対応していません。
 
 取り込みサブコマンドは用意されていませんが、トップレベルの database.sql に SOURCE が記載されているため、
 
