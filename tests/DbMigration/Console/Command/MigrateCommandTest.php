@@ -256,19 +256,15 @@ class MigrateCommandTest extends AbstractTestCase
     {
         unset($this->defaultArgs['-n']);
 
-        $this->questionSetInputStream('y', ['n' => 7], 'y');
-
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
-        ]);
+        ], ['y', 'n' => 7, 'y']);
         $this->assertStringContainsString('migs is created', $result);
         $this->assertEquals([], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
 
-        $this->questionSetInputStream(['p' => 7], 'y');
-
         $result = $this->runApp([
             '--migration' => $this->getFile('migs'),
-        ]);
+        ], ['p' => 7, 'y']);
         $this->assertStringNotContainsString('migs is created', $result);
         $this->assertEquals(['1.sql', '2.tsv', '3.php', '4.json', '5.yaml', 'x-post.php', 'x-pre.php'], $this->connection->executeQuery('select * from migs')->fetchFirstColumn());
     }
@@ -402,23 +398,21 @@ class MigrateCommandTest extends AbstractTestCase
             ];
         }, range(1, 1001)));
 
-        $this->questionSetInputStream(['n' => 100]);
         $result = $this->runApp([
             '--type' => 'dml',
             'files'  => [
                 $this->getFile('migtable.php'),
             ],
-        ]);
+        ], ['n' => 100]);
 
         $this->assertLessThanOrEqual(1000, substr_count($result, 'DELETE FROM `migtable`'));
 
-        $this->questionSetInputStream(['y' => 100]);
         $result = $this->runApp([
             '--type' => 'dml',
             'files'  => [
                 $this->getFile('migtable.php'),
             ],
-        ]);
+        ], ['y' => 100]);
 
         $this->assertGreaterThan(1000, substr_count($result, 'DELETE FROM `migtable`'));
     }

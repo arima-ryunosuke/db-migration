@@ -309,6 +309,38 @@ if (!defined('ryunosuke\\DbMigration\\SORT_STRICT')) {
     define('ryunosuke\\DbMigration\\SORT_STRICT', 256);
 }
 
+if (!defined('ryunosuke\\DbMigration\\BASE10')) {
+    define('ryunosuke\\DbMigration\\BASE10', "0123456789");
+}
+
+if (!defined('ryunosuke\\DbMigration\\BASE16_UPPER')) {
+    define('ryunosuke\\DbMigration\\BASE16_UPPER', "0123456789ABCDEF");
+}
+
+if (!defined('ryunosuke\\DbMigration\\BASE16_LOWER')) {
+    define('ryunosuke\\DbMigration\\BASE16_LOWER', "0123456789abecdf");
+}
+
+if (!defined('ryunosuke\\DbMigration\\BASE32_RFC4648')) {
+    define('ryunosuke\\DbMigration\\BASE32_RFC4648', "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567");
+}
+
+if (!defined('ryunosuke\\DbMigration\\BASE32_RFC4648_EXTENDED')) {
+    define('ryunosuke\\DbMigration\\BASE32_RFC4648_EXTENDED', "0123456789ABCDEFGHIJKLMNOPQRSTUV");
+}
+
+if (!defined('ryunosuke\\DbMigration\\BASE62_ASCII')) {
+    define('ryunosuke\\DbMigration\\BASE62_ASCII', "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+}
+
+if (!defined('ryunosuke\\DbMigration\\BASE64_RFC4648')) {
+    define('ryunosuke\\DbMigration\\BASE64_RFC4648', "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
+}
+
+if (!defined('ryunosuke\\DbMigration\\BASE255')) {
+    define('ryunosuke\\DbMigration\\BASE255', "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !\"#\$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff");
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\array_and') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_and'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\array_and')) {
     /**
@@ -345,6 +377,56 @@ if (!function_exists('ryunosuke\\DbMigration\\array_and')) {
             }
         }
         return true;
+    }
+}
+
+assert(!function_exists('ryunosuke\\DbMigration\\array_depth') || (new \ReflectionFunction('ryunosuke\\DbMigration\\array_depth'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\array_depth')) {
+    /**
+     * 配列の次元数を返す
+     *
+     * フラット配列は 1 と定義する。
+     * つまり、配列を与える限りは 0 以下を返すことはない。
+     *
+     * 第2引数 $max_depth を与えるとその階層になった時点で走査を打ち切る。
+     * 「1階層のみか？」などを調べるときは指定したほうが高速に動作する。
+     *
+     * Example:
+     * ```php
+     * that(array_depth([]))->isSame(1);
+     * that(array_depth(['hoge']))->isSame(1);
+     * that(array_depth([['nest1' => ['nest2']]]))->isSame(3);
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\array
+     *
+     * @param array $array 調べる配列
+     * @param int|null $max_depth 最大階層数
+     * @return int 次元数。素のフラット配列は 1
+     */
+    function array_depth($array, $max_depth = null)
+    {
+        assert((is_null($max_depth)) || $max_depth > 0);
+
+        $main = function ($array, $depth) use (&$main, $max_depth) {
+            // $max_depth を超えているなら打ち切る
+            if ($max_depth !== null && $depth >= $max_depth) {
+                return 1;
+            }
+
+            // 配列以外に興味はない
+            $arrays = array_filter($array, 'is_array');
+
+            // ネストしない配列は 1 と定義
+            if (!$arrays) {
+                return 1;
+            }
+
+            // 配下の内で最大を返す
+            return 1 + max(array_map(fn($v) => $main($v, $depth + 1), $arrays));
+        };
+
+        return $main($array, 1);
     }
 }
 
@@ -3780,7 +3862,15 @@ if (!function_exists('ryunosuke\\DbMigration\\php_tokens')) {
                     $text = $var_export($ref->getFileName());
                 }
                 if ($this->id === T_NS_C) {
-                    $text = $var_export($ref->getNamespaceName());
+                    // php8.4 から ReflectionFunction({closure})::getNamespaceName は値を返さなくなった
+                    // 「クロージャは名前空間を持つものではない」とのこと（それ自体は正しい）
+                    // 得る術が完全になくなったので自前で得るしかない
+                    if (version_compare(PHP_VERSION, '8.4.0') >= 0) {
+                        $text = $var_export(array_key_first(namespace_parse($ref->getFileName()))); // @codeCoverageIgnore
+                    }
+                    else {
+                        $text = $var_export($ref->getNamespaceName());
+                    }
                 }
                 return $text;
             }
@@ -4053,8 +4143,10 @@ if (!function_exists('ryunosuke\\DbMigration\\function_parameter')) {
         foreach ($reffunc->getParameters() as $parameter) {
             $declare = '';
 
+            $type = null;
             if ($parameter->hasType()) {
-                $declare .= reflect_type_resolve($parameter->getType()) . ' ';
+                $type = reflect_type_resolve($parameter->getType());
+                $declare .= $type . ' ';
             }
 
             if ($parameter->isPassedByReference()) {
@@ -4091,6 +4183,9 @@ if (!function_exists('ryunosuke\\DbMigration\\function_parameter')) {
                     // Type に応じたデフォルト値が得られればベストだがそこまでする必要もない
                     // 少なくとも 8.0 時点では = null してしまえば型エラーも起きない（8.4 で非推奨になってるけど）
                     $defval = "null";
+                    if ($type !== null && !preg_match('#[^_0-9a-z]?(null|mixed)[^_0-9a-z]?#u', $type)) {
+                        $declare = 'null|' . $declare;
+                    }
                 }
 
                 if (isset($defval)) {
@@ -4868,6 +4963,54 @@ if (!function_exists('ryunosuke\\DbMigration\\str_exists')) {
     }
 }
 
+assert(!function_exists('ryunosuke\\DbMigration\\str_putcsv') || (new \ReflectionFunction('ryunosuke\\DbMigration\\str_putcsv'))->isUserDefined());
+if (!function_exists('ryunosuke\\DbMigration\\str_putcsv')) {
+    /**
+     * fputcsv の文字列版（str_getcsv の put 版）
+     *
+     * 普通の配列を与えるとシンプルに "a,b,c" のような1行を返す。
+     * 多次元配列（2次元のみを想定）や Traversable を与えるとループして "a,b,c\nd,e,f" のような複数行を返す。
+     *
+     * Example:
+     * ```php
+     * // シンプルな1行を返す
+     * that(str_putcsv(['a', 'b', 'c']))->isSame("a,b,c");
+     * that(str_putcsv(['a', 'b', 'c'], "\t"))->isSame("a\tb\tc");
+     * that(str_putcsv(['a', ' b ', 'c'], " ", "'"))->isSame("a ' b ' c");
+     *
+     * // 複数行を返す
+     * that(str_putcsv([['a', 'b', 'c'], ['d', 'e', 'f']]))->isSame("a,b,c\nd,e,f");
+     * that(str_putcsv((function() {
+     *     yield ['a', 'b', 'c'];
+     *     yield ['d', 'e', 'f'];
+     * })()))->isSame("a,b,c\nd,e,f");
+     * ```
+     *
+     * @package ryunosuke\Functions\Package\strings
+     *
+     * @param iterable $array 値の配列 or 値の配列の配列
+     * @param string $delimiter フィールド区切り文字
+     * @param string $enclosure フィールドを囲む文字
+     * @param string $escape エスケープ文字
+     * @return string CSV 文字列
+     */
+    function str_putcsv($array, $delimiter = ',', $enclosure = '"', $escape = "\\")
+    {
+        static $fp = null;
+        $fp ??= fopen('php://memory', 'rw+');
+        rewind($fp);
+        ftruncate($fp, 0);
+        if (is_array($array) && array_depth($array, 2) === 1) {
+            $array = [$array];
+        }
+        foreach ($array as $line) {
+            fputcsv($fp, $line, $delimiter, $enclosure, $escape);
+        }
+        rewind($fp);
+        return rtrim(stream_get_contents($fp), "\n");
+    }
+}
+
 assert(!function_exists('ryunosuke\\DbMigration\\str_quote') || (new \ReflectionFunction('ryunosuke\\DbMigration\\str_quote'))->isUserDefined());
 if (!function_exists('ryunosuke\\DbMigration\\str_quote')) {
     /**
@@ -4908,6 +5051,42 @@ if (!function_exists('ryunosuke\\DbMigration\\str_quote')) {
      */
     function str_quote(string $string, array $options = []): string
     {
+        if (!mb_check_encoding($string, 'UTF-8')) {
+            $chunks = [];
+            $status = null;
+            $buffer = null;
+            foreach (mb_str_split($string, 1, 'UTF-8') as $char) {
+                $valid = (mb_check_encoding($char, 'UTF-8') && !preg_match('/[\x00-\x1F\x7F]/', $char));
+
+                if ($status !== $valid) {
+                    $status = $valid;
+                    $chunks[] = [$valid, ''];
+                    $buffer = &$chunks[array_key_last($chunks)];
+                }
+
+                $buffer[1] .= $char;
+            }
+            unset($buffer);
+
+            $result = [];
+            foreach ($chunks as [$valid, $buffer]) {
+                if ($valid) {
+                    $result[] = substr(str_quote($buffer, [
+                        'escape-character'  => false,
+                        'control-character' => false,
+                        'special-character' => true,
+                        'heredoc'           => '',
+                        'nowdoc'            => '',
+                        'indent'            => 0,
+                    ]), 1, -1);
+                }
+                else {
+                    $result[] = '\\x' . implode('\\x', str_split(bin2hex($buffer), 2));
+                }
+            }
+            return '"' . implode("", $result) . '"';
+        }
+
         $options += [
             'escape-character'  => true,
             'control-character' => true,
@@ -5133,8 +5312,8 @@ if (!function_exists('ryunosuke\\DbMigration\\function_configure')) {
         $config['placeholder'] ??= '';
         $config['var_stream'] ??= 'VarStreamV010000';
         $config['memory_stream'] ??= 'MemoryStreamV010000';
+        $config['proxy_stream'] ??= 'proxy';
         $config['array.variant'] ??= false;
-        $config['chain.version'] ??= 2;
         $config['chain.nullsafe'] ??= false;
         $config['process.autoload'] ??= [];
         $config['datetime.class'] ??= \DateTimeImmutable::class;
@@ -5595,6 +5774,10 @@ if (!function_exists('ryunosuke\\DbMigration\\is_exportable')) {
         }
 
         if (is_object($var)) {
+            // マニュアルに記載はないが enum は export できる
+            if ($var instanceof \UnitEnum) {
+                return true;
+            }
             // 無名クラスは非常に特殊で、出力は class@anonymous{filename}:123$456::__set_state(...) のようになる
             // set_state さえ実装してれば復元可能に思えるが php コードとして不正なのでそのまま実行するとシンタックスエラーになる
             // 'class@anonymous{filename}:123$456'::__set_state(...) のようにクオートすれば実行可能になるが、それは標準 var_export の動作ではない
@@ -5609,10 +5792,6 @@ if (!function_exists('ryunosuke\\DbMigration\\is_exportable')) {
             }
             // これの唯一の例外は stdClass です。 stdClass は、配列をオブジェクトにキャストした形でエクスポートされます
             if (get_class($var) === \stdClass::class) {
-                return true;
-            }
-            // マニュアルに記載はないが enum は export できる
-            if ($var instanceof \UnitEnum) {
                 return true;
             }
             return false;
@@ -5926,7 +6105,7 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
         $export = function ($value, $context, $nest, $parents = []) use (&$export, $options) {
             // コールバックを最優先とする
             if ($options['callback']) {
-                if (($string = $options['callback']($value)) !== null) {
+                if (($string = $options['callback']($value, $nest)) !== null) {
                     return $string;
                 }
             }
@@ -5977,6 +6156,28 @@ if (!function_exists('ryunosuke\\DbMigration\\var_export2')) {
             }
             // オブジェクトは単にプロパティを __set_state する文字列を出力する
             elseif (is_object($value)) {
+                $ref = new \ReflectionObject($value);
+
+                // enum はリテラルを返せばよい
+                if ($value instanceof \UnitEnum) {
+                    $declare = "\\$ref->name::$value->name";
+                    if ($ref->getConstant($value->name) === $value) {
+                        return $declare;
+                    }
+                    // enum の polyfill で、__callStatic を利用して疑似的にエミュレートしているライブラリは多い
+                    // もっとも、「多い」だけであり、そうとは限らないので値は見る必要はある（例外が飛ぶかもしれないので try も必要）
+                    if ($ref->hasMethod('__callStatic')) {
+                        try {
+                            if ($declare() === $value) {
+                                return "$declare()";
+                            }
+                        }
+                        catch (\Throwable) { // @codeCoverageIgnore
+                            // through. treat regular object
+                        }
+                    }
+                }
+
                 $parents[] = $value;
                 $classname = get_class($value);
                 if ($classname === \stdClass::class) {

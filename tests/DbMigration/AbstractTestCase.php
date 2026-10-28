@@ -98,7 +98,7 @@ abstract class AbstractTestCase extends \PHPUnit\Framework\TestCase
                     $this->logs = &$logs;
                 }
 
-                public function log($level, \Stringable|string $message, array $context = [])
+                public function log($level, \Stringable|string $message, array $context = []): void
                 {
                     $this->logs[] = $message;
                 }

@@ -34,30 +34,28 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
         return str_replace('\\', '/', __DIR__ . $filename);
     }
 
-    protected function questionSetInputStream()
+    protected function getStringStream($inputStream)
     {
         $stream = fopen('php://memory', 'w+');
-        foreach (func_get_args() as $arg) {
-            if (is_array($arg)) {
-                $l = reset($arg);
-                $c = key($arg);
-                fwrite($stream, str_repeat($c . PHP_EOL, $l));
+        foreach ($inputStream as $k => $v) {
+            if (is_string($k)) {
+                fwrite($stream, str_repeat($k . PHP_EOL, $v));
             }
             else {
-                fwrite($stream, $arg . PHP_EOL);
+                fwrite($stream, $v . PHP_EOL);
             }
         }
         rewind($stream);
-
-        (fn($stream) => $this->inputStream = $stream)->call($this->app->getHelperSet()->get('question'), $stream);
+        return $stream;
     }
 
     /**
      * @closurable
      * @param array $inputArray
+     * @param resource|array $inputStream
      * @return string
      */
-    protected function runApp($inputArray)
+    protected function runApp($inputArray, $inputStream = [])
     {
         $inputArray = [
                 'command' => $this->commandName,
@@ -65,6 +63,13 @@ abstract class AbstractTestCase extends \ryunosuke\Test\DbMigration\AbstractTest
 
         $input  = new ArrayInput($inputArray);
         $output = new BufferedOutput();
+
+        if ($inputStream) {
+            if (is_array($inputStream)) {
+                $inputStream = $this->getStringStream($inputStream);
+            }
+            $input->setStream($inputStream);
+        }
 
         $this->app->run($input, $output);
 

@@ -52,7 +52,6 @@ class ImportCommandTest extends AbstractTestCase
     function run_migration()
     {
         unset($this->defaultArgs['-n']);
-        $this->questionSetInputStream('y', 'y', 'n', 'p', 'y', 'y');
 
         $result = $this->runApp([
             '-v'    => true,
@@ -65,7 +64,7 @@ class ImportCommandTest extends AbstractTestCase
                 $this->getFile('data/notexist.php'),
                 $this->getFile('data/sametable.php'),
             ],
-        ]);
+        ], ['y', 'y', 'n', 'p', 'y', 'y']);
         $this->assertStringContainsString("Attach: 1.sql", $result);
         $this->assertStringNotContainsString("Attach: 2.tsv", $result);
         $this->assertStringNotContainsString("Attach: 3.php", $result);
@@ -80,13 +79,12 @@ class ImportCommandTest extends AbstractTestCase
             ['x-pre.php'],
         ], $this->connection->fetchAllNumeric('select version from migs'));
 
-        $this->questionSetInputStream('y', 'y');
         $this->assertExceptionMessage("'invalid query'", $this->runApp, [
             '-m'    => $this->getFile('migs_invalid'),
             'files' => [
                 $this->getFile('table.php'),
             ],
-        ]);
+        ], ['y', 'y']);
     }
 
     /**
@@ -118,7 +116,6 @@ class ImportCommandTest extends AbstractTestCase
     {
         unset($this->defaultArgs['-n']);
 
-        $this->questionSetInputStream(['n' => 100]);
         $this->assertExceptionMessage("canceled", $this->runApp, [
             '-v'    => true,
             'files' => [
@@ -129,7 +126,7 @@ class ImportCommandTest extends AbstractTestCase
                 $this->getFile('data/notexist.php'),
                 $this->getFile('data/sametable.php'),
             ],
-        ]);
+        ], ['n' => 100]);
     }
 
     /**

@@ -86,22 +86,22 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->setInputOutput($input, $output);
 
         // default integer
-        $this->questionSetInputStream(' ');
+        $input->setStream($this->getStringStream([' ']));
         $this->assertEquals(1, $this->command->choice('hoge', ['a', 'b', 'c'], 1));
         $this->assertEquals("hoge [a/B/c]:", $output->fetch());
 
         // default string
-        $this->questionSetInputStream(' ');
+        $input->setStream($this->getStringStream([' ']));
         $this->assertEquals(2, $this->command->choice('hoge', ['a', 'b', 'c'], 'c'));
         $this->assertEquals("hoge [a/b/C]:", $output->fetch());
 
         // select
-        $this->questionSetInputStream('b');
+        $input->setStream($this->getStringStream(['b']));
         $this->assertEquals(1, $this->command->choice('hoge', ['a', 'b', 'c'], 0));
         $this->assertEquals("hoge [A/b/c]:", $output->fetch());
 
         // foward match
-        $this->questionSetInputStream('cc');
+        $input->setStream($this->getStringStream(['cc']));
         $this->assertEquals(2, $this->command->choice('hoge', ['aaa', 'bbb', 'cccc'], 0));
         $this->assertEquals("hoge [Aaa/bbb/cccc]:", $output->fetch());
     }
@@ -128,13 +128,13 @@ class AbstractCommandTest extends AbstractTestCase
         });
 
         // ambiguous forward match
-        $this->questionSetInputStream('aa');
+        $input->setStream($this->getStringStream(['aa']));
         $this->assertException(new \UnexpectedValueException('ambiguous'), function () {
             $this->command->choice('hoge', ['aaA', 'aaB']);
         });
 
         // invalid answer
-        $this->questionSetInputStream('c');
+        $input->setStream($this->getStringStream(['c']));
         $this->assertException(new \UnexpectedValueException('invalid answer'), function () {
             $this->command->choice('hoge', ['a', 'b']);
         });
@@ -147,17 +147,17 @@ class AbstractCommandTest extends AbstractTestCase
         $this->command->setInputOutput($input, $output);
 
         // default true
-        $this->questionSetInputStream(' ');
+        $input->setStream($this->getStringStream([' ']));
         $this->assertTrue($this->command->confirm('hoge', true));
         $this->assertEquals("hoge [Y/n]:", $output->fetch());
 
         // default false
-        $this->questionSetInputStream(' ');
+        $input->setStream($this->getStringStream([' ']));
         $this->assertFalse($this->command->confirm('hoge', false));
         $this->assertEquals("hoge [y/N]:", $output->fetch());
 
         // select
-        $this->questionSetInputStream('y');
+        $input->setStream($this->getStringStream(['y']));
         $this->assertTrue($this->command->confirm('hoge', false));
         $this->assertEquals("hoge [y/N]:", $output->fetch());
     }
@@ -198,7 +198,7 @@ class AbstractCommandTest extends AbstractTestCase
             'wrapperClass' => Connection::class,
         ], $this->command->parseDsn('sqlite://hostname/dbname'));
 
-        $this->questionSetInputStream('this_is_password');
+        $input->setStream($this->getStringStream(['this_is_password']));
         $this->assertEquals([
             'host'         => 'hostname',
             'user'         => 'user',
