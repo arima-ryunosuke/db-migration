@@ -4,6 +4,7 @@ namespace ryunosuke\DbMigration\FileType;
 
 use Generator;
 use function ryunosuke\DbMigration\file_set_contents;
+use function ryunosuke\DbMigration\mb_monospace;
 use function ryunosuke\DbMigration\quoteexplode;
 use function ryunosuke\DbMigration\strpos_quoted;
 
@@ -48,15 +49,39 @@ class Sql extends AbstractFile
         $delimiter = $this->options['delimiter'] ?? ';';
         $qtable    = $this->options['quoteIdentifier']($this->pathinfo['filename']);
         $multiline = $this->options['multiline'] ?? false;
+        $align     = $this->options['align'] ?? false;
+        $align     = $align === true ? PHP_INT_MAX : intval($align);
 
         $stream = $this->stream('w');
 
-        $first = true;
+        $positions = [];
+        $first     = true;
         foreach ($rows as $row) {
             $columns = implode(', ', $this->options['quoteIdentifier'](array_keys($row)));
-            $values  = implode(', ', $this->options['quoteValue']($row));
 
             if ($multiline) {
+                if ($align) {
+                    $fields   = [];
+                    $position = 0;
+                    foreach (array_values($row) as $i => $value) {
+                        $value            = $this->options['quoteValue']($value);
+                        $delimiter_length = $i * 2;
+                        $padding_length   = ($positions[$i] ?? 0) - $position - $delimiter_length;
+                        if ($padding_length > 0) {
+                            $value = str_repeat(' ', $padding_length) . $value;
+                        }
+                        $fields[] = $value;
+
+                        $positions[$i] = max($positions[$i] ?? 0, min($position + $delimiter_length, $align));
+                        $position      += mb_monospace($value);
+                    }
+
+                    $values = implode(', ', $fields);
+                }
+                else {
+                    $values = implode(', ', $this->options['quoteValue']($row));
+                }
+
                 if ($first) {
                     $stream->fwrite("INSERT INTO $qtable ($columns) VALUES\n");
                     $stream->fwrite("($values)");
@@ -66,6 +91,7 @@ class Sql extends AbstractFile
                 }
             }
             else {
+                $values = implode(', ', $this->options['quoteValue']($row));
                 $stream->fwrite("INSERT INTO $qtable ($columns) VALUES ($values)$delimiter\n");
             }
 

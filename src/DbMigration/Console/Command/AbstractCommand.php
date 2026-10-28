@@ -107,8 +107,9 @@ abstract class AbstractCommand extends Command
             ],
             'align'              => [
                 null,
-                InputOption::VALUE_NONE,
-                'Specify php/json/yaml align key value.',
+                InputOption::VALUE_OPTIONAL,
+                'Specify sql/csv/php/json/yaml align key value.',
+                false,
             ],
             'delimiter'          => [
                 null,

@@ -90,4 +90,28 @@ class SqlTest extends AbstractFileTestCase
         file_put_contents($file->pathinfo()['fullname'], $contents);
         $this->assertEquals($expected, iterator_to_array($file->readMigration()));
     }
+
+    public function test_align()
+    {
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.sql', [
+            'quoteIdentifier' => fn($v) => $v,
+            'quoteValue'      => fn($v) => $v,
+            'multiline'       => true,
+            'align'           => true,
+        ]);
+        iterator_to_array($file->writeRecords([
+            ['a' => 'a1', 'b' => 'b1', 'c' => 'c1'],
+            ['a' => 'shortA', 'b' => 'longlonglongB', 'c' => 'c'],
+            ['a' => 'a2', 'b' => 'b2', 'c' => 'c2'],
+            ['a' => 'a3', 'b' => 'b3', 'c' => 'c3'],
+        ]));
+        $this->assertEquals(<<<SQL
+        INSERT INTO dummy (a, b, c) VALUES
+        (a1, b1, c1),
+        (shortA, longlonglongB, c),
+        (a2,     b2,            c2),
+        (a3,     b3,            c3);
+        
+        SQL, file_get_contents(self::$tmpdir . '/dummy.sql'));
+    }
 }

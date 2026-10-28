@@ -160,4 +160,28 @@ class CsvTest extends AbstractFileTestCase
 
         $this->assertException(new DomainException('does not support writeSchema'), fn() => $file->writeSchema([]));
     }
+
+    public function test_align()
+    {
+        $file = AbstractFile::create(self::$tmpdir . '/dummy.utf8n.csv', [
+            'align' => true,
+        ]);
+        iterator_to_array($file->writeRecords([
+            ['a' => 'a1', 'b' => 'b1', 'c' => 'c1'],
+            ['a' => 'shortA', 'b' => 'longlonglongB', 'c' => 'c'],
+            ['a' => 'a', 'b' => "multiline1\nmultiline2", 'c' => 'c'],
+            ['a' => 'a2', 'b' => 'b2', 'c' => 'c2'],
+            ['a' => 'a3', 'b' => 'adjust12345', 'c' => 'c3'],
+        ]));
+        $this->assertEquals(<<<CSV
+        a,b,c
+        a1,b1,c1
+        shortA,longlonglongB,c
+        a,     "multiline1
+        multiline2",         "c"
+        a2,    "b2",         "c2"
+        a3,    "adjust12345",c3
+        
+        CSV, file_get_contents(self::$tmpdir . '/dummy.utf8n.csv'));
+    }
 }

@@ -82,7 +82,7 @@ class ExportCommand extends AbstractCommand
             'inline'    => $this->input->getOption('inline'),
             'indent'    => $this->input->getOption('indent'),
             'multiline' => $this->input->getOption('multiline'),
-            'align'     => $this->input->getOption('align'),
+            'align'     => $this->input->getOption('align') ?? true,
             'delimiter' => $this->input->getOption('delimiter'),
             'typed'     => $this->input->getOption('maintain-type') ?? false,
         ]);

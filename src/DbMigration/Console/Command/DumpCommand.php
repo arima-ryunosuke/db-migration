@@ -33,6 +33,7 @@ class DumpCommand extends AbstractCommand
                 'exclude',
                 'disable',
                 'transaction',
+                'align',
                 'event',
                 'config',
             ]),
@@ -76,6 +77,7 @@ class DumpCommand extends AbstractCommand
         $transporter->setDisabled(array_fill_keys((array) $this->input->getOption('disable'), true));
         $transporter->setDataDescriptionOptions([
             'multiline' => true,
+            'align'     => $this->input->getOption('align'),
         ]);
 
         $generators = $transporter->dump(array_shift($files), $this->input->getOption('recreate'), $includes, $excludes, [

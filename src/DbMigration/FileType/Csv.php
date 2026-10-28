@@ -7,6 +7,8 @@ use Generator;
 use ryunosuke\DbMigration\FileType\Tool\Binary;
 use function ryunosuke\DbMigration\iterator_join;
 use function ryunosuke\DbMigration\iterator_split;
+use function ryunosuke\DbMigration\mb_monospace;
+use function ryunosuke\DbMigration\str_putcsv;
 
 class Csv extends AbstractFile
 {
@@ -35,8 +37,12 @@ class Csv extends AbstractFile
 
     public function writeRecords(iterable $rows): Generator
     {
-        $delimiter = $this->options['delimiter'] ?? ',';
-        $typed     = $this->options['typed'] ?? false;
+        $typed = $this->options['typed'] ?? false;
+        $align = $this->options['align'] ?? false;
+        $align = $align === true ? PHP_INT_MAX : intval($align);
+
+        $positions = [];
+        $options   = ['positions' => &$positions, 'align' => $align] + $this->options;
 
         $stream = $this->stream('w');
         if (($this->bom ?? true) && stripos($this->pathinfo['encoding'], 'utf') === 0) {
@@ -56,7 +62,7 @@ class Csv extends AbstractFile
             }
 
             if ($i === 0) {
-                $stream->fputcsv(array_keys($row), $delimiter);
+                $stream->fwrite($this->encode(array_keys($row), $options));
             }
 
             foreach ($row as $c => $v) {
@@ -68,7 +74,7 @@ class Csv extends AbstractFile
                 }
             }
 
-            $stream->fputcsv($row, $delimiter);
+            $stream->fwrite($this->encode($row, $options));
             yield $row;
         }
     }
@@ -118,6 +124,55 @@ class Csv extends AbstractFile
         }
 
         yield from $table_records;
+    }
+
+    protected function encode($data, $options): string
+    {
+        $positions = &$options['positions'];
+        $delimiter = $options['delimiter'] ?? ',';
+        $align     = $options['align'];
+
+        if ($align) {
+            $fields   = [];
+            $position = 0;
+
+            $logmeta = array_values(array_map(function ($value) use ($delimiter) {
+                $value = str_putcsv([$value], $delimiter, '"', '');
+
+                $lines = preg_split('@\r\n|\n@u', $value);
+                $first = $lines[array_key_first($lines)];
+                $last  = $lines[array_key_last($lines)];
+
+                return [$value, $lines, $first, $last];
+            }, $data));
+
+            $column = 0;
+            foreach ($logmeta as $i => [$value, $lines, $first, $last]) {
+                $delimiter_length = $column * strlen($delimiter);
+                $padding_length   = ($positions[$i] ?? 0) - $position - $delimiter_length;
+                if ($padding_length > 0) {
+                    if (($value[0] ?? '') !== '"') {
+                        $value = '"' . $value . '"';
+                    }
+                    $value = str_repeat(' ', min($align, $padding_length)) . $value;
+                }
+                $fields[] = $value;
+
+                $positions[$i] = max($positions[$i] ?? 0, $position + $delimiter_length);
+                if (count($lines) > 1) {
+                    $position = mb_monospace($last, [], $this->pathinfo['encoding']);
+                    $column   = 0;
+                }
+                else {
+                    $position += mb_monospace($value, [], $this->pathinfo['encoding']);
+                }
+                $column++;
+            }
+
+            return implode($delimiter, $fields) . "\n";
+        }
+
+        return str_putcsv($data, $delimiter, '"', '') . "\n";
     }
 
     protected function read(): Generator
