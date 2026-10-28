@@ -21,6 +21,11 @@
 - choice, confirm を Symfony 標準のものに差し替える？
 - DoctrineEventManager が廃止になるようなので撤廃する
 
+## 3.2.9
+
+- [feature] sql/csv のアラインメント対応
+- [composer] update
+
 ## 3.2.8
 
 - [feature] dump コマンドに order-by オプションを追加

@@ -198,7 +198,9 @@ import, migrate のときに 1 を指定すると一度でも失敗したとき�
 - `inline`: 指定された数以上のネストをインラインで出力します（php/json/yaml）
 - `indent`: 空白インデント数です（sql/php/json/yaml）
 - `multiline`: 複数行をリテラル的に出力します（php/sql/yaml）。.php の場合は nowdoc, sql の場合は bulk-insert, yaml の場合は `|-` で出力されます。yaml5 は対応していません
-- `align`: key と value の桁合わせフラグです（php/json/yaml）。php だけで指定される想定です。json, yaml で桁合わせは一般的ではないでしょう
+- `align`: 桁合わせフラグです（sql/csv/php/json/yaml）。
+  - sql/csv では列位置がなるべく揃うように出力されます。完全に揃うわけではないですし、csv の場合は完全に valid な csv とは呼べない形式になります（大抵は読めるでしょうけど）
+  - php/json/yaml では key と value の桁合わせになります。php だけで指定される想定です。json, yaml で桁合わせは一般的ではないでしょう
 - `delimiter`: .sql の場合は SQL の区切り文字、 .csv の場合は CSV のセパレータとして振る舞います。その他の場合は使用されません
 - `format`: .sql のときのみ有効です。コンソールにログ出力される際のフォーマットを指定します
 
